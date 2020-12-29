@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609231875963">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609231983389">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1609231875963" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1609231983389" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -254,7 +254,7 @@ env.setStateBackend(new FsStateBackend(&quot;hdfs://namenode:40010/flink/checkpo
 在并行度改变时，如何重分布KeyedState数据，最直观的做法就是计算每个Key的Hash值，并基于并行度parallelism取余。下图为当并行度改变时，基于Hash取余算法的State数据重分布情况：</p>
 <p>hash取余重分布算法存在的问题：之前在各个Task上维护好的State数据会根据新的并行度重新组织，State数据在各个Task之间传输。这对于KeyedState数据较大时，数据重新组织的代价会很高。</p>
 <p>为了规避上述问题，Flink基于Key-Group(KeyedState的最小组织单位)组织、分配KeyedState。具体的映射关系为</p>
-<pre><code>public static int assignToKeyGroup(Object key, int maxParallelism) {
+<pre><code class="language-java">public static int assignToKeyGroup(Object key, int maxParallelism) {
    return computeKeyGroupForKeyHash(key.hashCode(), maxParallelism);
 }
 public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {

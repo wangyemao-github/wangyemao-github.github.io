@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2020-12-29T08:51:26.900Z</updated>
+    <updated>2020-12-29T08:53:09.849Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -166,7 +166,7 @@ env.setStateBackend(new FsStateBackend(&quot;hdfs://namenode:40010/flink/checkpo
 在并行度改变时，如何重分布KeyedState数据，最直观的做法就是计算每个Key的Hash值，并基于并行度parallelism取余。下图为当并行度改变时，基于Hash取余算法的State数据重分布情况：</p>
 <p>hash取余重分布算法存在的问题：之前在各个Task上维护好的State数据会根据新的并行度重新组织，State数据在各个Task之间传输。这对于KeyedState数据较大时，数据重新组织的代价会很高。</p>
 <p>为了规避上述问题，Flink基于Key-Group(KeyedState的最小组织单位)组织、分配KeyedState。具体的映射关系为</p>
-<pre><code>public static int assignToKeyGroup(Object key, int maxParallelism) {
+<pre><code class="language-java">public static int assignToKeyGroup(Object key, int maxParallelism) {
    return computeKeyGroupForKeyHash(key.hashCode(), maxParallelism);
 }
 public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
