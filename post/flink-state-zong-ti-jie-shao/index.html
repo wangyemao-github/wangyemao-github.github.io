@@ -1,102 +1,104 @@
-
 <!DOCTYPE html>
 <html>
   <head>
-    
-<meta charset="utf-8" >
+    <meta charset="utf-8" >
 
 <title>Flink State 总体介绍 | Gridea</title>
-<meta name="description" content="温故而知新">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609230161200">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609230617091">
 <link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
 
 
 
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
 
 
 
+    <meta name="description" content="本文主要对Flink State进行整体介绍，包括
+一、有状态流计算介绍
+什么是有状态的计算
+计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，..." />
+    <meta name="keywords" content="Flink" />
   </head>
   <body>
     <div id="app" class="main">
-      <div class="site-header-container">
-  <div class="site-header">
-    <div class="left">
-      <a href="https://wangyemao-github.github.io">
-        <img class="avatar" src="https://wangyemao-github.github.io/images/avatar.png?v=1609230161200" alt="" width="32px" height="32px">
-      </a>
-      <a href="https://wangyemao-github.github.io">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://wangyemao-github.github.io">
+        <img src="https://wangyemao-github.github.io/images/avatar.png?v=1609230617091" class="site-logo">
         <h1 class="site-title">Gridea</h1>
       </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
     </div>
-    <div class="right">
-      <transition name="fade">
-        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
-      </transition>
-    </div>
-  </div>
-</div>
-
-<transition name="fade">
-  <div class="menu-container" style="display: none;" v-show="menuVisible">
-    <div class="menu-list">
+    <div>
       
         
-          <a href="/" class="menu purple-link">
+          <a href="/" class="site-nav">
             首页
           </a>
         
       
         
-          <a href="/archives" class="menu purple-link">
+          <a href="/archives" class="site-nav">
             归档
           </a>
         
       
         
-          <a href="/tags" class="menu purple-link">
+          <a href="/tags" class="site-nav">
             标签
           </a>
         
       
         
-          <a href="/post/about" class="menu purple-link">
+          <a href="/post/about" class="site-nav">
             关于
           </a>
         
       
     </div>
   </div>
-</transition>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
 
 
-      <div class="content-container">
-        <div class="post-detail">
-          
-          <h2 class="post-title">Flink State 总体介绍</h2>
-          <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2020-12-29</span>
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Flink State 总体介绍</h2>
+            <div class="post-date">2020-12-29</div>
             
-              <span>
-                <i class="icon-pricetags-outline"></i>
-                
-                  <a href="https://wangyemao-github.github.io/tag/fz0w5SGEE/">
-                    Flink
-                    
-                  </a>
-                
-              </span>
-            
-          </div>
-          <div class="post-content">
-            <h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
+            <div class="post-content" v-pre>
+              <p>本文主要对Flink State进行整体介绍，包括</p>
+<h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
 <h2 id="什么是有状态的计算">什么是有状态的计算</h2>
 <p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
 <img src="https://wangyemao-github.github.io/post-images/1609229474736.jpg" alt="" loading="lazy"><br>
@@ -246,45 +248,39 @@ public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
 <li>当并行度变更时，基于Key-Group，将Key-Group重新分配到并行Task中，并且这种重新分配不是一个Shuffle，Key-Group归属的并行Task的变更很小。</li>
 </ol>
 
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://wangyemao-github.github.io/tag/fz0w5SGEE/" class="tag">
+                    Flink
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://wangyemao-github.github.io/post/hello-gridea/">
+                  <h3 class="post-title">
+                    Hello Gridea
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
           </div>
+
         </div>
-
-        
-          <div class="next-post">
-            <a class="purple-link" href="https://wangyemao-github.github.io/post/hello-gridea/">
-              <h3 class="post-title">
-                下一篇：Hello Gridea
-              </h3>
-            </a>
-          </div>
-          
       </div>
-
-      
-
-      <div class="site-footer">
-  <div class="slogan">温故而知新</div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
-  </div>
-  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
-</div>
-
-
     </div>
-    <script type="application/javascript">
 
-hljs.initHighlightingOnLoad()
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
 
 var app = new Vue({
   el: '#app',
@@ -294,6 +290,8 @@ var app = new Vue({
 })
 
 </script>
+
+
 
 
 
