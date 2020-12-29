@@ -1,22 +1,98 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://wangyemao-github.github.io</id>
-    <title>Gridea</title>
-    <updated>2020-12-29T08:11:51.074Z</updated>
-    <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://wangyemao-github.github.io"/>
-    <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
-    <subtitle>温故而知新</subtitle>
-    <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
-    <icon>https://wangyemao-github.github.io/favicon.ico</icon>
-    <rights>All rights reserved 2020, Gridea</rights>
-    <entry>
-        <title type="html"><![CDATA[Flink State 总体介绍]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
-        </link>
-        <updated>2020-12-29T08:09:21.000Z</updated>
-        <content type="html"><![CDATA[<h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flink State 总体介绍 | Gridea</title>
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609229503183">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="Flink State 总体介绍 | Gridea - Atom Feed" href="https://wangyemao-github.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="一、有状态流计算介绍
+什么是有状态的计算
+计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么这里的count就是一个state
+
+Flink..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://wangyemao-github.github.io">
+  <img class="avatar" src="https://wangyemao-github.github.io/images/avatar.png?v=1609229503183" alt="">
+  </a>
+  <h1 class="site-title">
+    Gridea
+  </h1>
+  <p class="site-description">
+    温故而知新
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Flink State 总体介绍
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-12-29
+              </span>
+              <span>
+                7 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
 <h2 id="什么是有状态的计算">什么是有状态的计算</h2>
 <p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
 <img src="https://wangyemao-github.github.io/post-images/1609229474736.jpg" alt="" loading="lazy"><br>
@@ -164,38 +240,99 @@ public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
 <li>只要MaxParallelism不变，整个Key空间的Key-Group划分情况是不会变更的</li>
 <li>当并行度变更时，基于Key-Group，将Key-Group重新分配到并行Task中，并且这种重新分配不是一个Shuffle，Key-Group归属的并行Task的变更很小。</li>
 </ol>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Hello Gridea]]></title>
-        <id>https://wangyemao-github.github.io/post/hello-gridea/</id>
-        <link href="https://wangyemao-github.github.io/post/hello-gridea/">
-        </link>
-        <updated>2018-12-11T16:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
-]]></content>
-    </entry>
-</feed>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E6%9C%89%E7%8A%B6%E6%80%81%E6%B5%81%E8%AE%A1%E7%AE%97%E4%BB%8B%E7%BB%8D">一、有状态流计算介绍</a>
+<ul>
+<li><a href="#%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%89%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%A1%E7%AE%97">什么是有状态的计算</a></li>
+<li><a href="#%E4%BC%A0%E7%BB%9F%E6%B5%81%E5%BC%8F%E6%A1%86%E6%9E%B6">传统流式框架</a></li>
+<li><a href="#flink%E6%8F%90%E4%BE%9B%E4%BA%86%E4%B8%B0%E5%AF%8C%E7%9A%84%E7%8A%B6%E6%80%81%E8%AE%BF%E9%97%AE%E5%92%8C%E9%AB%98%E6%95%88%E7%9A%84%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6">Flink提供了丰富的状态访问和高效的容错机制</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%8C-flink-state">二、Flink State</a></li>
+<li><a href="#%E4%B8%89-flink-state%E5%AD%98%E5%82%A8%E5%92%8C%E7%AE%A1%E7%90%86">三、Flink State存储和管理</a>
+<ul>
+<li><a href="#state-backend-%E5%88%86%E7%B1%BB">State Backend 分类</a></li>
+<li><a href="#state-backend%E9%85%8D%E7%BD%AE">State Backend配置</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9B-flink-state-%E5%88%92%E5%88%86%E5%92%8C%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">四、Flink State 划分和动态扩容</a>
+<ul>
+<li><a href="#state-%E5%88%92%E5%88%86">State 划分</a></li>
+<li><a href="#state-%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">State 动态扩容</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://wangyemao-github.github.io/post/hello-gridea/">
+              <h3 class="post-title">
+                Hello Gridea
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+  <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
