@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609230617091">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609230775237">
 <link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
 
 
@@ -19,9 +19,10 @@
 
 
     <meta name="description" content="本文主要对Flink State进行整体介绍，包括
+
 一、有状态流计算介绍
 什么是有状态的计算
-计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，..." />
+计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去..." />
     <meta name="keywords" content="Flink" />
   </head>
   <body>
@@ -31,7 +32,7 @@
   <div class="top-container" data-aos="fade-right">
     <div class="top-header-container">
       <a class="site-title-container" href="https://wangyemao-github.github.io">
-        <img src="https://wangyemao-github.github.io/images/avatar.png?v=1609230617091" class="site-logo">
+        <img src="https://wangyemao-github.github.io/images/avatar.png?v=1609230775237" class="site-logo">
         <h1 class="site-title">Gridea</h1>
       </a>
       <div class="menu-btn" @click="menuVisible = !menuVisible">
@@ -98,12 +99,12 @@
             
             <div class="post-content" v-pre>
               <p>本文主要对Flink State进行整体介绍，包括</p>
+<!-- more -->
 <h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
 <h2 id="什么是有状态的计算">什么是有状态的计算</h2>
 <p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
 <img src="https://wangyemao-github.github.io/post-images/1609229474736.jpg" alt="" loading="lazy"><br>
 Flink基于用户定义代码对到来的数据进行转换操作，处理过程中不仅依赖用户定义算子，还会涉及State数据的读写操作。这些State数据会存储在本地的State backend中，在Checkpoint的时候持久化到配置的Checkpoint 目录</p>
-<!-- more -->
 <h2 id="传统流式框架">传统流式框架</h2>
 <p>此处主要针对实时计算框架—Spark进行对比。在Spark实时计算框架中，流式数据处理通过将源源不断的数据切分为一个个很小时间间隔的批块，流式计算实际上是一种微批计算，而不是真正意义上的流式处理。针对每一个微批，只需要保存微批计算的最终结果，因此它对于State的需求还是比较小的。</p>
 <p>实际上，流式计算对State的要求是非常高的。因为流系统中输入是一个无限制的流，需要保证很长一段时间持续不间断运行，这个过程中就需要很好地将状态数据管理起来。传统的流式计算框架缺乏对State的有效支持：</p>
