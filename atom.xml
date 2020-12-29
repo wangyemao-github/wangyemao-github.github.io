@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2020-12-29T08:33:41.232Z</updated>
+    <updated>2020-12-29T08:36:23.890Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -20,6 +20,29 @@
 ]]></summary>
         <content type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括</p>
 <!-- more -->
+<p><ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E6%9C%89%E7%8A%B6%E6%80%81%E6%B5%81%E8%AE%A1%E7%AE%97%E4%BB%8B%E7%BB%8D">一、有状态流计算介绍</a>
+<ul>
+<li><a href="#%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%89%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%A1%E7%AE%97">什么是有状态的计算</a></li>
+<li><a href="#%E4%BC%A0%E7%BB%9F%E6%B5%81%E5%BC%8F%E6%A1%86%E6%9E%B6">传统流式框架</a></li>
+<li><a href="#flink%E6%8F%90%E4%BE%9B%E4%BA%86%E4%B8%B0%E5%AF%8C%E7%9A%84%E7%8A%B6%E6%80%81%E8%AE%BF%E9%97%AE%E5%92%8C%E9%AB%98%E6%95%88%E7%9A%84%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6">Flink提供了丰富的状态访问和高效的容错机制</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%8C-flink-state">二、Flink State</a></li>
+<li><a href="#%E4%B8%89-flink-state%E5%AD%98%E5%82%A8%E5%92%8C%E7%AE%A1%E7%90%86">三、Flink State存储和管理</a>
+<ul>
+<li><a href="#state-backend-%E5%88%86%E7%B1%BB">State Backend 分类</a></li>
+<li><a href="#state-backend%E9%85%8D%E7%BD%AE">State Backend配置</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9B-flink-state-%E5%88%92%E5%88%86%E5%92%8C%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">四、Flink State 划分和动态扩容</a>
+<ul>
+<li><a href="#state-%E5%88%92%E5%88%86">State 划分</a></li>
+<li><a href="#state-%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">State 动态扩容</a></li>
+</ul>
+</li>
+</ul>
+</p>
 <h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
 <h2 id="什么是有状态的计算">什么是有状态的计算</h2>
 <p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
