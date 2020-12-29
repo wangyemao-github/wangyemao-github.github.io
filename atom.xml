@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2020-12-29T08:53:09.849Z</updated>
+    <updated>2020-12-29T11:08:35.004Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -16,60 +16,43 @@
         <link href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
         </link>
         <updated>2020-12-29T08:09:21.000Z</updated>
-        <summary type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括</p>
+        <summary type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
 ]]></summary>
-        <content type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括</p>
+        <content type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
 <!-- more -->
-<p><ul class="markdownIt-TOC">
-<li><a href="#%E4%B8%80-%E6%9C%89%E7%8A%B6%E6%80%81%E6%B5%81%E8%AE%A1%E7%AE%97%E4%BB%8B%E7%BB%8D">一、有状态流计算介绍</a>
-<ul>
-<li><a href="#%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%89%E7%8A%B6%E6%80%81%E7%9A%84%E8%AE%A1%E7%AE%97">什么是有状态的计算</a></li>
-<li><a href="#%E4%BC%A0%E7%BB%9F%E6%B5%81%E5%BC%8F%E6%A1%86%E6%9E%B6">传统流式框架</a></li>
-<li><a href="#flink%E6%8F%90%E4%BE%9B%E4%BA%86%E4%B8%B0%E5%AF%8C%E7%9A%84%E7%8A%B6%E6%80%81%E8%AE%BF%E9%97%AE%E5%92%8C%E9%AB%98%E6%95%88%E7%9A%84%E5%AE%B9%E9%94%99%E6%9C%BA%E5%88%B6">Flink提供了丰富的状态访问和高效的容错机制</a></li>
-</ul>
-</li>
-<li><a href="#%E4%BA%8C-flink-state">二、Flink State</a></li>
-<li><a href="#%E4%B8%89-flink-state%E5%AD%98%E5%82%A8%E5%92%8C%E7%AE%A1%E7%90%86">三、Flink State存储和管理</a>
-<ul>
-<li><a href="#state-backend-%E5%88%86%E7%B1%BB">State Backend 分类</a></li>
-<li><a href="#state-backend%E9%85%8D%E7%BD%AE">State Backend配置</a></li>
-</ul>
-</li>
-<li><a href="#%E5%9B%9B-flink-state-%E5%88%92%E5%88%86%E5%92%8C%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">四、Flink State 划分和动态扩容</a>
-<ul>
-<li><a href="#state-%E5%88%92%E5%88%86">State 划分</a></li>
-<li><a href="#state-%E5%8A%A8%E6%80%81%E6%89%A9%E5%AE%B9">State 动态扩容</a></li>
-</ul>
-</li>
-</ul>
-</p>
 <h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
 <h2 id="什么是有状态的计算">什么是有状态的计算</h2>
 <p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
 <img src="https://wangyemao-github.github.io/post-images/1609229474736.jpg" alt="" loading="lazy"><br>
 Flink基于用户定义代码对到来的数据进行转换操作，处理过程中不仅依赖用户定义算子，还会涉及State数据的读写操作。这些State数据会存储在本地的State backend中，在Checkpoint的时候持久化到配置的Checkpoint 目录</p>
 <h2 id="传统流式框架">传统流式框架</h2>
-<p>此处主要针对实时计算框架—Spark进行对比。在Spark实时计算框架中，流式数据处理通过将源源不断的数据切分为一个个很小时间间隔的批块，流式计算实际上是一种微批计算，而不是真正意义上的流式处理。针对每一个微批，只需要保存微批计算的最终结果，因此它对于State的需求还是比较小的。</p>
+<p>在之前的实时计算框架—Spark进行流式数据处理过程中，流式计算通过将源源不断的数据切分为一个个很小的时间间隔批块，然后针对每一个微批块进行数据计算。它并不是真正意义上的流式处理。每一个微批，只需要保存最终的计算结果，因此，它对于State的需求还是比较小的。</p>
 <p>实际上，流式计算对State的要求是非常高的。因为流系统中输入是一个无限制的流，需要保证很长一段时间持续不间断运行，这个过程中就需要很好地将状态数据管理起来。传统的流式计算框架缺乏对State的有效支持：</p>
-<ol>
+<ul>
 <li>状态数据的存储和访问</li>
 <li>状态数据的备份和恢复</li>
 <li>状态数据的划分和动态扩容</li>
-</ol>
+</ul>
 <h2 id="flink提供了丰富的状态访问和高效的容错机制">Flink提供了丰富的状态访问和高效的容错机制</h2>
-<ol>
+<ul>
 <li>多种数据类型：Value、List、Map、Reducing、Folding、Aggregating</li>
 <li>多种划分方式： Keyed State、Operator State</li>
 <li>多种存储格式： MemoryStateBackend、FsStateBackend、RocksDBStateBackend</li>
 <li>高效的备份和恢复：提供ExactlyOnce保证、增量及异步备份本地恢复</li>
-</ol>
-<h1 id="二-flink-state">二、Flink State</h1>
-<p>根据Flink 状态数据的划分和扩张方式 将 State 分为：</p>
-<ul>
-<li>Operator State</li>
-<li>Keyed State</li>
 </ul>
-<p>对比：</p>
+<h1 id="二-flink-state-类别">二、Flink State 类别</h1>
+<p>Flink中，State按照是否有Key划分为Keyed State和Operator State</p>
+<h2 id="keyed-state">Keyed State</h2>
+<p><strong>Keyed State</strong>在Keyed Stream中使用。状态是跟特定的Key绑定的，即Keyed Stream流上的每一个Key对应一个State对象。</p>
+<h2 id="operator-state">Operator State</h2>
+<p><strong>Operator State</strong>(non-keyed state)跟一个特定操作的并行实例绑定，整个操作只对应一个State。典型的Operator State应用场景就是Kafka Source Connector，kafka consumer的每一个并行实例都维护了topic partition与offsets的映射关系作为它的Operator State。<br>
+<strong>Broadcast State</strong>是一个特殊的Operator State。它的引入是为了支持一个流的记录需要被广播到下游的所有并行任务的场景，在这种场景中，它们被用来在所有的并行任务中维护相同的状态。然后，可以在处理第二个流的记录时访问这个状态。broadcast state与operator state的其他区别：</p>
+<ol>
+<li>状态的数据类型为Map格式</li>
+<li>它仅在具有两个输入流的特定操作上可用，一个输入流为broadcasted stream ，一个输入流为non-broadcasted</li>
+<li>这些操作可以定义多个具有不同名称的broadcast state</li>
+</ol>
+<p><strong>详细对比：</strong></p>
 <table>
 <thead>
 <tr>
@@ -80,14 +63,14 @@ Flink基于用户定义代码对到来的数据进行转换操作，处理过程
 </thead>
 <tbody>
 <tr>
-<td>是否存在当前处理的 key（current key）</td>
-<td>keyed state的value总是与一个current key对应。一个Operator实例处理多个key，访问相应的多个State</td>
-<td>无当前key概念。一个Operator实例对应一个State</td>
+<td>使用场景</td>
+<td>只能用于KeyedStream上的算子</td>
+<td>可以用于所有的算子，常用于Source，例如FlinkKafkaConsumer</td>
 </tr>
 <tr>
-<td>存储对象是否 on heap</td>
-<td>keyed state backend 有on-heap和off-heap(RocksDB)的多种实现</td>
-<td>目前operator state backend仅有一种on-heap的实现</td>
+<td>应用</td>
+<td>通过RuntimeContext访问，操作函数需要实现RichFunction接口</td>
+<td>实现CheckpointedFunction或ListCheckpointed接口</td>
 </tr>
 <tr>
 <td>是否需要手动声明快照(snapshot)和恢复（restore)方法</td>
@@ -95,14 +78,14 @@ Flink基于用户定义代码对到来的数据进行转换操作，处理过程
 <td>需要手动实现snapshot和restore方法</td>
 </tr>
 <tr>
-<td>状态数据大小【这只是个经验判断，不是绝对的判断区分标准】</td>
-<td>一般而言，Keyed state规模的相对比较大的</td>
-<td>一般而言，我们认为operator state的数据规模是比较小的</td>
+<td>支持数据接口</td>
+<td>包括：ValueState、ListState、ReducingState、AggregatingState、MapState</td>
+<td>ListState。特别说明：Broadcast State 是MapState类型</td>
 </tr>
 <tr>
-<td>使用场景</td>
-<td>只能用于KeyedStream上的算子</td>
-<td>可以用于所有的算子，常用于Source，例如FlinkKafkaConsumer</td>
+<td>是否存在当前处理的 key（current key）</td>
+<td>keyed state的value总是与一个current key对应。一个Operator实例处理多个key，访问相应的多个State</td>
+<td>无当前key概念。一个Operator实例对应一个State</td>
 </tr>
 <tr>
 <td>并发改变时State重分布</td>
@@ -110,21 +93,72 @@ Flink基于用户定义代码对到来的数据进行转换操作，处理过程
 <td>并发改变时，有多种重新分配方式可选：均匀分配；合并后每个实例都得到全量状态</td>
 </tr>
 <tr>
-<td>使用</td>
-<td>通过RuntimeContext访问-----操作函数需要实现RichFunction接口</td>
-<td>实现CheckpointedFunction或ListCheckpointed接口</td>
+<td>存储对象是否 on heap</td>
+<td>keyed state backend 有on-heap和off-heap(RocksDB)的多种实现</td>
+<td>目前operator state backend仅有一种on-heap的实现</td>
 </tr>
 <tr>
-<td>支持数据接口</td>
-<td>包括：ValueState、ListState、ReducingState、AggregatingState、MapState</td>
-<td>ListState。----特别说明：Broadcast State 是MapState类型</td>
+<td>状态数据大小【这只是个经验判断，不是绝对的判断区分标准】</td>
+<td>一般而言，Keyed state规模的相对比较大的</td>
+<td>一般而言，我们认为operator state的数据规模是比较小的</td>
 </tr>
 </tbody>
 </table>
 <h1 id="三-flink-state存储和管理">三、Flink State存储和管理</h1>
 <h2 id="state-backend-分类">State Backend 分类</h2>
 <p>State在内部如何表述，checkpoint时，State如何以及在哪里进行持久化，依赖于选择的State Backend。Flink默认捆绑了三类State Backends：MemoryStateBackend、FsStateBackend、RocksDBStateBackend。在未配置的情况下，系统将默认使用MemoryStateBackend。</p>
-<p><strong>详细区别：</strong></p>
+<p><strong>详细区别：</strong><br>
+<img src="https://wangyemao-github.github.io/post-images/1609232674288.jpg" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>State Backend 类型</th>
+<th>State存储</th>
+<th>Checkpoint时存储</th>
+<th>快照方式</th>
+<th>是否支持增量Checkpoint</th>
+<th>限制</th>
+<th>使用场景</th>
+<th>推荐设置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MemoryStateBackend</td>
+<td>TaskManager内存</td>
+<td>JobManager内存</td>
+<td>默认异步方式</td>
+<td>否</td>
+<td>1. 单个State默认限制为5MB，当然这个值可以在创建state backend时调整<br>2. 但是Max State最大不能超过akka frame的size (默认10M)<br>3. 聚合的State总大小要小于JobManager内存大小</td>
+<td>1. 本地开发和debugging<br>2. 需要存储很少量状态的作业<br>3. 不推荐生产场景</td>
+<td>将managed memory设置为0.确保最大量地使用分配内存给用户作业</td>
+<td>1. State数据作为Java堆对象在本地（TaskManager）存储<br>2. 在Checkpoint时，state backend会快照状态数据，作为checkpoint确认消息的一部分发送给JobManager。在JobManager上，状态数据也是在Java 堆上存储的</td>
+</tr>
+<tr>
+<td>FsStateBackend</td>
+<td>TaskManager内存</td>
+<td>外部文件系统（本地目录或HDFS目录）</td>
+<td>默认异步方式</td>
+<td>否</td>
+<td>1.单Taskmanager上的State总量不超过它的内存<br>2.总大小不超过配置的文件系统容量</td>
+<td>1.大状态作业，长窗口，大key/value 状态<br>2.高可用设置<br>3.生产场景</td>
+<td>同上</td>
+<td>1.在TaskManager的内存中，存储正在使用的State数据<br>2. Checkpointing时，state backend将状态快照写文件到配置文件系统和目录中。最小化的元数据存储在JobManager的内存【状态数据存储的路径】（高可用模式，存储元数据在元数据checkpoint路径）</td>
+</tr>
+<tr>
+<td>RocksDBStateBackend</td>
+<td>TaskManager上的KV数据库(RocksDB)【实际使用内存+磁盘】</td>
+<td>外部文件系统（本地目录或HDFS目录）</td>
+<td>总是异步</td>
+<td>是</td>
+<td>1.单TaskManager上的State不超过它的内存+磁盘<br>2.单Key最大2G<br>3.总大小不超过配置的文件系统容量</td>
+<td>1.大状态作业，长窗口，大key/value 状态<br>2.高可用设置<br>3.生产场景</td>
+<td></td>
+<td>1.RocksDBStateBackend在RocksDB数据库中保存正在使用的状态数据，默认存储在TaskManager的数据目录<br>2.在checkpointing时，整个RocksDB数据库将被快照到配置的文件系统或目录。最小化的元数据存储在JobManager的内存中（高可用模式，存储在元数据checkpoint目录）</td>
+</tr>
+</tbody>
+</table>
 <p><strong>关于RocksDBStateBackend的特别说明：</strong></p>
 <ol>
 <li>这种方式可以维持的状态量只受限于可用的磁盘空间。与FsStateBackend将state存储在内存相比，这种方式允许保留更大的state</li>
@@ -146,7 +180,7 @@ state.checkpoints.dir:定义backend写快照数据和元数据文件的目录</p
 <blockquote>
 <p>StreamExecutionEnvironment</p>
 </blockquote>
-<pre><code>StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+<pre><code class="language-java">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 env.setStateBackend(new FsStateBackend(&quot;hdfs://namenode:40010/flink/checkpoints&quot;));
 </code></pre>
 <h1 id="四-flink-state-划分和动态扩容">四、Flink State 划分和动态扩容</h1>
@@ -156,14 +190,16 @@ env.setStateBackend(new FsStateBackend(&quot;hdfs://namenode:40010/flink/checkpo
 <li>对于Keyed State类型，每一个Current Key对应一个State</li>
 </ul>
 <h2 id="state-动态扩容">State 动态扩容</h2>
-<p><strong>Operator State类型</strong></p>
+<p><strong>Operator State类型</strong><br>
+<img src="https://wangyemao-github.github.io/post-images/1609232700062.jpg" alt="" loading="lazy"></p>
 <ul>
-<li>ListState：并发度改变的时候，会将并发实例上的ListState都合并到一个新的List，然后均匀分配到并更后的并发Task上</li>
+<li>ListState：并发度改变的时候，会将并发实例上的ListState都合并到一个新的List，然后均匀分配到变更后的并发Task上</li>
 <li>UnionListState：每一个并发Task都会拿到全量的ListState</li>
 <li>BroadcastState：每个并发Task上的State都是完全一致的，因此，当增大并发度时，只需要Copy一份State到新Task即可</li>
 </ul>
 <p><strong>Keyed State类型</strong><br>
-在并行度改变时，如何重分布KeyedState数据，最直观的做法就是计算每个Key的Hash值，并基于并行度parallelism取余。下图为当并行度改变时，基于Hash取余算法的State数据重分布情况：</p>
+在并行度改变时，如何重分布KeyedState数据，最直观的做法就是计算每个Key的Hash值，并基于并行度parallelism取余。下图为当并行度改变时，基于Hash取余算法的State数据重分布情况：<br>
+<img src="https://wangyemao-github.github.io/post-images/1609232708709.png" alt="" loading="lazy"></p>
 <p>hash取余重分布算法存在的问题：之前在各个Task上维护好的State数据会根据新的并行度重新组织，State数据在各个Task之间传输。这对于KeyedState数据较大时，数据重新组织的代价会很高。</p>
 <p>为了规避上述问题，Flink基于Key-Group(KeyedState的最小组织单位)组织、分配KeyedState。具体的映射关系为</p>
 <pre><code class="language-java">public static int assignToKeyGroup(Object key, int maxParallelism) {
@@ -185,8 +221,9 @@ public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
 }
 </code></pre>
 <p><strong>以一个具体的实例说明：</strong><br>
-对于一个Key 空间=[0,1,2,3,4,5,6,7,8,9] 的数据，MaxParallelism=5，并行度Parallelism由2扩大到3的过程中， 各个并行Task的Key-Group重分布情况为：</p>
-<p><strong>总结：</strong></p>
+对于一个Key 空间=[0,1,2,3,4,5,6,7,8,9] 的数据，MaxParallelism=5，并行度Parallelism由2扩大到3的过程中， 各个并行Task的Key-Group重分布情况为：<br>
+<img src="https://wangyemao-github.github.io/post-images/1609232723011.png" alt="" loading="lazy"><br>
+<strong>总结：</strong></p>
 <ol>
 <li>只要MaxParallelism不变，整个Key空间的Key-Group划分情况是不会变更的</li>
 <li>当并行度变更时，基于Key-Group，将Key-Group重新分配到并行Task中，并且这种重新分配不是一个Shuffle，Key-Group归属的并行Task的变更很小。</li>
