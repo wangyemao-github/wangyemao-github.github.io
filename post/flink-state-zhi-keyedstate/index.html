@@ -34,18 +34,18 @@
           </p>
           <div class="toc-container hidden lg:block">
             <ul class="markdownIt-TOC">
-<li><a href="#operator-state">Operator State</a>
+<li><a href="#keyedstate">KeyedState</a>
 <ul>
-<li><a href="#%E6%94%AF%E6%8C%81%E7%9A%84%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B">支持的数据类型</a></li>
-<li><a href="#%E9%87%8D%E5%88%86%E5%B8%83%E6%9C%BA%E5%88%B6">重分布机制</a></li>
+<li><a href="#keyedstate-%E6%94%AF%E6%8C%81%E7%9A%84%E7%8A%B6%E6%80%81%E7%B1%BB%E5%9E%8B">KeyedState 支持的状态类型</a></li>
+<li><a href="#statedescriptor">StateDescriptor</a>
+<ul>
+<li><a href="#valuestatedescriptor%E5%AE%9A%E4%B9%89">ValueStateDescriptor定义</a></li>
 </ul>
 </li>
-<li><a href="#operator-state-%E5%BA%94%E7%94%A8">Operator State 应用</a>
-<ul>
-<li><a href="#%E5%A6%82%E4%BD%95%E5%88%9D%E5%A7%8B%E5%8C%96%E4%B8%80%E4%B8%AA%E7%8A%B6%E6%80%81state">如何初始化一个状态(State)</a></li>
-<li><a href="#sinkfunction-sample">SinkFunction Sample</a></li>
+<li><a href="#%E4%B8%8D%E5%90%8C%E7%8A%B6%E6%80%81%E7%B1%BB%E5%9E%8B%E8%AF%A6%E7%BB%86%E5%AF%B9%E6%AF%94">不同状态类型详细对比</a></li>
 </ul>
 </li>
+<li><a href="#keyedstate%E4%BD%BF%E7%94%A8">KeyedState使用</a></li>
 </ul>
 
           </div>
@@ -92,90 +92,103 @@
 <div class="mask" onclick="closeMenu()">
 </div>
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
-        <h1 class="text-3xl font-bold lg:mt-16">Flink State 之 Operator State 应用</h1>
+        <h1 class="text-3xl font-bold lg:mt-16">Flink State 之 KeyedState</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2020-12-29 / 4 min read
+          2021-01-03 / 4 min read
         </div>
         
         <div class="post-content yue">
-          <p>上文已经说到：Flink中，根据数据集是否根据Key进行分区，将状态分为Keyde State和Operator State两种类型。本文主要关注Operator State以及Operator State相关应用。</p>
-<!-- more -->  
-<h1 id="operator-state">Operator State</h1>
-<p>Operator State，也称作non-keyed State。每一个Operator State与一个并行的Operator实例绑定，每个Operator实例中都持有所有数据元素的一部分状态。<br>
-在典型的Flink有状态应用中，并不需要用到Operator State。它主要是作为一种特殊类型的状态，应用于Source/Sink的实现，以及在没有键进行状态分区的场景。</p>
-<h2 id="支持的数据类型">支持的数据类型</h2>
-<p>目前Operator State只支持使用<strong>ListState</strong></p>
-<h2 id="重分布机制">重分布机制</h2>
-<p>当并行度改变时，Operator State接口支持在并行的操作实例之间重分布State，并且支持多种重分布方案：</p>
-<ul>
-<li>均匀重分布：每一个并行Operator都返回一个状态列表（List）。整个状态空间逻辑上就是所有状态列表的并集。在恢复/重分布阶段，整个状态列表根据并行操作数目均分为子状态列表。每一个并行操作分配一个子状态列表，子状态列表可能为空，也可能包含一个或多个元素。</li>
-<li>合并重分布：这种方式将状态的划分交给用户，与均匀重分布方式相比具有更好的灵活性。在恢复/重分布阶段，每一个并行操作都获得了完整的一份状态列表。如果状态基数很大，不建议使用这种方式。因为Checkpoint 元数据会存储每个列表项的偏移量，这可能导致RPC帧大小或内存不足错误。</li>
-</ul>
-<h1 id="operator-state-应用">Operator State 应用</h1>
-<h2 id="如何初始化一个状态state">如何初始化一个状态(State)</h2>
-<p>在Flink中，使用状态描述<strong>StateDescriptor</strong>来初始化State，它包含了State的名称以及保存的State值的类型信息</p>
-<pre><code class="language-java">ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
-    new ListStateDescriptor&lt;&gt;(
-        &quot;buffered-elements&quot;,
-        TypeInformation.of(new TypeHint&lt;Tuple2&lt;String,Integer&gt;&gt;() {}));
+          <p>本文主要总结Flink State 中KeyedState，以及KeyedState的应用</p>
+<!-- more -->
+<h1 id="keyedstate">KeyedState</h1>
+<p>KeyedState在KeyedStream中使用。状态跟特定Key绑定的，即KeyedStream流上的每一个Key对应一个State对象。。</p>
+<h2 id="keyedstate-支持的状态类型">KeyedState 支持的状态类型</h2>
+<p>KeyedState可以使用所有Flink支持的State类型。FoldingState跟ReducingState类似，但是已标记为废弃，不建议再使用<br>
+<img src="https://wangyemao-github.github.io/post-images/1609670108841.png" alt="" loading="lazy"></p>
+<h2 id="statedescriptor">StateDescriptor</h2>
+<p>对应于每一类State，Flink内部都设计了对应的<strong>StateDescriptor</strong>状态描述。它指定了状态的一些属性，包括：State名称，State中类型信息，序列化/反序列化器，State生存时间等。</p>
+<h3 id="valuestatedescriptor定义">ValueStateDescriptor定义</h3>
+<pre><code class="language-java">ValueStateDescriptor&lt;Tuple2&lt;Long,Long&gt;&gt; descriptor = 
+              new ValueStateDescriptor&lt;&gt;(&quot;average&quot;,
+                    TypeInformation.of(new TypeHint&lt;Tuple2&lt;Long,Long&gt;&gt;(){}),
+                    Tuple2.of(0L,0L));
 </code></pre>
-<p>上面的代码片段中定义了一个State名称为：buffered-elements，State值类型为：Tuple2&lt;String,Integer&gt; 的状态描述<br>
-##CheckpointedFunction<br>
-要使用Operator State，有状态的函数需要实现<strong>CheckpointedFunction</strong>接口，该接口需要实现两个方法：</p>
-<pre><code class="language-java">void snapshotState(FunctionSnapshotContext context) throws Exception;
-void initializeState(FunctionInitializationContext context) throws Exception;
-</code></pre>
-<p>无论什么时候执行checkpoint，都会调用snapshotState()方法。因此该方法主要定义状态的快照保存逻辑；相应地，每当用户定义的函数被初始化时（无论是函数首次初始化，还是函数实际上从更早一个检查点恢复），都会调用initializeState()方法。因此，initializeState()不仅是不同类型状态初始化的地方，而且也包含了状态恢复的逻辑。</p>
-<h2 id="sinkfunction-sample">SinkFunction Sample</h2>
-<pre><code class="language-java">public class BufferingSink implements SinkFunction&lt;Tuple2&lt;String, Integer&gt;&gt;,            CheckpointedFunction {
-
-    private final int threshold;
-
-    private transient ListState&lt;Tuple2&lt;String, Integer&gt;&gt; checkpointedState;
-
-    private List&lt;Tuple2&lt;String, Integer&gt;&gt; bufferedElements;
-
-    public BufferingSink(int threshold) {
-        this.threshold = threshold;
-        this.bufferedElements = new ArrayList&lt;&gt;();
-    }
-
-    @Override
-    public void invoke(Tuple2&lt;String, Integer&gt; value, Context contex) throws Exception {
-        bufferedElements.add(value);
-        if (bufferedElements.size() == threshold) {
-            for (Tuple2&lt;String, Integer&gt; element: bufferedElements) {
-                // send it to the sink
-            }
-            bufferedElements.clear();
-        }
-    }
-
-    @Override
-    public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        checkpointedState.clear();
-        for (Tuple2&lt;String, Integer&gt; element : bufferedElements) {
-            checkpointedState.add(element);
-        }
-    }
-
-    @Override
-    public void initializeState(FunctionInitializationContext context) throws Exception {
-        ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
-            new ListStateDescriptor&lt;&gt;(
-                &quot;buffered-elements&quot;,
-                TypeInformation.of(new TypeHint&lt;Tuple2&lt;String, Integer&gt;&gt;() {}));
-
-        checkpointedState = context.getOperatorStateStore().getListState(descriptor);
-
-        if (context.isRestored()) {
-            for (Tuple2&lt;String, Integer&gt; element : checkpointedState.get()) {
-                bufferedElements.add(element);
-            }
-        }
-    }
-}
-</code></pre>
+<p>代码片段定义了一个ValueStateDescriptor，指定状态名称为“average”，状态类型为Tuple2&lt;Long,Long&gt;，默认值为：Tuple2&lt;0L,0L&gt;</p>
+<h2 id="不同状态类型详细对比">不同状态类型详细对比</h2>
+<table>
+<thead>
+<tr>
+<th>State类型</th>
+<th>存储数据类型</th>
+<th>StateDescriptor</th>
+<th>使用</th>
+<th>操作</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ValueState<T></td>
+<td>T类型的单值状态</td>
+<td>ValueStateDescriptor<T></td>
+<td>ValueState<T> getState(ValueStateDescriptor<T>)</td>
+<td>更新：update(T);<br>获取：T value();</td>
+<td>每一个Key与T类型状态值绑定</td>
+</tr>
+<tr>
+<td>ListState<T></td>
+<td>Key上的状态值为一个列表</td>
+<td>ListStateDescriptor<T></td>
+<td>ListState<T> getListState(ListStateDescriptor<T>)</td>
+<td>追加数据：add(T)/addAll(List<T>);<br>获取状态数据列表：Iterable<T> get()</td>
+<td></td>
+</tr>
+<tr>
+<td>ReducingState<T></td>
+<td>存储一个T类型的值</td>
+<td>ReducingStateDescriptor<T></td>
+<td>ReducingState<T> getReducingState(ReducingStateDescriptor<T>)</td>
+<td>添加数据：add(T);</td>
+<td>这种状态通过用户传入的reduceFunction，每次调用add方法添加值时，会调用reduceFunction，最后合并到一个单一的状态值</td>
+</tr>
+<tr>
+<td>AggregatingState&lt;IN, OUT&gt;</td>
+<td>存储一个值</td>
+<td>AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;</td>
+<td>AggregatingState&lt;IN, OUT&gt; getAggregatingState(AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;)</td>
+<td>添加数据：add(IN)</td>
+<td>聚合State，与ReducingState不同的是，这里的聚合类型可以是不同的元素类型。每次添加值时，会调用AggregateFunction函数计算聚合结果</td>
+</tr>
+<tr>
+<td>MapState&lt;UK, UV&gt;</td>
+<td>Map</td>
+<td>MapStateDescriptor&lt;UK,UV&gt;</td>
+<td>MapState&lt;UK, UV&gt; getMapState(MapStateDescriptor&lt;UK, UV&gt;)</td>
+<td>添加：put(UK,UV)/putAll(UK,UV);<br>获取：UV get(UK);<br>遍历：Iterable&lt;Map.Entry&gt; entries()/Iterator&lt;Map.Entry&gt; iterator();</td>
+<td>key-value结构数据</td>
+</tr>
+</tbody>
+</table>
+<h1 id="keyedstate使用">KeyedState使用</h1>
+<p>##KeyedStream<br>
+KeyedState只能应用于KeyedStream，如果你想在DataStream上使用Keyed State，你需要首先指定<strong>Key</strong>，Key用于State（也用于流记录本身）的分区。<br>
+###指定Key的方式<br>
+DataStream的keyBy()方法用于指定Key，并将DataStream转换为KeyedStream。它有如下几种重载方法，官方</p>
+<blockquote>
+<p>KeySelector</p>
+<blockquote>
+<p>KeyedStream&lt;T, K&gt; keyBy(KeySelector&lt;T, K&gt; key)<br>
+通过实现KeySelector Function中的getKey()方法，自由指定Key的提取<br>
+Tuple Keys<br>
+KeyedStream&lt;T, Tuple&gt; keyBy(int... fields)<br>
+应用于数据类型为简单Tuple类型，通过Tuple下表索引指定Key，当指定多个时为组合键<br>
+Expression Keys<br>
+KeyedStream&lt;T, Tuple&gt; keyBy(String... fields)<br>
+应用于复杂的Tuple类型或POJO类型，对于POJO类型，String参数用于指定字段名</p>
+</blockquote>
+</blockquote>
+<p>Flink的数据模型并不是基于键值对的。因此，KeyedStream并不会将物理上将数据处理为键何值。Key是“虚拟的”：它被定义为在实际数据上用于指导分组操作的函数。</p>
+<p>KeyedState保存在StateBackend中</p>
 
         </div>
 
@@ -184,21 +197,12 @@ void initializeState(FunctionInitializationContext context) throws Exception;
 
         <div class="flex justify-between py-8">
           
-            <div class="prev-post">
-              <a href="https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/">
-                <h3 class="post-title">
-                  <i class="ri-arrow-left-line"></i>
-                  Flink State 之 KeyedState
-                </h3>
-              </a>
-            </div>
-          
 
           
             <div class="next-post">
-              <a href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
+              <a href="https://wangyemao-github.github.io/post/flink-state-zhi-operator-state-ying-yong/">
                 <h3 class="post-title">
-                  Flink State 之总体介绍
+                  Flink State 之 Operator State 应用
                   <i class="ri-arrow-right-line"></i>
                 </h3>
               </a>

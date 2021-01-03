@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-03T02:44:07.735Z</updated>
+    <updated>2021-01-03T12:51:53.894Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -10,6 +10,107 @@
     <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[Flink State 之 KeyedState]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/">
+        </link>
+        <updated>2021-01-03T02:44:22.000Z</updated>
+        <summary type="html"><![CDATA[<p>本文主要总结Flink State 中KeyedState，以及KeyedState的应用</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>本文主要总结Flink State 中KeyedState，以及KeyedState的应用</p>
+<!-- more -->
+<h1 id="keyedstate">KeyedState</h1>
+<p>KeyedState在KeyedStream中使用。状态跟特定Key绑定的，即KeyedStream流上的每一个Key对应一个State对象。。</p>
+<h2 id="keyedstate-支持的状态类型">KeyedState 支持的状态类型</h2>
+<p>KeyedState可以使用所有Flink支持的State类型。FoldingState跟ReducingState类似，但是已标记为废弃，不建议再使用<br>
+<img src="https://wangyemao-github.github.io/post-images/1609670108841.png" alt="" loading="lazy"></p>
+<h2 id="statedescriptor">StateDescriptor</h2>
+<p>对应于每一类State，Flink内部都设计了对应的<strong>StateDescriptor</strong>状态描述。它指定了状态的一些属性，包括：State名称，State中类型信息，序列化/反序列化器，State生存时间等。</p>
+<h3 id="valuestatedescriptor定义">ValueStateDescriptor定义</h3>
+<pre><code class="language-java">ValueStateDescriptor&lt;Tuple2&lt;Long,Long&gt;&gt; descriptor = 
+              new ValueStateDescriptor&lt;&gt;(&quot;average&quot;,
+                    TypeInformation.of(new TypeHint&lt;Tuple2&lt;Long,Long&gt;&gt;(){}),
+                    Tuple2.of(0L,0L));
+</code></pre>
+<p>代码片段定义了一个ValueStateDescriptor，指定状态名称为“average”，状态类型为Tuple2&lt;Long,Long&gt;，默认值为：Tuple2&lt;0L,0L&gt;</p>
+<h2 id="不同状态类型详细对比">不同状态类型详细对比</h2>
+<table>
+<thead>
+<tr>
+<th>State类型</th>
+<th>存储数据类型</th>
+<th>StateDescriptor</th>
+<th>使用</th>
+<th>操作</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ValueState<T></td>
+<td>T类型的单值状态</td>
+<td>ValueStateDescriptor<T></td>
+<td>ValueState<T> getState(ValueStateDescriptor<T>)</td>
+<td>更新：update(T);<br>获取：T value();</td>
+<td>每一个Key与T类型状态值绑定</td>
+</tr>
+<tr>
+<td>ListState<T></td>
+<td>Key上的状态值为一个列表</td>
+<td>ListStateDescriptor<T></td>
+<td>ListState<T> getListState(ListStateDescriptor<T>)</td>
+<td>追加数据：add(T)/addAll(List<T>);<br>获取状态数据列表：Iterable<T> get()</td>
+<td></td>
+</tr>
+<tr>
+<td>ReducingState<T></td>
+<td>存储一个T类型的值</td>
+<td>ReducingStateDescriptor<T></td>
+<td>ReducingState<T> getReducingState(ReducingStateDescriptor<T>)</td>
+<td>添加数据：add(T);</td>
+<td>这种状态通过用户传入的reduceFunction，每次调用add方法添加值时，会调用reduceFunction，最后合并到一个单一的状态值</td>
+</tr>
+<tr>
+<td>AggregatingState&lt;IN, OUT&gt;</td>
+<td>存储一个值</td>
+<td>AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;</td>
+<td>AggregatingState&lt;IN, OUT&gt; getAggregatingState(AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;)</td>
+<td>添加数据：add(IN)</td>
+<td>聚合State，与ReducingState不同的是，这里的聚合类型可以是不同的元素类型。每次添加值时，会调用AggregateFunction函数计算聚合结果</td>
+</tr>
+<tr>
+<td>MapState&lt;UK, UV&gt;</td>
+<td>Map</td>
+<td>MapStateDescriptor&lt;UK,UV&gt;</td>
+<td>MapState&lt;UK, UV&gt; getMapState(MapStateDescriptor&lt;UK, UV&gt;)</td>
+<td>添加：put(UK,UV)/putAll(UK,UV);<br>获取：UV get(UK);<br>遍历：Iterable&lt;Map.Entry&gt; entries()/Iterator&lt;Map.Entry&gt; iterator();</td>
+<td>key-value结构数据</td>
+</tr>
+</tbody>
+</table>
+<h1 id="keyedstate使用">KeyedState使用</h1>
+<p>##KeyedStream<br>
+KeyedState只能应用于KeyedStream，如果你想在DataStream上使用Keyed State，你需要首先指定<strong>Key</strong>，Key用于State（也用于流记录本身）的分区。<br>
+###指定Key的方式<br>
+DataStream的keyBy()方法用于指定Key，并将DataStream转换为KeyedStream。它有如下几种重载方法，官方</p>
+<blockquote>
+<p>KeySelector</p>
+<blockquote>
+<p>KeyedStream&lt;T, K&gt; keyBy(KeySelector&lt;T, K&gt; key)<br>
+通过实现KeySelector Function中的getKey()方法，自由指定Key的提取<br>
+Tuple Keys<br>
+KeyedStream&lt;T, Tuple&gt; keyBy(int... fields)<br>
+应用于数据类型为简单Tuple类型，通过Tuple下表索引指定Key，当指定多个时为组合键<br>
+Expression Keys<br>
+KeyedStream&lt;T, Tuple&gt; keyBy(String... fields)<br>
+应用于复杂的Tuple类型或POJO类型，对于POJO类型，String参数用于指定字段名</p>
+</blockquote>
+</blockquote>
+<p>Flink的数据模型并不是基于键值对的。因此，KeyedStream并不会将物理上将数据处理为键何值。Key是“虚拟的”：它被定义为在实际数据上用于指导分组操作的函数。</p>
+<p>KeyedState保存在StateBackend中</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Flink State 之 Operator State 应用]]></title>
         <id>https://wangyemao-github.github.io/post/flink-state-zhi-operator-state-ying-yong/</id>
