@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609240109126">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1609641534428">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1609240109126" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1609641534428" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -106,8 +106,22 @@
   <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${0 * 0.2}s` }">
     
     <div class="content">
+      <a href="https://wangyemao-github.github.io/post/flink-state-zhi-operator-state-ying-yong/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink State 之 Operator State 应用</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        <p>上文已经说到：Flink中，根据数据集是否根据Key进行分区，将状态分为Keyde State和Operator State两种类型。本文主要关注Operator State以及Operator State相关应用。</p>
+
+      </div>
+      <div class="text-gray-400 text-sm font-light">2020-12-29 / 4 min read</div>
+    </div>
+  </section>
+
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${1 * 0.2}s` }">
+    
+    <div class="content">
       <a href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
-        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink State 总体介绍</h2>
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink State 之总体介绍</h2>
       </a>
       <div class="post-abstract text-gray-700 font-light my-4">
         <p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
@@ -117,7 +131,7 @@
     </div>
   </section>
 
-  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${1 * 0.2}s` }">
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${2 * 0.2}s` }">
     
       <a href="https://wangyemao-github.github.io/post/hello-gridea/" class="feature-image-wrapper bg-gray-100 rounded-lg flex-shrink-0 mr-8 w-full h-56 h-32 md:w-56 md:h-40">
         <div class="post-feature-image lazy w-full h-56 h-32 md:w-56 md:h-40" data-bg="'https://wangyemao-github.github.io/post-images/hello-gridea.png'">

@@ -34,9 +34,16 @@
           </p>
           <div class="toc-container hidden lg:block">
             <ul class="markdownIt-TOC">
-<li>
+<li><a href="#operator-state">Operator State</a>
 <ul>
-<li><a href="#%E7%89%B9%E6%80%A7">特性👇</a></li>
+<li><a href="#%E6%94%AF%E6%8C%81%E7%9A%84%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B">支持的数据类型</a></li>
+<li><a href="#%E9%87%8D%E5%88%86%E5%B8%83%E6%9C%BA%E5%88%B6">重分布机制</a></li>
+</ul>
+</li>
+<li><a href="#operator-state-%E5%BA%94%E7%94%A8">Operator State 应用</a>
+<ul>
+<li><a href="#%E5%A6%82%E4%BD%95%E5%88%9D%E5%A7%8B%E5%8C%96%E4%B8%80%E4%B8%AA%E7%8A%B6%E6%80%81state">如何初始化一个状态(State)</a></li>
+<li><a href="#sinkfunction-sample">SinkFunction Sample</a></li>
 </ul>
 </li>
 </ul>
@@ -85,57 +92,108 @@
 <div class="mask" onclick="closeMenu()">
 </div>
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
-        <h1 class="text-3xl font-bold lg:mt-16">Hello Gridea</h1>
+        <h1 class="text-3xl font-bold lg:mt-16">Flink State 之 Operator State 应用</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2018-12-12 / 2 min read
+          2020-12-29 / 4 min read
         </div>
-        
-          <img class="post-feature-image rounded-lg mx-auto my-4" src="https://wangyemao-github.github.io/post-images/hello-gridea.png" alt="">
         
         <div class="post-content yue">
-          <p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
+          <p>上文已经说到：Flink中，根据数据集是否根据Key进行分区，将状态分为Keyde State和Operator State两种类型。本文主要关注Operator State以及Operator State相关应用。</p>
+<!-- more -->  
+<h1 id="operator-state">Operator State</h1>
+<p>Operator State，也称作non-keyed State。每一个Operator State与一个并行的Operator实例绑定，每个Operator实例中都持有所有数据元素的一部分状态。<br>
+在典型的Flink有状态应用中，并不需要用到Operator State。它主要是作为一种特殊类型的状态，应用于Source/Sink的实现，以及在没有键进行状态分区的场景。</p>
+<h2 id="支持的数据类型">支持的数据类型</h2>
+<p>目前Operator State只支持使用<strong>ListState</strong></p>
+<h2 id="重分布机制">重分布机制</h2>
+<p>当并行度改变时，Operator State接口支持在并行的操作实例之间重分布State，并且支持多种重分布方案：</p>
+<ul>
+<li>均匀重分布：每一个并行Operator都返回一个状态列表（List）。整个状态空间逻辑上就是所有状态列表的并集。在恢复/重分布阶段，整个状态列表根据并行操作数目均分为子状态列表。每一个并行操作分配一个子状态列表，子状态列表可能为空，也可能包含一个或多个元素。</li>
+<li>合并重分布：这种方式将状态的划分交给用户，与均匀重分布方式相比具有更好的灵活性。在恢复/重分布阶段，每一个并行操作都获得了完整的一份状态列表。如果状态基数很大，不建议使用这种方式。因为Checkpoint 元数据会存储每个列表项的偏移量，这可能导致RPC帧大小或内存不足错误。</li>
+</ul>
+<h1 id="operator-state-应用">Operator State 应用</h1>
+<h2 id="如何初始化一个状态state">如何初始化一个状态(State)</h2>
+<p>在Flink中，使用状态描述<strong>StateDescriptor</strong>来初始化State，它包含了State的名称以及保存的State值的类型信息</p>
+<pre><code class="language-java">ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
+    new ListStateDescriptor&lt;&gt;(
+        &quot;buffered-elements&quot;,
+        TypeInformation.of(new TypeHint&lt;Tuple2&lt;String,Integer&gt;&gt;() {}));
+</code></pre>
+<p>上面的代码片段中定义了一个State名称为：buffered-elements，State值类型为：Tuple2&lt;String,Integer&gt; 的状态描述<br>
+##CheckpointedFunction<br>
+要使用Operator State，有状态的函数需要实现<strong>CheckpointedFunction</strong>接口，该接口需要实现两个方法：</p>
+<pre><code class="language-java">void snapshotState(FunctionSnapshotContext context) throws Exception;
+void initializeState(FunctionInitializationContext context) throws Exception;
+</code></pre>
+<p>无论什么时候执行checkpoint，都会调用snapshotState()方法。因此该方法主要定义状态的快照保存逻辑；相应地，每当用户定义的函数被初始化时（无论是函数首次初始化，还是函数实际上从更早一个检查点恢复），都会调用initializeState()方法。因此，initializeState()不仅是不同类型状态初始化的地方，而且也包含了状态恢复的逻辑。</p>
+<h2 id="sinkfunction-sample">SinkFunction Sample</h2>
+<pre><code class="language-java">public class BufferingSink implements SinkFunction&lt;Tuple2&lt;String, Integer&gt;&gt;,            CheckpointedFunction {
+
+    private final int threshold;
+
+    private transient ListState&lt;Tuple2&lt;String, Integer&gt;&gt; checkpointedState;
+
+    private List&lt;Tuple2&lt;String, Integer&gt;&gt; bufferedElements;
+
+    public BufferingSink(int threshold) {
+        this.threshold = threshold;
+        this.bufferedElements = new ArrayList&lt;&gt;();
+    }
+
+    @Override
+    public void invoke(Tuple2&lt;String, Integer&gt; value, Context contex) throws Exception {
+        bufferedElements.add(value);
+        if (bufferedElements.size() == threshold) {
+            for (Tuple2&lt;String, Integer&gt; element: bufferedElements) {
+                // send it to the sink
+            }
+            bufferedElements.clear();
+        }
+    }
+
+    @Override
+    public void snapshotState(FunctionSnapshotContext context) throws Exception {
+        checkpointedState.clear();
+        for (Tuple2&lt;String, Integer&gt; element : bufferedElements) {
+            checkpointedState.add(element);
+        }
+    }
+
+    @Override
+    public void initializeState(FunctionInitializationContext context) throws Exception {
+        ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
+            new ListStateDescriptor&lt;&gt;(
+                &quot;buffered-elements&quot;,
+                TypeInformation.of(new TypeHint&lt;Tuple2&lt;String, Integer&gt;&gt;() {}));
+
+        checkpointedState = context.getOperatorStateStore().getListState(descriptor);
+
+        if (context.isRestored()) {
+            for (Tuple2&lt;String, Integer&gt; element : checkpointedState.get()) {
+                bufferedElements.add(element);
+            }
+        }
+    }
+}
+</code></pre>
 
         </div>
 
-        
-          <a class="animated fadeInUp p-2 items-center text-sm text-gray-700 border hover:bg-gray-300 leading-none rounded-full flex lg:inline-flex m-4 " href="https://wangyemao-github.github.io/tag/z7rfNTXh3/">
-            <span class="flex-auto">Gridea</span>
-          </a>
         
 
 
         <div class="flex justify-between py-8">
           
-            <div class="prev-post">
+
+          
+            <div class="next-post">
               <a href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
                 <h3 class="post-title">
-                  <i class="ri-arrow-left-line"></i>
                   Flink State 之总体介绍
+                  <i class="ri-arrow-right-line"></i>
                 </h3>
               </a>
             </div>
-          
-
           
         </div>
 
