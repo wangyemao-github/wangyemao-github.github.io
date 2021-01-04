@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-03T12:51:53.894Z</updated>
+    <updated>2021-01-04T01:39:18.813Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -417,6 +417,9 @@ public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
 <li>只要MaxParallelism不变，整个Key空间的Key-Group划分情况是不会变更的</li>
 <li>当并行度变更时，基于Key-Group，将Key-Group重新分配到并行Task中，并且这种重新分配不是一个Shuffle，Key-Group归属的并行Task的变更很小。</li>
 </ol>
+<p>参考资料：<br>
+https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/state.html<br>
+https://ci.apache.org/projects/flink/flink-docs-release-1.12/ops/state/state_backends.html</p>
 ]]></content>
     </entry>
     <entry>
