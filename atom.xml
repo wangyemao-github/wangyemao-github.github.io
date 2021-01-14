@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-04T02:26:18.746Z</updated>
+    <updated>2021-01-14T11:06:25.242Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -10,6 +10,302 @@
     <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[Flink Time]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-time/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-time/">
+        </link>
+        <updated>2021-01-13T01:47:03.000Z</updated>
+        <content type="html"><![CDATA[<p>在Flink中有状态流式处理中，Time在计算中承担着一定的作用。比如：进行时间序列的分析，基于特定时间段的聚合（window操作），以及基于发生时间的事件处理等。本文主要讲解Flink中时间概念，及相关应用</p>
+<h1 id="flink-time">Flink Time</h1>
+<h2 id="time-notition">Time notition</h2>
+<p>Flink流程序中支持多种不同的时间概念，包括：Processing Time，Event Time 和 Ingestion Time。下面为官网的说明图及解释：<br>
+<img src="https://wangyemao-github.github.io/post-images/1610504879179.png" alt="" loading="lazy"></p>
+<ul>
+<li>Processing Time<br>
+Processing Time 是事件在执行相关操作时，所在机器的系统时间。当流程序在Processing Time上运行时，所有基于时间(比如windows操作)都将使用当时机器的系统时间。每小时处理时间窗口将包括在系统时钟指示整小时之间到达特定操作的所有记录。例如：如果应用程序在上午9:15开始运行，那第一个小时Processing Time 窗口将包括从上午9:15到上午10:00的事件；下一个窗口包含从上午10:00到11:00的事件。<br>
+Processing Time是最简单的时间概念。它不需要流和机器之间的协调，并且提供了最好的性能及最低的延迟。但是，由于会受到事件到达系统的速度，以及事件在系统内操作流动速度的影响，在分布式和异步环境下，基于Processing Time的流程序不能提供确定性的结果</li>
+<li>Event Time<br>
+Event Time 是指事件的发生时间，通常事件到达Flink之前本身就携带了这个时间。在基于事件时间的流程序中，时间取决于数据，跟机器系统时间无关。使用Event Time，需要指定如何提取事件时间，以及如何生成Event Time watermark。<br>
+在理想情况下，无论事件什么时候到达，无论事件如何乱序到达，基于Event Time的流程序总会得到一致且确定的结果。但事实上，除非事件按照既定的顺序到达，否则流程序会因为需要等待一些无序的事件而产生延迟。由于只能等待一段有限的时间，因此很难保障基于Event Time的流程序总是得到一致且确定性的结果。</li>
+<li>Ingestion Time<br>
+Ingestion Time 是事件进入Flink 的时间。在源操作处，每个事件将当前机器的系统时间作为时间戳，后续的所有基于时间的操作(window操作)都将使用这个时间戳。<br>
+<strong>三个不同时间概念对比</strong></li>
+<li>与Event Time 相比，Ingestion Time 无法处理任何无序或延迟事件，因为时间都是在进入Flink源时，统一分配的机器系统时间，事件的顺序已被重新定义；但是使用Ingestion Time的流程序由Flink自动分配时间戳，自动生成水印，不需要用户代码额外指定</li>
+<li>与Processing Time 相比，Ingestion Time稍微更贵一些，但结果更可预测。</li>
+</ul>
+<h2 id="设定时间特性">设定时间特性</h2>
+<p>下面的代码片段为在Flink中设定不同时间特性的：</p>
+<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+</code></pre>
+<h1 id="watermarks">WaterMarks</h1>
+<p>支持Event Time的流程序中，由于各种原因，不可能完全保证事件都按照既定的顺序到达，通常事件达到都是无序的并且存在延迟。那基于时间的操作，比如window操作就需要一种方法来衡量时间的进度。在Flink中这种衡量Event Time进度的机制就称作<strong>watermarks</strong>。<br>
+在Flink中，watermarks作为数据流的一部分在流程序中流动，并携带了一个时间戳<strong>t</strong>。<strong>watermark(t)<strong>表明所有时间戳&lt;=t的事件都已经到达。<br>
+下图为有序事件流和无序事件流中watermark：<br>
+<img src="https://wangyemao-github.github.io/post-images/1610506420248.png" alt="" loading="lazy"><br>
+<img src="https://wangyemao-github.github.io/post-images/1610506426262.png" alt="" loading="lazy"><br>
+在有序事件流中，watermark只是事件流中简单地周期性标记。<br>
+在无序事件流中，watermark充当着很重要的作用。一旦</strong>watermark(t)<strong>到达某个操作，操作将使用watermark携带的时间戳更新内部</strong>event time clock</strong>。当满足特定条件时触发操作。<br>
+**Time &amp; watermark **</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Processing Time</th>
+<th>Event Time</th>
+<th>Ingestion Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>watermark</td>
+<td>不需要</td>
+<td>用户程序指定</td>
+<td>系统自动生成</td>
+</tr>
+</tbody>
+</table>
+<h1 id="time-characteristic-watermark-生成-源码分析">Time Characteristic &amp; watermark 生成 源码分析</h1>
+<h2 id="基于ingestion-time-的时间戳分配和水印生成">基于Ingestion Time 的时间戳分配和水印生成</h2>
+<p>在Flink流程序中，当指定时间特性为Ingestion Time之后，在源操作处，对于到来的每个事件，将使用当时的机器系统时间作为事件时间戳并自动生成水印。<br>
+在Flink中，源操作处如何发送数据（提取时间戳）、如何生成水印都是由<strong>SourceFunction.SourceContext</strong>接口中定义的</p>
+<pre><code class="language-java">public interface SourceFunction&lt;T&gt; extends Function, Serializable {
+    /**
+     *  Interface that source functions use to emit elements, and possibly watermarks   
+     */
+    interface SourceContext&lt;T&gt; {
+        //Emits one element from the source, without attaching a timestamp
+        void collect(T element);
+        // Emits one element from the source, and attaches the given timestamp
+        void collectWithTimestamp(T element, long timestamp);
+        //Emits the given {@link Watermark}
+        void emitWatermark(Watermark mark);
+    }
+}
+</code></pre>
+<p>针对不同的时间特性(Time Characteristic)，StreamSourceContext定义了三种不同的SourceContext实现。NonTimeStampContext、AutomaticWatermarkContext、ManualWatermarkContext。其中后两者都归属于WatermarkContext。</p>
+<pre><code class="language-java">//Source contexts for various stream time characteristics
+public class StreamSourceContexts {
+    /**
+     * Depending on the {@link TimeCharacteristic}, this method will return
+     * the adequate {@link    org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext}
+    **/ 
+    public static &lt;OUT&gt; SourceFunction.SourceContext&lt;OUT&gt; getSourceContext(
+			TimeCharacteristic timeCharacteristic,
+			ProcessingTimeService processingTimeService,
+			Object checkpointLock,
+			StreamStatusMaintainer streamStatusMaintainer,
+			Output&lt;StreamRecord&lt;OUT&gt;&gt; output,
+			long watermarkInterval,
+			long idleTimeout){
+                final SourceFunction.SourceContext&lt;OUT&gt; ctx;
+                switch (timeCharacteristic) {
+			case EventTime:
+				ctx = new ManualWatermarkContext&lt;&gt;(
+					output,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+				break;
+			case IngestionTime:
+				ctx = new AutomaticWatermarkContext&lt;&gt;(
+					output,
+					watermarkInterval,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+				break;
+			case ProcessingTime:
+				ctx = new NonTimestampContext&lt;&gt;(checkpointLock, output);
+				break;
+			default:
+				throw new IllegalArgumentException(String.valueOf(timeCharacteristic));
+            }
+}
+</code></pre>
+<p>从上面的代码片段中可见，不同的时间特性（TimeCharacteristic）对应实例化的SourceContext对应关系为：ProcessTime对应NonTimestampContext；EventTime对应ManualWatermarkContext；IngestionTime对应AutomaticWatermarkContext。</p>
+<h2 id="processingtime-时间戳-和水印生成">ProcessingTime &amp; 时间戳 和水印生成</h2>
+<p>对于指定Processing Time 情况，时间戳与水印如何生成，具体看<strong>NonTimestampContext</strong>如何实现：</p>
+<pre><code class="language-java">/**
+ *  A source context that attached {@code -1} as a timestamp to all records,   *   and that does not forward watermarks
+ **/
+private static class NonTimestampContext&lt;T&gt; implements SourceFunction.SourceContext&lt;T&gt;{
+
+    public void collect(T element) {
+			synchronized (lock) {
+				output.collect(reuse.replace(element));
+			}
+	}
+    public void collectWithTimestamp(T element, long timestamp) {
+			// ignore the timestamp
+			collect(element);
+	}
+    public void emitWatermark(Watermark mark) {
+			// do nothing
+	}
+}
+</code></pre>
+<p>NonTimestampContext没有为事件赋予时间戳，对于传入时间戳的情况也会将时间戳忽略。另外，发送水印方法为空实现，即不会向下游发送Watermark。<br>
+事实上，使用ProcessingTime时，生成时间戳和向下游发送水印并没有实际意义。对于时间相关的操作，各个计算节点会根据机器的系统时间定义触发器，触发执行时间相关操作(window类操作)，而不是根据watermark来触发。</p>
+<h2 id="ingestiontime-时间戳-和水印生成">IngestionTime &amp; 时间戳 和水印生成</h2>
+<p>对于IngestionTime情况，时间戳生成及水印生成具体看<strong>AutomaticWatermarkContext</strong>实现。另外前面说到AutomaticWatermarkContext和ManualWatermarkContext都归属于WatermarkContext，它们都会继承WatermarkContext。此处首先会大概说明下<strong>WatermarkContext</strong>具体实现了什么功能：<br>
+WatermarkContext定义了与watermark相关的行为(因为不是本文的重点，此处简要说明)：</p>
+<ul>
+<li>负责管理当前的StreamStatus，确保StreamStatus向下游传递；</li>
+<li>负责空闲监测逻辑，当超过设定的时间间隔还没有收到数据或者watermark时，会认为Task处于空闲状态。空闲监测逻辑是很有意义上的：如果某个源操作Task标志为空闲状态，后续的Checkpoint中不需要再等待该Taskbarrier对齐，不需要耗费资源或时间等待</li>
+</ul>
+<h3 id="如何生成事件时间戳">如何生成事件时间戳</h3>
+<p>回到AutomaticWatermarkContext，我们看下在IngestionTime情况，系统是如何自动赋值时间戳，如何自动生成watermark，首先看下时间戳：</p>
+<pre><code class="language-java">protected void processAndCollect(T element) {
+			lastRecordTime = this.timeService.getCurrentProcessingTime();
+			output.collect(reuse.replace(element, lastRecordTime));
+
+			// this is to avoid lock contention in the lockingObject by
+			// sending the watermark before the firing of the watermark
+			// emission task.
+			if (lastRecordTime &gt; nextWatermarkTime) {
+				// in case we jumped some watermarks, recompute the next watermark time
+				final long watermarkTime = lastRecordTime - (lastRecordTime % watermarkInterval);
+				nextWatermarkTime = watermarkTime + watermarkInterval;
+				output.emitWatermark(new Watermark(watermarkTime));
+
+				// we do not need to register another timer here
+				// because the emitting task will do so.
+			}
+	}
+
+    protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			processAndCollect(element);
+	}
+</code></pre>
+<p>可见，两个向下游发送数据的方法最终都是执行processAndCollect(element)方法。对于每一条数据记录，都会取当前的ProcessingTime(机器系统时间)作为事件时间戳，然后发送到下游。<br>
+###如何生成水印<br>
+在AutomaticWatermarkContext的构造方法中会初始化两个重要的属性：</p>
+<pre><code class="language-java">private AutomaticWatermarkContext(
+				final Output&lt;StreamRecord&lt;T&gt;&gt; output,
+				final long watermarkInterval,
+				final ProcessingTimeService timeService,
+				final Object checkpointLock,
+				final StreamStatusMaintainer streamStatusMaintainer,
+				final long idleTimeout) {
+			super(timeService, checkpointLock, streamStatusMaintainer, idleTimeout);
+            
+			this.watermarkInterval = watermarkInterval;
+			long now = this.timeService.getCurrentProcessingTime();
+			this.nextWatermarkTimer = this.timeService.registerTimer(now + watermarkInterval,
+				new WatermarkEmittingTask(this.timeService, checkpointLock, output));
+		}
+</code></pre>
+<p><strong>watermarkInterval</strong>指定了watermark生成的间隔周期，具体的取值：</p>
+<pre><code class="language-java">watermarkInterval = getRuntimeContext().getExecutionConfig().getAutoWatermarkInterval(); 
+```默认情况下，间隔周期为200ms，当然可以调用ExecutionConfig#setAutoWatermarkInterval（long interval）重新指定
+**nextWatermarkTimer**指定了一个定时器，间隔**watermarkInterval**时间之后会调用执行**WatermarkEmittingTask**，下面为从WatermarkEmittingTask中摘取的重要代码片段：
+``` java
+ private class WatermarkEmittingTask implements ProcessingTimeCallback{
+
+     public void onProcessingTime(long timestamp) {
+				final long currentTime = timeService.getCurrentProcessingTime();
+                synchronized (lock) {
+					// we should continue to automatically emit watermarks if we are active
+					if (streamStatusMaintainer.getStreamStatus().isActive()) {
+						if (idleTimeout != -1 &amp;&amp; currentTime - lastRecordTime &gt; idleTimeout) {
+						} else if (currentTime &gt; nextWatermarkTime) {
+							// align the watermarks across all machines. this will ensure that we don't have watermarks that creep along at different intervals because the machine clocks are out of sync 
+							final long watermarkTime = currentTime - (currentTime % watermarkInterval);
+							output.emitWatermark(new Watermark(watermarkTime));
+							nextWatermarkTime = watermarkTime + watermarkInterval;
+						}
+					}
+				}
+				long nextWatermark = currentTime + watermarkInterval;
+				nextWatermarkTimer = this.timeService.registerTimer(
+						nextWatermark, new WatermarkEmittingTask(this.timeService, lock, output));
+			}
+ }
+</code></pre>
+<p>可见，在<strong>AutomaticWatermarkContext</strong>中使用一个定时器，每当注册触发时间到来时，会自动向下游发送水印，并且会持续地自动注册下一次触发时间。触发时间为：（作业启动时刻+watermark周期*n）</p>
+<h2 id="event-time-时间戳和水印生成">Event Time &amp; 时间戳和水印生成</h2>
+<p>最后，我们看一下基于Event Time的流程序，在源操作处，是如何处理事件时间戳和水印生成的。具体的实现在<strong>ManualWatermarkContext</strong>：</p>
+<pre><code class="language-java">private static class ManualWatermarkContext&lt;T&gt; extends WatermarkContext&lt;T&gt;{
+    protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			output.collect(reuse.replace(element, timestamp));
+	}
+    protected void processAndEmitWatermark(Watermark mark) {
+			output.emitWatermark(mark);
+	}
+    protected boolean allowWatermark(Watermark mark) {
+			return true;
+	}
+}
+</code></pre>
+<p>从上面代码片段中可以看出：在使用Event Time的情况下，ManualWatermarkContext不会额外赋值时间戳，也不会生成watermark。对于数据和水印都只做透传。<br>
+那么，这种情况下透传的时间戳和水印是从哪里来的呢？答案就是UDF(User Defined Function)。具体可以去看下<strong>StreamSource</strong>的run()方法：在run方法中根据设置的时间特性创建StreamSourceContexts ctx之后，会将ctx传给userFunction：</p>
+<pre><code class="language-java">this.ctx = StreamSourceContexts.getSourceContext(
+			timeCharacteristic,
+			getProcessingTimeService(),
+			lockingObject,
+			streamStatusMaintainer,
+			collector,
+			watermarkInterval,
+			-1);
+userFunction.run(ctx);
+</code></pre>
+<h2 id="flink-kafka-source-时间戳和水印生成">Flink Kafka Source 时间戳和水印生成</h2>
+<p>本节以Flink-source-connector中KafkaConsumer 为例，说明在设置不同时间特性情况下，时间戳和水印的生成机制。<br>
+对于消费kafka的每条记录会调用emitRecord()方法发出数据，该方法中会同时处理时间戳和水印生成：</p>
+<pre><code class="language-java">//emit the actual record. this also updates offset state atomically
+//and deals with timestamps and watermark generation
+protected void emitRecord(
+			T record,
+			KafkaTopicPartitionState&lt;TopicPartition&gt; partition,
+			long offset,
+			ConsumerRecord&lt;?, ?&gt; consumerRecord) throws Exception {
+		// we attach the Kafka 0.10 timestamp here
+		emitRecordWithTimestamp(record, partition, offset, consumerRecord.timestamp());
+}
+</code></pre>
+<p>在emitRecord()方法中调用了emitRecordWithTimestamp()方法，并且传入的时间戳为：consumerRecord.timestamp()。也就是从kafka中消费出来的数据所带的时间戳。具体看下**emitRecordWithTimestamp()**方法片段：</p>
+<pre><code class="language-java">protected void emitRecordWithTimestamp(
+			T record, KafkaTopicPartitionState&lt;KPH&gt; partitionState, long offset, long timestamp) throws Exception {
+		if (record != null) {
+			if (timestampWatermarkMode == NO_TIMESTAMPS_WATERMARKS) {
+				// fast path logic, in case there are no watermarks generated in the fetcher  emit the record, using the checkpoint lock to guarantee atomicity of record emission and offset state update
+				synchronized (checkpointLock) {
+					sourceContext.collectWithTimestamp(record, timestamp);
+					partitionState.setOffset(offset);
+				}
+			} else if (timestampWatermarkMode == PERIODIC_WATERMARKS) {
+				emitRecordWithTimestampAndPeriodicWatermark(record, partitionState, offset, timestamp);
+			} else {
+				emitRecordWithTimestampAndPunctuatedWatermark(record, partitionState, offset, timestamp);
+			}
+		} 
+</code></pre>
+<p>从上面代码片段可见：根据timestampWatermarkMode的不同取值会调用不同的方法发出数据。首先看下<strong>timestampWatermarkMode</strong>取值：</p>
+<pre><code class="language-java">if (watermarksPeriodic == null) {
+			if (watermarksPunctuated == null) {
+				// simple case, no watermarks involved
+				timestampWatermarkMode = NO_TIMESTAMPS_WATERMARKS;
+			} else {
+				timestampWatermarkMode = PUNCTUATED_WATERMARKS;
+			}
+		} else {
+			if (watermarksPunctuated == null) {
+				timestampWatermarkMode = PERIODIC_WATERMARKS;
+			} else {
+				throw new IllegalArgumentException(&quot;Cannot have both periodic and punctuated watermarks&quot;);
+			}
+}
+</code></pre>
+<p>当watermarksPeriodic和watermarksPunctuated都为null时，timestampWatermarkMode=NO_TIMESTAMPS_WATERMARKS；当watermarksPunctuated!=null时，timestampWatermarkMode = PUNCTUATED_WATERMARKS；否则当watermarksPeriodic!=null时，timestampWatermarkMode = PERIODIC_WATERMARKS。默认情况下timestampWatermarkMode=NO_TIMESTAMPS_WATERMARKS。对于默认情况，直接调用sourceContext.collectWithTimestamp(record, timestamp)将数据和时间戳发往下游。<br>
+参考前面所讲</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Flink State 之 KeyedState]]></title>
         <id>https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/</id>
@@ -421,38 +717,6 @@ public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
 https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/state.html<br>
 https://ci.apache.org/projects/flink/flink-docs-release-1.12/ops/state/state_backends.html<br>
 http://www.54tianzhisheng.cn/2019/06/18/flink-state/</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Hello Gridea]]></title>
-        <id>https://wangyemao-github.github.io/post/hello-gridea/</id>
-        <link href="https://wangyemao-github.github.io/post/hello-gridea/">
-        </link>
-        <updated>2018-12-11T16:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="http://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
 ]]></content>
     </entry>
 </feed>

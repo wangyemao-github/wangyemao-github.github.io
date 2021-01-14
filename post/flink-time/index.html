@@ -1,0 +1,522 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610583427141">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610583427141" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#flink-time">Flink Time</a>
+<ul>
+<li><a href="#time-notition">Time notition</a></li>
+<li><a href="#%E8%AE%BE%E5%AE%9A%E6%97%B6%E9%97%B4%E7%89%B9%E6%80%A7">设定时间特性</a></li>
+</ul>
+</li>
+<li><a href="#watermarks">WaterMarks</a></li>
+<li><a href="#time-characteristic-watermark-%E7%94%9F%E6%88%90-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90">Time Characteristic &amp; watermark 生成 源码分析</a>
+<ul>
+<li><a href="#%E5%9F%BA%E4%BA%8Eingestion-time-%E7%9A%84%E6%97%B6%E9%97%B4%E6%88%B3%E5%88%86%E9%85%8D%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">基于Ingestion Time 的时间戳分配和水印生成</a></li>
+<li><a href="#processingtime-%E6%97%B6%E9%97%B4%E6%88%B3-%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">ProcessingTime &amp; 时间戳 和水印生成</a></li>
+<li><a href="#ingestiontime-%E6%97%B6%E9%97%B4%E6%88%B3-%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">IngestionTime &amp; 时间戳 和水印生成</a>
+<ul>
+<li><a href="#%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%97%B4%E6%88%B3">如何生成事件时间戳</a></li>
+</ul>
+</li>
+<li><a href="#event-time-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Event Time &amp; 时间戳和水印生成</a></li>
+<li><a href="#flink-kafka-source-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Flink Kafka Source 时间戳和水印生成</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Flink Time</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-13 / 13 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>在Flink中有状态流式处理中，Time在计算中承担着一定的作用。比如：进行时间序列的分析，基于特定时间段的聚合（window操作），以及基于发生时间的事件处理等。本文主要讲解Flink中时间概念，及相关应用</p>
+<h1 id="flink-time">Flink Time</h1>
+<h2 id="time-notition">Time notition</h2>
+<p>Flink流程序中支持多种不同的时间概念，包括：Processing Time，Event Time 和 Ingestion Time。下面为官网的说明图及解释：<br>
+<img src="https://wangyemao-github.github.io/post-images/1610504879179.png" alt="" loading="lazy"></p>
+<ul>
+<li>Processing Time<br>
+Processing Time 是事件在执行相关操作时，所在机器的系统时间。当流程序在Processing Time上运行时，所有基于时间(比如windows操作)都将使用当时机器的系统时间。每小时处理时间窗口将包括在系统时钟指示整小时之间到达特定操作的所有记录。例如：如果应用程序在上午9:15开始运行，那第一个小时Processing Time 窗口将包括从上午9:15到上午10:00的事件；下一个窗口包含从上午10:00到11:00的事件。<br>
+Processing Time是最简单的时间概念。它不需要流和机器之间的协调，并且提供了最好的性能及最低的延迟。但是，由于会受到事件到达系统的速度，以及事件在系统内操作流动速度的影响，在分布式和异步环境下，基于Processing Time的流程序不能提供确定性的结果</li>
+<li>Event Time<br>
+Event Time 是指事件的发生时间，通常事件到达Flink之前本身就携带了这个时间。在基于事件时间的流程序中，时间取决于数据，跟机器系统时间无关。使用Event Time，需要指定如何提取事件时间，以及如何生成Event Time watermark。<br>
+在理想情况下，无论事件什么时候到达，无论事件如何乱序到达，基于Event Time的流程序总会得到一致且确定的结果。但事实上，除非事件按照既定的顺序到达，否则流程序会因为需要等待一些无序的事件而产生延迟。由于只能等待一段有限的时间，因此很难保障基于Event Time的流程序总是得到一致且确定性的结果。</li>
+<li>Ingestion Time<br>
+Ingestion Time 是事件进入Flink 的时间。在源操作处，每个事件将当前机器的系统时间作为时间戳，后续的所有基于时间的操作(window操作)都将使用这个时间戳。<br>
+<strong>三个不同时间概念对比</strong></li>
+<li>与Event Time 相比，Ingestion Time 无法处理任何无序或延迟事件，因为时间都是在进入Flink源时，统一分配的机器系统时间，事件的顺序已被重新定义；但是使用Ingestion Time的流程序由Flink自动分配时间戳，自动生成水印，不需要用户代码额外指定</li>
+<li>与Processing Time 相比，Ingestion Time稍微更贵一些，但结果更可预测。</li>
+</ul>
+<h2 id="设定时间特性">设定时间特性</h2>
+<p>下面的代码片段为在Flink中设定不同时间特性的：</p>
+<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
+env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+</code></pre>
+<h1 id="watermarks">WaterMarks</h1>
+<p>支持Event Time的流程序中，由于各种原因，不可能完全保证事件都按照既定的顺序到达，通常事件达到都是无序的并且存在延迟。那基于时间的操作，比如window操作就需要一种方法来衡量时间的进度。在Flink中这种衡量Event Time进度的机制就称作<strong>watermarks</strong>。<br>
+在Flink中，watermarks作为数据流的一部分在流程序中流动，并携带了一个时间戳<strong>t</strong>。<strong>watermark(t)<strong>表明所有时间戳&lt;=t的事件都已经到达。<br>
+下图为有序事件流和无序事件流中watermark：<br>
+<img src="https://wangyemao-github.github.io/post-images/1610506420248.png" alt="" loading="lazy"><br>
+<img src="https://wangyemao-github.github.io/post-images/1610506426262.png" alt="" loading="lazy"><br>
+在有序事件流中，watermark只是事件流中简单地周期性标记。<br>
+在无序事件流中，watermark充当着很重要的作用。一旦</strong>watermark(t)<strong>到达某个操作，操作将使用watermark携带的时间戳更新内部</strong>event time clock</strong>。当满足特定条件时触发操作。<br>
+**Time &amp; watermark **</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Processing Time</th>
+<th>Event Time</th>
+<th>Ingestion Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>watermark</td>
+<td>不需要</td>
+<td>用户程序指定</td>
+<td>系统自动生成</td>
+</tr>
+</tbody>
+</table>
+<h1 id="time-characteristic-watermark-生成-源码分析">Time Characteristic &amp; watermark 生成 源码分析</h1>
+<h2 id="基于ingestion-time-的时间戳分配和水印生成">基于Ingestion Time 的时间戳分配和水印生成</h2>
+<p>在Flink流程序中，当指定时间特性为Ingestion Time之后，在源操作处，对于到来的每个事件，将使用当时的机器系统时间作为事件时间戳并自动生成水印。<br>
+在Flink中，源操作处如何发送数据（提取时间戳）、如何生成水印都是由<strong>SourceFunction.SourceContext</strong>接口中定义的</p>
+<pre><code class="language-java">public interface SourceFunction&lt;T&gt; extends Function, Serializable {
+    /**
+     *  Interface that source functions use to emit elements, and possibly watermarks   
+     */
+    interface SourceContext&lt;T&gt; {
+        //Emits one element from the source, without attaching a timestamp
+        void collect(T element);
+        // Emits one element from the source, and attaches the given timestamp
+        void collectWithTimestamp(T element, long timestamp);
+        //Emits the given {@link Watermark}
+        void emitWatermark(Watermark mark);
+    }
+}
+</code></pre>
+<p>针对不同的时间特性(Time Characteristic)，StreamSourceContext定义了三种不同的SourceContext实现。NonTimeStampContext、AutomaticWatermarkContext、ManualWatermarkContext。其中后两者都归属于WatermarkContext。</p>
+<pre><code class="language-java">//Source contexts for various stream time characteristics
+public class StreamSourceContexts {
+    /**
+     * Depending on the {@link TimeCharacteristic}, this method will return
+     * the adequate {@link    org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext}
+    **/ 
+    public static &lt;OUT&gt; SourceFunction.SourceContext&lt;OUT&gt; getSourceContext(
+			TimeCharacteristic timeCharacteristic,
+			ProcessingTimeService processingTimeService,
+			Object checkpointLock,
+			StreamStatusMaintainer streamStatusMaintainer,
+			Output&lt;StreamRecord&lt;OUT&gt;&gt; output,
+			long watermarkInterval,
+			long idleTimeout){
+                final SourceFunction.SourceContext&lt;OUT&gt; ctx;
+                switch (timeCharacteristic) {
+			case EventTime:
+				ctx = new ManualWatermarkContext&lt;&gt;(
+					output,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+				break;
+			case IngestionTime:
+				ctx = new AutomaticWatermarkContext&lt;&gt;(
+					output,
+					watermarkInterval,
+					processingTimeService,
+					checkpointLock,
+					streamStatusMaintainer,
+					idleTimeout);
+				break;
+			case ProcessingTime:
+				ctx = new NonTimestampContext&lt;&gt;(checkpointLock, output);
+				break;
+			default:
+				throw new IllegalArgumentException(String.valueOf(timeCharacteristic));
+            }
+}
+</code></pre>
+<p>从上面的代码片段中可见，不同的时间特性（TimeCharacteristic）对应实例化的SourceContext对应关系为：ProcessTime对应NonTimestampContext；EventTime对应ManualWatermarkContext；IngestionTime对应AutomaticWatermarkContext。</p>
+<h2 id="processingtime-时间戳-和水印生成">ProcessingTime &amp; 时间戳 和水印生成</h2>
+<p>对于指定Processing Time 情况，时间戳与水印如何生成，具体看<strong>NonTimestampContext</strong>如何实现：</p>
+<pre><code class="language-java">/**
+ *  A source context that attached {@code -1} as a timestamp to all records,   *   and that does not forward watermarks
+ **/
+private static class NonTimestampContext&lt;T&gt; implements SourceFunction.SourceContext&lt;T&gt;{
+
+    public void collect(T element) {
+			synchronized (lock) {
+				output.collect(reuse.replace(element));
+			}
+	}
+    public void collectWithTimestamp(T element, long timestamp) {
+			// ignore the timestamp
+			collect(element);
+	}
+    public void emitWatermark(Watermark mark) {
+			// do nothing
+	}
+}
+</code></pre>
+<p>NonTimestampContext没有为事件赋予时间戳，对于传入时间戳的情况也会将时间戳忽略。另外，发送水印方法为空实现，即不会向下游发送Watermark。<br>
+事实上，使用ProcessingTime时，生成时间戳和向下游发送水印并没有实际意义。对于时间相关的操作，各个计算节点会根据机器的系统时间定义触发器，触发执行时间相关操作(window类操作)，而不是根据watermark来触发。</p>
+<h2 id="ingestiontime-时间戳-和水印生成">IngestionTime &amp; 时间戳 和水印生成</h2>
+<p>对于IngestionTime情况，时间戳生成及水印生成具体看<strong>AutomaticWatermarkContext</strong>实现。另外前面说到AutomaticWatermarkContext和ManualWatermarkContext都归属于WatermarkContext，它们都会继承WatermarkContext。此处首先会大概说明下<strong>WatermarkContext</strong>具体实现了什么功能：<br>
+WatermarkContext定义了与watermark相关的行为(因为不是本文的重点，此处简要说明)：</p>
+<ul>
+<li>负责管理当前的StreamStatus，确保StreamStatus向下游传递；</li>
+<li>负责空闲监测逻辑，当超过设定的时间间隔还没有收到数据或者watermark时，会认为Task处于空闲状态。空闲监测逻辑是很有意义上的：如果某个源操作Task标志为空闲状态，后续的Checkpoint中不需要再等待该Taskbarrier对齐，不需要耗费资源或时间等待</li>
+</ul>
+<h3 id="如何生成事件时间戳">如何生成事件时间戳</h3>
+<p>回到AutomaticWatermarkContext，我们看下在IngestionTime情况，系统是如何自动赋值时间戳，如何自动生成watermark，首先看下时间戳：</p>
+<pre><code class="language-java">protected void processAndCollect(T element) {
+			lastRecordTime = this.timeService.getCurrentProcessingTime();
+			output.collect(reuse.replace(element, lastRecordTime));
+
+			// this is to avoid lock contention in the lockingObject by
+			// sending the watermark before the firing of the watermark
+			// emission task.
+			if (lastRecordTime &gt; nextWatermarkTime) {
+				// in case we jumped some watermarks, recompute the next watermark time
+				final long watermarkTime = lastRecordTime - (lastRecordTime % watermarkInterval);
+				nextWatermarkTime = watermarkTime + watermarkInterval;
+				output.emitWatermark(new Watermark(watermarkTime));
+
+				// we do not need to register another timer here
+				// because the emitting task will do so.
+			}
+	}
+
+    protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			processAndCollect(element);
+	}
+</code></pre>
+<p>可见，两个向下游发送数据的方法最终都是执行processAndCollect(element)方法。对于每一条数据记录，都会取当前的ProcessingTime(机器系统时间)作为事件时间戳，然后发送到下游。<br>
+###如何生成水印<br>
+在AutomaticWatermarkContext的构造方法中会初始化两个重要的属性：</p>
+<pre><code class="language-java">private AutomaticWatermarkContext(
+				final Output&lt;StreamRecord&lt;T&gt;&gt; output,
+				final long watermarkInterval,
+				final ProcessingTimeService timeService,
+				final Object checkpointLock,
+				final StreamStatusMaintainer streamStatusMaintainer,
+				final long idleTimeout) {
+			super(timeService, checkpointLock, streamStatusMaintainer, idleTimeout);
+            
+			this.watermarkInterval = watermarkInterval;
+			long now = this.timeService.getCurrentProcessingTime();
+			this.nextWatermarkTimer = this.timeService.registerTimer(now + watermarkInterval,
+				new WatermarkEmittingTask(this.timeService, checkpointLock, output));
+		}
+</code></pre>
+<p><strong>watermarkInterval</strong>指定了watermark生成的间隔周期，具体的取值：</p>
+<pre><code class="language-java">watermarkInterval = getRuntimeContext().getExecutionConfig().getAutoWatermarkInterval(); 
+```默认情况下，间隔周期为200ms，当然可以调用ExecutionConfig#setAutoWatermarkInterval（long interval）重新指定
+**nextWatermarkTimer**指定了一个定时器，间隔**watermarkInterval**时间之后会调用执行**WatermarkEmittingTask**，下面为从WatermarkEmittingTask中摘取的重要代码片段：
+``` java
+ private class WatermarkEmittingTask implements ProcessingTimeCallback{
+
+     public void onProcessingTime(long timestamp) {
+				final long currentTime = timeService.getCurrentProcessingTime();
+                synchronized (lock) {
+					// we should continue to automatically emit watermarks if we are active
+					if (streamStatusMaintainer.getStreamStatus().isActive()) {
+						if (idleTimeout != -1 &amp;&amp; currentTime - lastRecordTime &gt; idleTimeout) {
+						} else if (currentTime &gt; nextWatermarkTime) {
+							// align the watermarks across all machines. this will ensure that we don't have watermarks that creep along at different intervals because the machine clocks are out of sync 
+							final long watermarkTime = currentTime - (currentTime % watermarkInterval);
+							output.emitWatermark(new Watermark(watermarkTime));
+							nextWatermarkTime = watermarkTime + watermarkInterval;
+						}
+					}
+				}
+				long nextWatermark = currentTime + watermarkInterval;
+				nextWatermarkTimer = this.timeService.registerTimer(
+						nextWatermark, new WatermarkEmittingTask(this.timeService, lock, output));
+			}
+ }
+</code></pre>
+<p>可见，在<strong>AutomaticWatermarkContext</strong>中使用一个定时器，每当注册触发时间到来时，会自动向下游发送水印，并且会持续地自动注册下一次触发时间。触发时间为：（作业启动时刻+watermark周期*n）</p>
+<h2 id="event-time-时间戳和水印生成">Event Time &amp; 时间戳和水印生成</h2>
+<p>最后，我们看一下基于Event Time的流程序，在源操作处，是如何处理事件时间戳和水印生成的。具体的实现在<strong>ManualWatermarkContext</strong>：</p>
+<pre><code class="language-java">private static class ManualWatermarkContext&lt;T&gt; extends WatermarkContext&lt;T&gt;{
+    protected void processAndCollectWithTimestamp(T element, long timestamp) {
+			output.collect(reuse.replace(element, timestamp));
+	}
+    protected void processAndEmitWatermark(Watermark mark) {
+			output.emitWatermark(mark);
+	}
+    protected boolean allowWatermark(Watermark mark) {
+			return true;
+	}
+}
+</code></pre>
+<p>从上面代码片段中可以看出：在使用Event Time的情况下，ManualWatermarkContext不会额外赋值时间戳，也不会生成watermark。对于数据和水印都只做透传。<br>
+那么，这种情况下透传的时间戳和水印是从哪里来的呢？答案就是UDF(User Defined Function)。具体可以去看下<strong>StreamSource</strong>的run()方法：在run方法中根据设置的时间特性创建StreamSourceContexts ctx之后，会将ctx传给userFunction：</p>
+<pre><code class="language-java">this.ctx = StreamSourceContexts.getSourceContext(
+			timeCharacteristic,
+			getProcessingTimeService(),
+			lockingObject,
+			streamStatusMaintainer,
+			collector,
+			watermarkInterval,
+			-1);
+userFunction.run(ctx);
+</code></pre>
+<h2 id="flink-kafka-source-时间戳和水印生成">Flink Kafka Source 时间戳和水印生成</h2>
+<p>本节以Flink-source-connector中KafkaConsumer 为例，说明在设置不同时间特性情况下，时间戳和水印的生成机制。<br>
+对于消费kafka的每条记录会调用emitRecord()方法发出数据，该方法中会同时处理时间戳和水印生成：</p>
+<pre><code class="language-java">//emit the actual record. this also updates offset state atomically
+//and deals with timestamps and watermark generation
+protected void emitRecord(
+			T record,
+			KafkaTopicPartitionState&lt;TopicPartition&gt; partition,
+			long offset,
+			ConsumerRecord&lt;?, ?&gt; consumerRecord) throws Exception {
+		// we attach the Kafka 0.10 timestamp here
+		emitRecordWithTimestamp(record, partition, offset, consumerRecord.timestamp());
+}
+</code></pre>
+<p>在emitRecord()方法中调用了emitRecordWithTimestamp()方法，并且传入的时间戳为：consumerRecord.timestamp()。也就是从kafka中消费出来的数据所带的时间戳。具体看下**emitRecordWithTimestamp()**方法片段：</p>
+<pre><code class="language-java">protected void emitRecordWithTimestamp(
+			T record, KafkaTopicPartitionState&lt;KPH&gt; partitionState, long offset, long timestamp) throws Exception {
+		if (record != null) {
+			if (timestampWatermarkMode == NO_TIMESTAMPS_WATERMARKS) {
+				// fast path logic, in case there are no watermarks generated in the fetcher  emit the record, using the checkpoint lock to guarantee atomicity of record emission and offset state update
+				synchronized (checkpointLock) {
+					sourceContext.collectWithTimestamp(record, timestamp);
+					partitionState.setOffset(offset);
+				}
+			} else if (timestampWatermarkMode == PERIODIC_WATERMARKS) {
+				emitRecordWithTimestampAndPeriodicWatermark(record, partitionState, offset, timestamp);
+			} else {
+				emitRecordWithTimestampAndPunctuatedWatermark(record, partitionState, offset, timestamp);
+			}
+		} 
+</code></pre>
+<p>从上面代码片段可见：根据timestampWatermarkMode的不同取值会调用不同的方法发出数据。首先看下<strong>timestampWatermarkMode</strong>取值：</p>
+<pre><code class="language-java">if (watermarksPeriodic == null) {
+			if (watermarksPunctuated == null) {
+				// simple case, no watermarks involved
+				timestampWatermarkMode = NO_TIMESTAMPS_WATERMARKS;
+			} else {
+				timestampWatermarkMode = PUNCTUATED_WATERMARKS;
+			}
+		} else {
+			if (watermarksPunctuated == null) {
+				timestampWatermarkMode = PERIODIC_WATERMARKS;
+			} else {
+				throw new IllegalArgumentException(&quot;Cannot have both periodic and punctuated watermarks&quot;);
+			}
+}
+</code></pre>
+<p>当watermarksPeriodic和watermarksPunctuated都为null时，timestampWatermarkMode=NO_TIMESTAMPS_WATERMARKS；当watermarksPunctuated!=null时，timestampWatermarkMode = PUNCTUATED_WATERMARKS；否则当watermarksPeriodic!=null时，timestampWatermarkMode = PERIODIC_WATERMARKS。默认情况下timestampWatermarkMode=NO_TIMESTAMPS_WATERMARKS。对于默认情况，直接调用sourceContext.collectWithTimestamp(record, timestamp)将数据和时间戳发往下游。<br>
+参考前面所讲</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/">
+                <h3 class="post-title">
+                  Flink State 之 KeyedState
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>
