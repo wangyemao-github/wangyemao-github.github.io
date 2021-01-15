@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610628105301">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610629381736">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610628105301" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610629381736" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -51,7 +51,11 @@
 </ul>
 </li>
 <li><a href="#event-time-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Event Time &amp; 时间戳和水印生成</a></li>
-<li><a href="#flink-kafka-source-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Flink Kafka Source 时间戳和水印生成</a></li>
+<li><a href="#flink-kafka-source-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Flink Kafka Source 时间戳和水印生成</a>
+<ul>
+<li><a href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E4%BE%8B">具体实例</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -102,7 +106,7 @@
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
         <h1 class="text-3xl font-bold lg:mt-16">Flink Time</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-13 / 14 min read
+          2021-01-13 / 15 min read
         </div>
         
         <div class="post-content yue">
@@ -350,7 +354,7 @@ userFunction.run(ctx);
 </code></pre>
 <p>时间戳提取及水印的生成在用户定义的SourceFunction中完成之后，到StreamSourceContexts时，只做数据的透传。</p>
 <h2 id="flink-kafka-source-时间戳和水印生成">Flink Kafka Source 时间戳和水印生成</h2>
-<p>本节以Flink-source-connector中KafkaConsumer 为例，说明在设置不同时间特性情况下，时间戳和水印如何生成。<br>
+<p>本节以Flink-source-connector中KafkaConsumer 为例，说明在设置不同时间特性情况下，时间戳和水印如何生成。基于Flink1.8版本，kafka-010。<br>
 对于消费kafka的每条记录会调用emitRecord()方法发出数据，该方法中会进行时间戳的提取和水印生成：</p>
 <pre><code class="language-java">//emit the actual record. this also updates offset state atomically
 //and deals with timestamps and watermark generation
@@ -396,15 +400,22 @@ protected void emitRecord(
 			}
 }
 </code></pre>
-<p>在没有设置属性watermarksPeriodic和watermarksPunctuated时，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS；否则，如果设置了watermarksPunctuated，timestampWatermarkMode的取值为PUNCTUATED_WATERMARKS；否则，如果设置了watermarksPeriodic，则timestampWatermarkMode的取值为PERIODIC_WATERMARKS。</p>
-<blockquote>
-<p>对于时间特性(TimeCharacteristic)设置为processing Time 或 Ingestion Time的情况</p>
+<p>在没有设置属性watermarksPeriodic和watermarksPunctuated时，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS；否则，如果设置了watermarksPunctuated，timestampWatermarkMode的取值为PUNCTUATED_WATERMARKS；否则，如果设置了watermarksPeriodic，则timestampWatermarkMode的取值为PERIODIC_WATERMARKS。<br>
+对于时间特性(TimeCharacteristic)设置为processing Time 或 Ingestion Time的情况：</p>
 <blockquote>
 <p>这种情况是没有必要设置watermarksPeriodic和watermarksPunctuated属性的。因为，对于Processing Time情况，设置时间戳和水印没有实际意义；而对于Ingestion Time情况，具体会在SourceStreamContext中自动生成。<br>
-这种情况下，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS，直接调用了方法: sourceContext.collectWithTimestamp(record, timestamp)，后续如何提取时间戳，如何生成水印依赖于设置的时间特性，由具体SourceStreamContext实现（前面已经说明，此处不再赘述）。<br>
-对于Event Time情况</p>
+这种情况下，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS，直接调用了方法: sourceContext.collectWithTimestamp(record, timestamp)，后续如何提取时间戳，如何生成水印依赖于设置的时间特性，由具体SourceStreamContext实现（前面已经说明，此处不再赘述）。</p>
 </blockquote>
+<p>对于Event Time情况：</p>
+<blockquote>
+<p>对于这种情况，如果想要在源操作处完成时间戳提取以及水印的生成，需要自定义具体AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks的实现，包括如何提取时间戳，以及如何生成下一个水印。<br>
+在FlinkKafkaConsumerBase类中提供了两个方法分别接收用户自定义的AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks。具体为：</p>
 </blockquote>
+<pre><code class="language-java">public FlinkKafkaConsumerBase&lt;T&gt; assignTimestampsAndWatermarks(AssignerWithPunctuatedWatermarks&lt;T&gt; assigner) {}
+
+public FlinkKafkaConsumerBase&lt;T&gt; assignTimestampsAndWatermarks(AssignerWithPeriodicWatermarks&lt;T&gt; assigner){}
+</code></pre>
+<h3 id="具体实例">具体实例</h3>
 
         </div>
 
