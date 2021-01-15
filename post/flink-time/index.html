@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610696454772">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610702499943">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610696454772" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610702499943" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -106,7 +106,7 @@
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
         <h1 class="text-3xl font-bold lg:mt-16">Flink Time</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-13 / 19 min read
+          2021-01-13 / 20 min read
         </div>
         
         <div class="post-content yue">
@@ -486,7 +486,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
          @Override
          public long extractTimestamp(JSONObject element, long previousElementTimestamp) {
              if (StringUtils.isNotBlank(element.getString(&quot;occurTime&quot;))) {
-                 System.out.println(&quot;生成水印：&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
+                 System.out.println(&quot;数据：&quot; + element.getString(&quot;value&quot;) + &quot;:&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
                  return Long.valueOf(element.getString(&quot;occurTime&quot;));
              } else return 0L;
          }
@@ -506,11 +506,10 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
              .process(new ProcessWindowFunction&lt;JSONObject, Tuple3&lt;String, Long, String&gt;, String, TimeWindow&gt;() {
                  @Override
                  public void process(String s, Context context, Iterable&lt;JSONObject&gt; elements, Collector&lt;Tuple3&lt;String, Long, String&gt;&gt; out) throws Exception {
-                     System.out.println(&quot;window info: &quot; + context.window() + &quot;;start:&quot; +
-                             timeStamp2Date(context.window().getStart()) +
+                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()) +
+                             &quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()) +
+                             &quot;window info,start:&quot; + timeStamp2Date(context.window().getStart()) +
                              &quot;;end:&quot; + timeStamp2Date(context.window().getEnd()));
-                     System.out.println(&quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()));
-                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()));
                      long sum = 0L;
                      long maxTime = Long.MIN_VALUE;
                      for (JSONObject jsonObject : elements) {
@@ -521,10 +520,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
                      }
                      out.collect(new Tuple3&lt;&gt;(s, sum, timeStamp2Date(maxTime)));
                  }
-
-
-             })
-             .print();
+             }).print();
      env.execute();
  }
 
@@ -537,6 +533,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
      return sdf.format(new Date(Long.valueOf(seconds)));
  }
 
+
  private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
      @Override
      public JSONObject deserialize(byte[] message) throws IOException {
@@ -546,6 +543,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
              return null;
          }
      }
+
      @Override
      public boolean isEndOfStream(JSONObject nextElement) {
          return false;
@@ -560,7 +558,19 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
 </li>
 </ol>
 <p>}</p>
-<pre><code>
+<pre><code>3. 运行结果片段
+![](https://wangyemao-github.github.io/post-images/1610698549901.png)
+以上就是一个基于Event Time，自定义时间戳提取以及水印生成的Flink消费kafka数据的简单实例。除了在数据源处提取时间戳，生成水印之外，还能在一些简单的操作之后再指定相关生成策略。具体可以参见Flink#WarkMark。
+
+# 总结
+1. 本文首先对Flink支持的多种时间概念，包括：Processing Time、Event Time、Ingestion Time 的定义、内涵、差异进行了详细说明，并给出了Flink应用程序中如何设置时间特性
+2. WaterMark是Flink基于时间操作中的一个很重要的概念，本节简要地对WaterMark的作用进行说明
+3. 之后，基于Flink1.8版本，本文对三种时间特性下，Flink在数据源处如何提取时间戳、如何生成水印并发送到下游进行了解读
+4. 接着，本文结合源码分析了Flink-kafka-source-connector时间戳提取和水印生成进行说明
+5. 最后，基于Flink消费kafka数据场景，给出了一个简单的在源处提取时间戳和生成水印的实例。
+
+
+
 
 
 

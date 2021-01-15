@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-15T07:41:00.112Z</updated>
+    <updated>2021-01-15T09:21:46.167Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -392,7 +392,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
          @Override
          public long extractTimestamp(JSONObject element, long previousElementTimestamp) {
              if (StringUtils.isNotBlank(element.getString(&quot;occurTime&quot;))) {
-                 System.out.println(&quot;生成水印：&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
+                 System.out.println(&quot;数据：&quot; + element.getString(&quot;value&quot;) + &quot;:&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
                  return Long.valueOf(element.getString(&quot;occurTime&quot;));
              } else return 0L;
          }
@@ -412,11 +412,10 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
              .process(new ProcessWindowFunction&lt;JSONObject, Tuple3&lt;String, Long, String&gt;, String, TimeWindow&gt;() {
                  @Override
                  public void process(String s, Context context, Iterable&lt;JSONObject&gt; elements, Collector&lt;Tuple3&lt;String, Long, String&gt;&gt; out) throws Exception {
-                     System.out.println(&quot;window info: &quot; + context.window() + &quot;;start:&quot; +
-                             timeStamp2Date(context.window().getStart()) +
+                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()) +
+                             &quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()) +
+                             &quot;window info,start:&quot; + timeStamp2Date(context.window().getStart()) +
                              &quot;;end:&quot; + timeStamp2Date(context.window().getEnd()));
-                     System.out.println(&quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()));
-                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()));
                      long sum = 0L;
                      long maxTime = Long.MIN_VALUE;
                      for (JSONObject jsonObject : elements) {
@@ -427,10 +426,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
                      }
                      out.collect(new Tuple3&lt;&gt;(s, sum, timeStamp2Date(maxTime)));
                  }
-
-
-             })
-             .print();
+             }).print();
      env.execute();
  }
 
@@ -443,6 +439,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
      return sdf.format(new Date(Long.valueOf(seconds)));
  }
 
+
  private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
      @Override
      public JSONObject deserialize(byte[] message) throws IOException {
@@ -452,6 +449,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
              return null;
          }
      }
+
      @Override
      public boolean isEndOfStream(JSONObject nextElement) {
          return false;
@@ -466,7 +464,19 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
 </li>
 </ol>
 <p>}</p>
-<pre><code>
+<pre><code>3. 运行结果片段
+![](https://wangyemao-github.github.io/post-images/1610698549901.png)
+以上就是一个基于Event Time，自定义时间戳提取以及水印生成的Flink消费kafka数据的简单实例。除了在数据源处提取时间戳，生成水印之外，还能在一些简单的操作之后再指定相关生成策略。具体可以参见Flink#WarkMark。
+
+# 总结
+1. 本文首先对Flink支持的多种时间概念，包括：Processing Time、Event Time、Ingestion Time 的定义、内涵、差异进行了详细说明，并给出了Flink应用程序中如何设置时间特性
+2. WaterMark是Flink基于时间操作中的一个很重要的概念，本节简要地对WaterMark的作用进行说明
+3. 之后，基于Flink1.8版本，本文对三种时间特性下，Flink在数据源处如何提取时间戳、如何生成水印并发送到下游进行了解读
+4. 接着，本文结合源码分析了Flink-kafka-source-connector时间戳提取和水印生成进行说明
+5. 最后，基于Flink消费kafka数据场景，给出了一个简单的在源处提取时间戳和生成水印的实例。
+
+
+
 
 
 
