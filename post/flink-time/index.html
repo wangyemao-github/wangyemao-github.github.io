@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610629381736">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610696109113">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610629381736" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610696109113" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -53,7 +53,7 @@
 <li><a href="#event-time-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Event Time &amp; 时间戳和水印生成</a></li>
 <li><a href="#flink-kafka-source-%E6%97%B6%E9%97%B4%E6%88%B3%E5%92%8C%E6%B0%B4%E5%8D%B0%E7%94%9F%E6%88%90">Flink Kafka Source 时间戳和水印生成</a>
 <ul>
-<li><a href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E4%BE%8B">具体实例</a></li>
+<li><a href="#%E5%9F%BA%E4%BA%8Eflink-kafka-consumer%E7%9A%84%E6%B6%88%E8%B4%B9%E5%AE%9E%E4%BE%8B">基于Flink kafka consumer的消费实例</a></li>
 </ul>
 </li>
 </ul>
@@ -106,7 +106,7 @@
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
         <h1 class="text-3xl font-bold lg:mt-16">Flink Time</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-13 / 15 min read
+          2021-01-13 / 19 min read
         </div>
         
         <div class="post-content yue">
@@ -400,13 +400,17 @@ protected void emitRecord(
 			}
 }
 </code></pre>
-<p>在没有设置属性watermarksPeriodic和watermarksPunctuated时，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS；否则，如果设置了watermarksPunctuated，timestampWatermarkMode的取值为PUNCTUATED_WATERMARKS；否则，如果设置了watermarksPeriodic，则timestampWatermarkMode的取值为PERIODIC_WATERMARKS。<br>
-对于时间特性(TimeCharacteristic)设置为processing Time 或 Ingestion Time的情况：</p>
+<p>在没有设置属性watermarksPeriodic和watermarksPunctuated时，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS；否则，如果设置了watermarksPunctuated，timestampWatermarkMode的取值为PUNCTUATED_WATERMARKS；否则，如果设置了watermarksPeriodic，则timestampWatermarkMode的取值为PERIODIC_WATERMARKS。</p>
+<ol>
+<li>对于时间特性(TimeCharacteristic)设置为processing Time 或 Ingestion Time的情况：</li>
+</ol>
 <blockquote>
 <p>这种情况是没有必要设置watermarksPeriodic和watermarksPunctuated属性的。因为，对于Processing Time情况，设置时间戳和水印没有实际意义；而对于Ingestion Time情况，具体会在SourceStreamContext中自动生成。<br>
 这种情况下，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS，直接调用了方法: sourceContext.collectWithTimestamp(record, timestamp)，后续如何提取时间戳，如何生成水印依赖于设置的时间特性，由具体SourceStreamContext实现（前面已经说明，此处不再赘述）。</p>
 </blockquote>
-<p>对于Event Time情况：</p>
+<ol start="2">
+<li>对于Event Time情况：</li>
+</ol>
 <blockquote>
 <p>对于这种情况，如果想要在源操作处完成时间戳提取以及水印的生成，需要自定义具体AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks的实现，包括如何提取时间戳，以及如何生成下一个水印。<br>
 在FlinkKafkaConsumerBase类中提供了两个方法分别接收用户自定义的AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks。具体为：</p>
@@ -415,7 +419,157 @@ protected void emitRecord(
 
 public FlinkKafkaConsumerBase&lt;T&gt; assignTimestampsAndWatermarks(AssignerWithPeriodicWatermarks&lt;T&gt; assigner){}
 </code></pre>
-<h3 id="具体实例">具体实例</h3>
+<h3 id="基于flink-kafka-consumer的消费实例">基于Flink kafka consumer的消费实例</h3>
+<p>下面以一个具体的实例，阐述Flink消费kafka数据时如何在数据源出自定义时间戳提取以及生成水印：</p>
+<ol>
+<li>kafka producer端<pre><code class="language-java">public class WriteDataToKafka {
+ public static void main(String[] args) throws IOException {
+     Map&lt;String, String&gt; config = new HashMap&lt;String, String&gt;();
+     config.putAll(ReadPropertiesUtils.readConfig(&quot;config.properties&quot;));
+     Properties properties = new Properties();
+     properties.put(&quot;zookeeper.connect&quot;, config.get(&quot;zookeeper.connect&quot;));
+     properties.put(&quot;key.serializer&quot;, &quot;org.apache.kafka.common.serialization.StringSerializer&quot;);
+     properties.put(&quot;value.serializer&quot;, &quot;org.apache.kafka.common.serialization.StringSerializer&quot;);
+     properties.put(&quot;bootstrap.servers&quot;, config.get(&quot;metadata.broker.list&quot;));
+
+     try {
+         KafkaProducer&lt;String, String&gt; kafkaProducer = new KafkaProducer&lt;String, String&gt;(properties);
+         final String[] arr = new String[]{&quot;a&quot;, &quot;b&quot;};
+         Timer timer = new Timer();
+         timer.schedule(new TimerTask() {
+             @Override
+             public void run() {
+                 for (int i = 0; i &lt; arr.length; i++) {
+                     SampleObj sampleObj = new SampleObj();
+                     sampleObj.setValue(arr[i]);
+                     sampleObj.setOccurTime(System.currentTimeMillis());
+                     System.out.println(JSONObject.toJSON(sampleObj).toString());
+                     ProducerRecord&lt;String, String&gt; record =
+                             new ProducerRecord&lt;String, String&gt;(&quot;test_topic&quot;,
+                                     JSONObject.toJSON(sampleObj).toString());
+                     kafkaProducer.send(record);
+                     kafkaProducer.flush();
+                 }
+             }
+         }, 0L, 1000);
+     } catch (Exception e) {
+         e.printStackTrace();
+     }
+ }
+</code></pre>
+</li>
+</ol>
+<p>}</p>
+<pre><code>每隔1s向kafka 的test_topic中分别发送两条value取值为&quot;a&quot;或&quot;b&quot;的两条数据，数据的时间戳为构造数据时机器的系统时间。
+发送数据对应的实体类定义为：
+``` java 
+public class SampleObj {
+ private String value;
+ private Long occurTime;}
+</code></pre>
+<ol>
+<li>Flink 端消费数据代码<br>
+Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对应的count数，并打印到控制台。<pre><code class="language-java">public class FlinkKafkaConsumerSample {
+ public static void main(String[] args) throws Exception {
+     final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+     env.enableCheckpointing(5000);
+     //设定时间特性为Event Time
+     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+     Properties props = new Properties();
+     props.setProperty(&quot;bootstrap.servers&quot;, &quot;10.154.8.27:9092&quot;);
+     props.setProperty(&quot;group.id&quot;, &quot;alarm_consumer_test&quot;);
+
+     FlinkKafkaConsumer010&lt;JSONObject&gt; consumer =
+             new FlinkKafkaConsumer010&lt;&gt;(&quot;test_topic&quot;, new JsonFormatDeserializer(), props);
+     consumer.assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks&lt;JSONObject&gt;() {
+
+         @Override
+         public long extractTimestamp(JSONObject element, long previousElementTimestamp) {
+             if (StringUtils.isNotBlank(element.getString(&quot;occurTime&quot;))) {
+                 System.out.println(&quot;生成水印：&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
+                 return Long.valueOf(element.getString(&quot;occurTime&quot;));
+             } else return 0L;
+         }
+
+         @Nullable
+         @Override
+         public Watermark checkAndGetNextWatermark(JSONObject lastElement, long extractedTimestamp) {
+             if (StringUtils.isNotBlank(lastElement.getString(&quot;occurTime&quot;))) {
+                 return new Watermark(Long.valueOf(lastElement.getString(&quot;occurTime&quot;)));
+             } else return null;
+         }
+     });
+
+     env.addSource(consumer)
+             .keyBy((KeySelector&lt;JSONObject, String&gt;) value -&gt; value.getString(&quot;value&quot;))
+             .timeWindow(Time.seconds(10))
+             .process(new ProcessWindowFunction&lt;JSONObject, Tuple3&lt;String, Long, String&gt;, String, TimeWindow&gt;() {
+                 @Override
+                 public void process(String s, Context context, Iterable&lt;JSONObject&gt; elements, Collector&lt;Tuple3&lt;String, Long, String&gt;&gt; out) throws Exception {
+                     System.out.println(&quot;window info: &quot; + context.window() + &quot;;start:&quot; +
+                             timeStamp2Date(context.window().getStart()) +
+                             &quot;;end:&quot; + timeStamp2Date(context.window().getEnd()));
+                     System.out.println(&quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()));
+                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()));
+                     long sum = 0L;
+                     long maxTime = Long.MIN_VALUE;
+                     for (JSONObject jsonObject : elements) {
+                         if (jsonObject.getLong(&quot;occurTime&quot;) &gt; maxTime) {
+                             maxTime = jsonObject.getLong(&quot;occurTime&quot;);
+                         }
+                         sum += 1;
+                     }
+                     out.collect(new Tuple3&lt;&gt;(s, sum, timeStamp2Date(maxTime)));
+                 }
+
+
+             })
+             .print();
+     env.execute();
+ }
+
+ public static String timeStamp2Date(Long time) {
+     String seconds = String.valueOf(time);
+     if (seconds == null || seconds.isEmpty() || seconds.equals(&quot;null&quot;)) {
+         return &quot;&quot;;
+     }
+
+     SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
+     return sdf.format(new Date(Long.valueOf(seconds)));
+ }
+
+
+ private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
+     @Override
+     public JSONObject deserialize(byte[] message) throws IOException {
+         try {
+             return JSON.parseObject(message, JSONObject.class);
+         } catch (Exception e) {
+             return null;
+         }
+     }
+     @Override
+     public boolean isEndOfStream(JSONObject nextElement) {
+         return false;
+     }
+
+     @Override
+     public TypeInformation&lt;JSONObject&gt; getProducedType() {
+         return TypeInformation.of(JSONObject.class);
+     }
+ }
+</code></pre>
+</li>
+</ol>
+<p>}</p>
+<pre><code>
+
+
+
+
+
+
+</code></pre>
 
         </div>
 
