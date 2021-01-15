@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-15T09:22:04.609Z</updated>
+    <updated>2021-01-15T09:32:25.098Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -376,7 +376,7 @@ public class SampleObj {
 <ol>
 <li>Flink 端消费数据代码<br>
 Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对应的count数，并打印到控制台。<pre><code class="language-java">public class FlinkKafkaConsumerSample {
- public static void main(String[] args) throws Exception {
+        public static void main(String[] args) throws Exception {
      final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
      env.enableCheckpointing(5000);
      //设定时间特性为Event Time
@@ -429,8 +429,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
              }).print();
      env.execute();
  }
-
- public static String timeStamp2Date(Long time) {
+     public static String timeStamp2Date(Long time) {
      String seconds = String.valueOf(time);
      if (seconds == null || seconds.isEmpty() || seconds.equals(&quot;null&quot;)) {
          return &quot;&quot;;
@@ -438,9 +437,7 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
      SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
      return sdf.format(new Date(Long.valueOf(seconds)));
  }
-
-
- private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
+     private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
      @Override
      public JSONObject deserialize(byte[] message) throws IOException {
          try {
@@ -460,33 +457,21 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
          return TypeInformation.of(JSONObject.class);
      }
  }
+}
 </code></pre>
 </li>
+<li>运行结果片段<br>
+<img src="https://wangyemao-github.github.io/post-images/1610698549901.png" alt="" loading="lazy"><br>
+以上就是一个基于Event Time，自定义时间戳提取以及水印生成的Flink消费kafka数据的简单实例。除了在数据源处提取时间戳，生成水印之外，还能在一些简单的操作之后再指定相关生成策略。具体可以参见Flink#WarkMark。</li>
 </ol>
-<p>}</p>
-<pre><code>3. 运行结果片段
-![](https://wangyemao-github.github.io/post-images/1610698549901.png)
-以上就是一个基于Event Time，自定义时间戳提取以及水印生成的Flink消费kafka数据的简单实例。除了在数据源处提取时间戳，生成水印之外，还能在一些简单的操作之后再指定相关生成策略。具体可以参见Flink#WarkMark。
-
-# 总结
-1. 本文首先对Flink支持的多种时间概念，包括：Processing Time、Event Time、Ingestion Time 的定义、内涵、差异进行了详细说明，并给出了Flink应用程序中如何设置时间特性
-2. WaterMark是Flink基于时间操作中的一个很重要的概念，本节简要地对WaterMark的作用进行说明
-3. 之后，基于Flink1.8版本，本文对三种时间特性下，Flink在数据源处如何提取时间戳、如何生成水印并发送到下游进行了解读
-4. 接着，本文结合源码分析了Flink-kafka-source-connector时间戳提取和水印生成进行说明
-5. 最后，基于Flink消费kafka数据场景，给出了一个简单的在源处提取时间戳和生成水印的实例。
-
-
-
-
-
-
-
-
-
-
-
-
-</code></pre>
+<h1 id="总结">总结</h1>
+<ol>
+<li>本文首先对Flink支持的多种时间概念，包括：Processing Time、Event Time、Ingestion Time 的定义、内涵、差异进行了详细说明，并给出了Flink应用程序中如何设置时间特性</li>
+<li>WaterMark是Flink基于时间操作中的一个很重要的概念，本节简要地对WaterMark的作用进行说明</li>
+<li>之后，基于Flink1.8版本，本文对三种时间特性下，Flink在数据源处如何提取时间戳、如何生成水印并发送到下游进行了解读</li>
+<li>接着，本文结合源码分析了Flink-kafka-source-connector时间戳提取和水印生成进行说明</li>
+<li>最后，基于Flink消费kafka数据场景，给出了一个简单的在源处提取时间戳和生成水印的实例。</li>
+</ol>
 ]]></content>
     </entry>
     <entry>
