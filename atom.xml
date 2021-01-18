@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-15T11:22:06.486Z</updated>
+    <updated>2021-01-18T03:21:09.813Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -10,6 +10,104 @@
     <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[Upgrade Flink to 1.12 —Release Notes(翻译官网)]]></title>
+        <id>https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/</id>
+        <link href="https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/">
+        </link>
+        <updated>2021-01-18T01:50:01.000Z</updated>
+        <summary type="html"><![CDATA[<p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
+<!-- more -->
+<h1 id="已知存在的问题">已知存在的问题</h1>
+<h2 id="未对齐的checkpoint-恢复可能会导致数据流损毁-flink-20654">未对齐的checkpoint 恢复可能会导致数据流损毁 FLINK-20654</h2>
+<p>在Flink 1.12 版本中，同时使用<strong>未对齐的检查点(UnalignedCheckpoints) <strong>加</strong>两个/多个输入任务或单输入任务的联合输入(Union inputs)</strong> 组合情况，可能会导致状态数据损毁。<br>
+<strong>发生的场景</strong>：在完全恢复完成之前触发了新的检查点就会发生这种情况。导致一个带有两个或多个输入的任务发生状态损毁的前提是：该任务必须在完成恢复溢出的飞行数据的同时接受检查点屏障。在这种情况下，新的检查点是可以执行成功的，但是因为传输中的数据已损毁/丢失，当尝试从已损毁的检查点恢复时，这将导致各种反序列化/数据流已损毁的错误。</p>
+<h1 id="apis-相关变更和注意点">APIs 相关变更和注意点</h1>
+<h2 id="移除了executionconfig-中的deprecated-方法-flink-19084">移除了ExecutionConfig 中的deprecated 方法 FLINK-19084</h2>
+<ul>
+<li>移除了过期的ExecutionConfig#isLatencyTrackingEnabled方法，替代方法：ExecutionConfig#getLatencyTrackingInterval代替</li>
+<li>过期的或无效的方法被移除：ExecutionConfig#enable/disableSysoutLogging ；ExecutionConfig#set/isFailTaskOnCheckpointError</li>
+<li>从cli中移除了无效的-q选项</li>
+</ul>
+<h2 id="移除过期的runtimecontextgetallaccumulators-方法-flink-19032">移除过期的RuntimeContext#getAllAccumulators 方法 FLINK-19032</h2>
+<p>移除了RuntimeContext#getAllAccumulators方法，替代方法：RuntimeContext#getAccumulator</p>
+<h2 id="因为存在数据丢失的风险设置方法过期checkpointconfigsetprefercheckpointforrecovery-flink-20441">因为存在数据丢失的风险，设置方法过期：CheckpointConfig#setPreferCheckpointForRecovery FLINK-20441</h2>
+<p>因为偏好选择旧的检查点，而不是新的保存点来进行恢复可能会导致数据丢失，设置CheckpointConfig#setPreferCheckpointForRecovery为过期方法</p>
+<h2 id="flip-134datastream-api中批执行相关">FLIP-134：DataStream API中批执行相关</h2>
+<ol>
+<li>
+<p>允许显示地在KeyedStream.intervalJoin()上配置时间行为 FLINK-19479<br>
+在FLINK 1.12之前，KeyedStream.intervalJoin()操作基于全局设置的流的时间特性（TimeCharacteristic)来改变行为。在Flink 1.12中，在IntervalJoin类中显示地引入了inProcessingTime() 和 inEventTime()方法，join不再基于全局的时间特性改变行为。</p>
+</li>
+<li>
+<p>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318<br>
+在Flink 1.12中，DataStream API中的timeWindow()方法设置为过期。请使用window(WindowAssigner) + TumblingEventTimeWindows/SlidingEventTimeWindows/TumblingProcessingTimeWindows/SlidingProcessingTimeWindows 替代。更多的信息，请查看TimeCharacteristic/setStreamTimeCharacteristic的过期描述</p>
+</li>
+<li>
+<p>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319<br>
+在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。在Event-time模式下，显示使用处理时间（Processing Time）窗口和计时器是起作用的。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用的是通用的“time window”操作（比如，KeyedStream.timeWindow()），该操作基于设置的时间特性（time characteristic）改变行为，请使用显示指定Processing time 或event Time的等价操作。</p>
+</li>
+<li>
+<p>允许在CEP PatternStream中显示配置时间行为  FLINK-19326<br>
+在Flink 1.12之前，CEP 操作基于全局设置的流时间特性来变更行为。在Flink 1.12中，PatternStream中引入了显示设置的inProcessingTime() 和inEventTime()方法，CEP操作不再基于全局的时间特性变更行为</p>
+</li>
+</ol>
+<h2 id="api-清理">API 清理</h2>
+<ol>
+<li>移除了剩余的UdfAnalyzer 配置 FLINK-13857<br>
+移除了ExecutionConfig#get/setCodeAnalysisMode方法和 SkipCodeAnalysis 类。在这个变更之前，这些类或方法也没有启作用，所以也没有必要使用</li>
+<li>移除过期的DataStream#split FLINK-19083<br>
+DataStream#split方法在几个版本中被标记为已弃用后被删除，替代方法：请使用Side Outputs 替换</li>
+<li>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035<br>
+长时间弃用的（Window）DataStream#fold方法在Flink 1.12版本中已经移除。请使用其他操作比如：（Window）DataStream#reduce方法替代，该方法在分布式系统中具有更好的性能</li>
+</ol>
+<h2 id="extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</h2>
+<p>CompositeTypeSerializerSnapshot # isOuterSnapshotCompatible(TypeSerializer)方法已经设置为过期，为了支持新的OuterSchemaCompatibility#resolveOuterSchemaCompatibility(TypeSerializer)方法。请自行实现它。与旧方法相比，新方法允许复合序列化器基于外部模式和配置来指示状态模式迁移。</p>
+<h2 id="bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</h2>
+<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持Scala&lt;2.11.11的版本</p>
+<h1 id="connectors-and-formats">Connectors and Formats</h1>
+<h2 id="移除了kafka-010x-和011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</h2>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Flink 时间操作—Window]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-shi-jian-cao-zuo-window/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-shi-jian-cao-zuo-window/">
+        </link>
+        <updated>2021-01-17T06:51:32.000Z</updated>
+        <summary type="html"><![CDATA[<p>本文主要讲解Flink中window相关设计、原理和应用。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>本文主要讲解Flink中window相关设计、原理和应用。</p>
+<!-- more -->
+<h1 id="flink窗口的概述及分类">Flink窗口的概述及分类</h1>
+<p>Flink<br>
+在Google的Dataflow编程模型论文《The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost in Massive-Scale, Unbounded, Out-of-Order Data Processing》中介绍了该模型流批一体计算中的核心设计，其中重点是Window操作。流处理的本质是处理无限持续产生的数据集，批处理的本质是处理有限不变的数据集，因此，批处理实际上是流处理的一种特列，而窗口就是流和批一体的桥梁。<br>
+可见，Window操作就是用来将一个无限的流切分为一个个有限的数据集，并在有界数据集上进行操作的一种机制。Flink中提供了3类默认的窗口：计数窗口(Count Window)、时间窗口（Time Window）和会话窗口（Session Window）。</p>
+<ol>
+<li><strong>Count Window</strong>
+<ul>
+<li><strong>Tumble Count Window</strong> : 累计固定个数的元素就视为一个窗口，该类型窗口无法像时间窗口一样实现切分好</li>
+<li><strong>Sliding Count Window</strong> ：累计固定的个数视为一个窗口，每超过一定个数的滑动个数，则产生一个新的窗口</li>
+</ul>
+</li>
+<li><strong>Time Window</strong>
+<ul>
+<li><strong>Tumble Time Window</strong> : 在时间上按照事先约定的窗口大小切分的窗口，窗口之间不会相互重叠</li>
+<li><strong>Sliding Time Window</strong> ：在时间上按照事先约定的窗口大小、滑动步长切分的窗口，滑动窗口之间可能会存在相互重叠的情况</li>
+</ul>
+</li>
+<li><strong>Session Window</strong><br>
+一种特殊的窗口，当超过一段时间，该窗口没有收到新的数据元素，则视为该窗口结束。因此，无法事先确定窗口的长度、元素个数，窗口之间也不会相互重叠</li>
+</ol>
+<!--  画图说明 几种window的区别   -->
+<h1 id="flink-window的实现原理与机制">Flink Window的实现原理与机制</h1>
+<p>数据进入窗口之后，如何分配窗口，如何驱逐数据，以及如何触发计算的逻辑如下图所示：<br>
+<img src="https://wangyemao-github.github.io/post-images/1610883497379.png" alt="" loading="lazy"><br>
+数据流中每一个数据进入Window算子时，</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Flink Time]]></title>
         <id>https://wangyemao-github.github.io/post/flink-time/</id>

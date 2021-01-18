@@ -1,0 +1,286 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610940061754">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610940061754" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#%E5%B7%B2%E7%9F%A5%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98">已知存在的问题</a>
+<ul>
+<li><a href="#%E6%9C%AA%E5%AF%B9%E9%BD%90%E7%9A%84checkpoint-%E6%81%A2%E5%A4%8D%E5%8F%AF%E8%83%BD%E4%BC%9A%E5%AF%BC%E8%87%B4%E6%95%B0%E6%8D%AE%E6%B5%81%E6%8D%9F%E6%AF%81-flink-20654">未对齐的checkpoint 恢复可能会导致数据流损毁 FLINK-20654</a></li>
+</ul>
+</li>
+<li><a href="#apis-%E7%9B%B8%E5%85%B3%E5%8F%98%E6%9B%B4%E5%92%8C%E6%B3%A8%E6%84%8F%E7%82%B9">APIs 相关变更和注意点</a>
+<ul>
+<li><a href="#%E7%A7%BB%E9%99%A4%E4%BA%86executionconfig-%E4%B8%AD%E7%9A%84deprecated-%E6%96%B9%E6%B3%95-flink-19084">移除了ExecutionConfig 中的deprecated 方法 FLINK-19084</a></li>
+<li><a href="#%E7%A7%BB%E9%99%A4%E8%BF%87%E6%9C%9F%E7%9A%84runtimecontextgetallaccumulators-%E6%96%B9%E6%B3%95-flink-19032">移除过期的RuntimeContext#getAllAccumulators 方法 FLINK-19032</a></li>
+<li><a href="#%E5%9B%A0%E4%B8%BA%E5%AD%98%E5%9C%A8%E6%95%B0%E6%8D%AE%E4%B8%A2%E5%A4%B1%E7%9A%84%E9%A3%8E%E9%99%A9%E8%AE%BE%E7%BD%AE%E6%96%B9%E6%B3%95%E8%BF%87%E6%9C%9Fcheckpointconfigsetprefercheckpointforrecovery-flink-20441">因为存在数据丢失的风险，设置方法过期：CheckpointConfig#setPreferCheckpointForRecovery FLINK-20441</a></li>
+<li><a href="#flip-134datastream-api%E4%B8%AD%E6%89%B9%E6%89%A7%E8%A1%8C%E7%9B%B8%E5%85%B3">FLIP-134：DataStream API中批执行相关</a></li>
+<li><a href="#api-%E6%B8%85%E7%90%86">API 清理</a></li>
+<li><a href="#extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</a></li>
+<li><a href="#bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</a></li>
+</ul>
+</li>
+<li><a href="#connectors-and-formats">Connectors and Formats</a>
+<ul>
+<li><a href="#%E7%A7%BB%E9%99%A4%E4%BA%86kafka-010x-%E5%92%8C011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Upgrade Flink to 1.12 —Release Notes(翻译官网)</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-18 / 5 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
+<!-- more -->
+<h1 id="已知存在的问题">已知存在的问题</h1>
+<h2 id="未对齐的checkpoint-恢复可能会导致数据流损毁-flink-20654">未对齐的checkpoint 恢复可能会导致数据流损毁 FLINK-20654</h2>
+<p>在Flink 1.12 版本中，同时使用<strong>未对齐的检查点(UnalignedCheckpoints) <strong>加</strong>两个/多个输入任务或单输入任务的联合输入(Union inputs)</strong> 组合情况，可能会导致状态数据损毁。<br>
+<strong>发生的场景</strong>：在完全恢复完成之前触发了新的检查点就会发生这种情况。导致一个带有两个或多个输入的任务发生状态损毁的前提是：该任务必须在完成恢复溢出的飞行数据的同时接受检查点屏障。在这种情况下，新的检查点是可以执行成功的，但是因为传输中的数据已损毁/丢失，当尝试从已损毁的检查点恢复时，这将导致各种反序列化/数据流已损毁的错误。</p>
+<h1 id="apis-相关变更和注意点">APIs 相关变更和注意点</h1>
+<h2 id="移除了executionconfig-中的deprecated-方法-flink-19084">移除了ExecutionConfig 中的deprecated 方法 FLINK-19084</h2>
+<ul>
+<li>移除了过期的ExecutionConfig#isLatencyTrackingEnabled方法，替代方法：ExecutionConfig#getLatencyTrackingInterval代替</li>
+<li>过期的或无效的方法被移除：ExecutionConfig#enable/disableSysoutLogging ；ExecutionConfig#set/isFailTaskOnCheckpointError</li>
+<li>从cli中移除了无效的-q选项</li>
+</ul>
+<h2 id="移除过期的runtimecontextgetallaccumulators-方法-flink-19032">移除过期的RuntimeContext#getAllAccumulators 方法 FLINK-19032</h2>
+<p>移除了RuntimeContext#getAllAccumulators方法，替代方法：RuntimeContext#getAccumulator</p>
+<h2 id="因为存在数据丢失的风险设置方法过期checkpointconfigsetprefercheckpointforrecovery-flink-20441">因为存在数据丢失的风险，设置方法过期：CheckpointConfig#setPreferCheckpointForRecovery FLINK-20441</h2>
+<p>因为偏好选择旧的检查点，而不是新的保存点来进行恢复可能会导致数据丢失，设置CheckpointConfig#setPreferCheckpointForRecovery为过期方法</p>
+<h2 id="flip-134datastream-api中批执行相关">FLIP-134：DataStream API中批执行相关</h2>
+<ol>
+<li>
+<p>允许显示地在KeyedStream.intervalJoin()上配置时间行为 FLINK-19479<br>
+在FLINK 1.12之前，KeyedStream.intervalJoin()操作基于全局设置的流的时间特性（TimeCharacteristic)来改变行为。在Flink 1.12中，在IntervalJoin类中显示地引入了inProcessingTime() 和 inEventTime()方法，join不再基于全局的时间特性改变行为。</p>
+</li>
+<li>
+<p>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318<br>
+在Flink 1.12中，DataStream API中的timeWindow()方法设置为过期。请使用window(WindowAssigner) + TumblingEventTimeWindows/SlidingEventTimeWindows/TumblingProcessingTimeWindows/SlidingProcessingTimeWindows 替代。更多的信息，请查看TimeCharacteristic/setStreamTimeCharacteristic的过期描述</p>
+</li>
+<li>
+<p>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319<br>
+在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。在Event-time模式下，显示使用处理时间（Processing Time）窗口和计时器是起作用的。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用的是通用的“time window”操作（比如，KeyedStream.timeWindow()），该操作基于设置的时间特性（time characteristic）改变行为，请使用显示指定Processing time 或event Time的等价操作。</p>
+</li>
+<li>
+<p>允许在CEP PatternStream中显示配置时间行为  FLINK-19326<br>
+在Flink 1.12之前，CEP 操作基于全局设置的流时间特性来变更行为。在Flink 1.12中，PatternStream中引入了显示设置的inProcessingTime() 和inEventTime()方法，CEP操作不再基于全局的时间特性变更行为</p>
+</li>
+</ol>
+<h2 id="api-清理">API 清理</h2>
+<ol>
+<li>移除了剩余的UdfAnalyzer 配置 FLINK-13857<br>
+移除了ExecutionConfig#get/setCodeAnalysisMode方法和 SkipCodeAnalysis 类。在这个变更之前，这些类或方法也没有启作用，所以也没有必要使用</li>
+<li>移除过期的DataStream#split FLINK-19083<br>
+DataStream#split方法在几个版本中被标记为已弃用后被删除，替代方法：请使用Side Outputs 替换</li>
+<li>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035<br>
+长时间弃用的（Window）DataStream#fold方法在Flink 1.12版本中已经移除。请使用其他操作比如：（Window）DataStream#reduce方法替代，该方法在分布式系统中具有更好的性能</li>
+</ol>
+<h2 id="extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</h2>
+<p>CompositeTypeSerializerSnapshot # isOuterSnapshotCompatible(TypeSerializer)方法已经设置为过期，为了支持新的OuterSchemaCompatibility#resolveOuterSchemaCompatibility(TypeSerializer)方法。请自行实现它。与旧方法相比，新方法允许复合序列化器基于外部模式和配置来指示状态模式迁移。</p>
+<h2 id="bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</h2>
+<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持Scala&lt;2.11.11的版本</p>
+<h1 id="connectors-and-formats">Connectors and Formats</h1>
+<h2 id="移除了kafka-010x-和011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</h2>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/flink-shi-jian-cao-zuo-window/">
+                <h3 class="post-title">
+                  Flink 时间操作—Window
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>
