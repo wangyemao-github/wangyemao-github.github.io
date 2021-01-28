@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1610940061754">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1611800152462">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1610940061754" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1611800152462" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -53,6 +53,37 @@
 <li><a href="#connectors-and-formats">Connectors and Formats</a>
 <ul>
 <li><a href="#%E7%A7%BB%E9%99%A4%E4%BA%86kafka-010x-%E5%92%8C011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</a></li>
+<li><a href="#csv%E5%BA%8F%E5%88%97%E5%8C%96%E6%A8%A1%E5%BC%8F%E5%8C%85%E5%90%AB%E4%BA%86%E8%A1%8C%E5%88%86%E9%9A%94%E7%AC%A6-flink-19868">Csv序列化模式包含了行分隔符 FLINK-19868</a></li>
+<li><a href="#%E5%8D%87%E7%BA%A7%E5%88%B0kafka-schema-registry-client-550-flink-18546">升级到Kafka Schema Registry Client 5.5.0 FLINK-18546</a></li>
+<li><a href="#%E5%B0%86avro-version-%E7%89%88%E6%9C%AC%E4%BB%8E182%E5%8D%87%E7%BA%A7%E5%88%B01100-flink-18192">将Avro version 版本从1.8.2升级到1.10.0 FLINK-18192</a></li>
+<li><a href="#%E4%B8%BAsql-%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%89%93%E5%8C%85flink-avro%E6%97%B6%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAuber-jar">为SQL 客户端打包flink-avro时，创建一个uber jar</a></li>
+</ul>
+</li>
+<li><a href="#%E9%83%A8%E7%BD%B2">部署</a>
+<ul>
+<li><a href="#%E9%BB%98%E8%AE%A4log4j%E9%85%8D%E7%BD%AE%E5%9C%A8%E8%BE%BE%E5%88%B0100mb%E5%90%8E%E6%BB%9A%E5%8A%A8%E6%97%A5%E5%BF%97-flink-8357">默认log4j配置：在达到100MB后滚动日志  FLINK-8357</a></li>
+<li><a href="#%E5%9C%A8flink%E7%9A%84docker%E9%95%9C%E5%83%8F%E4%B8%AD%E9%BB%98%E8%AE%A4%E4%BD%BF%E7%94%A8jemalloc-flink-19125">在Flink的docker镜像中默认使用jemalloc FLINK-19125</a></li>
+<li><a href="#%E5%8D%87%E7%BA%A7mesos%E7%89%88%E6%9C%AC%E5%88%B017-flink-19783">升级Mesos版本到1.7 FLINK-19783</a></li>
+<li><a href="#%E5%A6%82%E6%9E%9Cflink%E8%BF%9B%E7%A8%8B%E8%B6%85%E6%97%B6%E4%B9%8B%E5%90%8E%E8%BF%98%E6%B2%A1%E6%9C%89%E7%BB%88%E6%AD%A2%E4%BC%9A%E5%8F%91%E9%80%81sigkill%E4%BF%A1%E5%8F%B7-flink-17470">如果FLINK进程超时之后还没有终止会发送SIGKILL信号  FLINK-17470</a></li>
+<li><a href="#%E5%BC%95%E5%85%A5%E4%BA%86%E9%9D%9E%E9%98%BB%E5%A1%9E%E7%9A%84job%E6%8F%90%E4%BA%A4-flink-16866">引入了非阻塞的job提交 FLINK-16866</a></li>
+</ul>
+</li>
+<li><a href="#%E8%BF%90%E8%A1%8C%E6%97%B6runtime">运行时Runtime</a>
+<ul>
+<li><a href="#flip-141intra-slot-managed-memory-sharing-%E6%A7%BD%E5%86%85%E6%89%98%E7%AE%A1%E7%9A%84%E5%86%85%E5%AD%98%E5%85%B1%E4%BA%AB">FLIP-141：Intra-Slot Managed Memory Sharing （槽内托管的内存共享）</a></li>
+<li><a href="#flip-119-pipeline-region-schedling-flink-16430">FLIP-119 Pipeline Region Schedling FLINK-16430</a></li>
+</ul>
+</li>
+<li><a href="#flink-112-apache-kafka-connector">Flink 1.12 Apache Kafka Connector</a>
+<ul>
+<li><a href="#kafka-consumer">kafka consumer</a>
+<ul>
+<li><a href="#kafka-consumer%E5%8F%8A%E5%AE%B9%E9%94%99">kafka consumer及容错</a></li>
+<li><a href="#kafka-consumer-topic-and-partition-discovery">kafka Consumer topic and partition discovery</a></li>
+<li><a href="#kafka-consumer-offset-%E6%8F%90%E4%BA%A4%E8%A1%8C%E4%B8%BA%E9%85%8D%E7%BD%AE">kafka consumer offset 提交行为配置</a></li>
+<li><a href="#kafka-consumers-and-timestamp-extractionwatermark-emission">kafka consumers and TimeStamp Extraction/WaterMark Emission</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -103,7 +134,7 @@
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
         <h1 class="text-3xl font-bold lg:mt-16">Upgrade Flink to 1.12 —Release Notes(翻译官网)</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-18 / 5 min read
+          2021-01-18 / 21 min read
         </div>
         
         <div class="post-content yue">
@@ -131,12 +162,12 @@
 在FLINK 1.12之前，KeyedStream.intervalJoin()操作基于全局设置的流的时间特性（TimeCharacteristic)来改变行为。在Flink 1.12中，在IntervalJoin类中显示地引入了inProcessingTime() 和 inEventTime()方法，join不再基于全局的时间特性改变行为。</p>
 </li>
 <li>
-<p>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318<br>
+<p><em>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318</em><br>
 在Flink 1.12中，DataStream API中的timeWindow()方法设置为过期。请使用window(WindowAssigner) + TumblingEventTimeWindows/SlidingEventTimeWindows/TumblingProcessingTimeWindows/SlidingProcessingTimeWindows 替代。更多的信息，请查看TimeCharacteristic/setStreamTimeCharacteristic的过期描述</p>
 </li>
 <li>
-<p>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319<br>
-在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。在Event-time模式下，显示使用处理时间（Processing Time）窗口和计时器是起作用的。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用的是通用的“time window”操作（比如，KeyedStream.timeWindow()），该操作基于设置的时间特性（time characteristic）改变行为，请使用显示指定Processing time 或event Time的等价操作。</p>
+<p><em>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319</em><br>
+在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。显示使用处理时间（Processing Time）窗口和计时器可以在Event-time模式下使用。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用基于时间特性（time characteristic）更改行为的通用的“time window”操作（比如，KeyedStream.timeWindow()），请使用等效的显示指定Processing time 或event Time的操作。</p>
 </li>
 <li>
 <p>允许在CEP PatternStream中显示配置时间行为  FLINK-19326<br>
@@ -147,17 +178,239 @@
 <ol>
 <li>移除了剩余的UdfAnalyzer 配置 FLINK-13857<br>
 移除了ExecutionConfig#get/setCodeAnalysisMode方法和 SkipCodeAnalysis 类。在这个变更之前，这些类或方法也没有启作用，所以也没有必要使用</li>
-<li>移除过期的DataStream#split FLINK-19083<br>
+<li><em>移除过期的DataStream#split FLINK-19083</em><br>
 DataStream#split方法在几个版本中被标记为已弃用后被删除，替代方法：请使用Side Outputs 替换</li>
-<li>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035<br>
+<li><em>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035</em><br>
 长时间弃用的（Window）DataStream#fold方法在Flink 1.12版本中已经移除。请使用其他操作比如：（Window）DataStream#reduce方法替代，该方法在分布式系统中具有更好的性能</li>
 </ol>
 <h2 id="extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</h2>
 <p>CompositeTypeSerializerSnapshot # isOuterSnapshotCompatible(TypeSerializer)方法已经设置为过期，为了支持新的OuterSchemaCompatibility#resolveOuterSchemaCompatibility(TypeSerializer)方法。请自行实现它。与旧方法相比，新方法允许复合序列化器基于外部模式和配置来指示状态模式迁移。</p>
 <h2 id="bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</h2>
-<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持Scala&lt;2.11.11的版本</p>
+<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持(Scala&lt;&quot;2.11.11&quot;)的版本</p>
 <h1 id="connectors-and-formats">Connectors and Formats</h1>
 <h2 id="移除了kafka-010x-和011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</h2>
+<p>在Flink 1.12中，移除了kafka 0.10.x 和 0.11.x connectors。请使用通用的kafka链接器（universal kafka connector），它支持所有0.10.2.x 版本之后的kafka集群版本。<br>
+请参阅文档，链接如何升级Flink kafka connector 版本 https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/connectors/kafka.html</p>
+<h2 id="csv序列化模式包含了行分隔符-flink-19868">Csv序列化模式包含了行分隔符 FLINK-19868</h2>
+<p>csv.line-delimiter 选项已经从CSV格式中移除。因为行分隔符应该由连接器定义，而不是由格式(format)去定义。如果用户已经在以前的Flink版本中使用了这个选项，在升级到Flink 1.12时，应该alter such table to remove this option。应该没有太多用户使用了这个选项。</p>
+<h2 id="升级到kafka-schema-registry-client-550-flink-18546">升级到Kafka Schema Registry Client 5.5.0 FLINK-18546</h2>
+<p>flink-avro-confluent-schema-registry模块不再作为fat-jar提供。你应该将它所依赖的添加到你的fat-jar中。Sql-客户端用户可以使用 flink-sql-avro-confluent-schema-registry  fat -jar。</p>
+<h2 id="将avro-version-版本从182升级到1100-flink-18192">将Avro version 版本从1.8.2升级到1.10.0 FLINK-18192</h2>
+<p>flink-avro模块的Avro默认版本已经升级到1.10.如果由于某些原因，你需要使用一个旧版本（有来自Hadoop的Avro，或者你使用了基于旧版本Avro的类），请在项目中显示地降低Avro版本。<br>
+注意：我们发现Avro 1.10版本的性能比1.8.2版本有所下降。如果你关心性能，并且你可以很好地使用旧版本的Avro，考虑降级Avro的版本。</p>
+<h2 id="为sql-客户端打包flink-avro时创建一个uber-jar">为SQL 客户端打包flink-avro时，创建一个uber jar</h2>
+<p>SQL客户端jar被重命名为flink-sql-avro-1.12.0.jar，之前为： flink-avro-1.12.0-sql-jar.jar。并且不再需要手动增加Avro依赖。</p>
+<h1 id="部署">部署</h1>
+<h2 id="默认log4j配置在达到100mb后滚动日志-flink-8357">默认log4j配置：在达到100MB后滚动日志  FLINK-8357</h2>
+<p>默认的log4j配置已经变更：除了已有的在Flink启动时滚动日志文件外，当日志文件大小达到100MB时，也会滚动日志文件。Flink总共保存了10个日志文件，有效地将日志目录总大小限制为1GB。</p>
+<h2 id="在flink的docker镜像中默认使用jemalloc-flink-19125">在Flink的docker镜像中默认使用jemalloc FLINK-19125</h2>
+<p>在Flink的docker镜像中，使用jemalloc作为默认的内存分配器，以减少内存碎片问题。在docker-entrypoint.sh 脚本中设置“disable-jemalloc”，可以回滚到使用glibc内存分配器。更多细节，请参考https://ci.apache.org/projects/flink/flink-docs-release-1.12/deployment/resource-providers/standalone/docker.html</p>
+<h2 id="升级mesos版本到17-flink-19783">升级Mesos版本到1.7 FLINK-19783</h2>
+<p>Mesos依赖从1.0.1升级到了1.7</p>
+<h2 id="如果flink进程超时之后还没有终止会发送sigkill信号-flink-17470">如果FLINK进程超时之后还没有终止会发送SIGKILL信号  FLINK-17470</h2>
+<p>在Flink 1.12版本中，变更了standalong 脚本的行为：如果SIGTERM信号没有成功地终止Flink进程，就发出SIGKILL信号</p>
+<h2 id="引入了非阻塞的job提交-flink-16866">引入了非阻塞的job提交 FLINK-16866</h2>
+<p>提交job的语义稍有改变。提交的调用会立即返回，此时作业处于新的初始化状态。当作业处于该状态时，诸如触发保存点或检索完整作业详细信息等操作不可用<br>
+一旦job的JobManager已经创建，该job处于created状态，所有的调用都是可用的</p>
+<h1 id="运行时runtime">运行时Runtime</h1>
+<h2 id="flip-141intra-slot-managed-memory-sharing-槽内托管的内存共享">FLIP-141：Intra-Slot Managed Memory Sharing （槽内托管的内存共享）</h2>
+<p>配置项：python.fn-execution.buffer.memory.size和python.fn-execution.framework.memory.size 已经移除，因此不再产生具体作用。python.fn-execution.memory.managed的默认值变更为True，因此托管的内存将默认被Python workers 使用。当同时使用Python udf 和 RocksDB状态后端时，或者在批处理中使用内存批处理算法时，用户可以通过覆盖“managed memory consumer weights”，以控制在数据处理和Python之间如何共享托管内存（RocksDB状态后端或者批处理算法）。</p>
+<h2 id="flip-119-pipeline-region-schedling-flink-16430">FLIP-119 Pipeline Region Schedling FLINK-16430</h2>
+<p>从Flink 1.12 开始，jobs将以pipelined regions 为单元进行调度。<strong>a pipelined region</strong> 就是一个流水线任务集。这就意味着，对于由多个pipelined regions组成的流作业，不再等待所有的任务获得slot之后才开始部署任务。相反，一旦某个region包含的任务获得了足够的slot，就可以进行部署。对于批作业，将不会为任务分配slots，也不会单独部署任务；相反，某个region获得了足够的slots，在该region中的所有task将一起部署。<br>
+使用jobmanager.scheduler.scheduling-strategy: legacy 可以启用原有调度。</p>
+<h1 id="flink-112-apache-kafka-connector">Flink 1.12 Apache Kafka Connector</h1>
+<p>universal kafka connector 向后兼容kafka 0.10.0及之后的客户端版本。<br>
+依赖：</p>
+<blockquote>
+<dependency>
+>	<groupId>org.apache.flink</groupId>
+>	<artifactId>flink-connector-kafka_2.11</artifactId>
+>	<version>1.12.0</version>
+</dependency>
+</blockquote>
+<h2 id="kafka-consumer">kafka consumer</h2>
+<p>使用同之前版本：</p>
+<pre><code class="language-java">Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+DataStream&lt;String&gt; stream = env
+	.addSource(new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties));
+</code></pre>
+<p>###配置如何确定分区的起始位置----同之前版本</p>
+<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(...);
+myConsumer.setStartFromEarliest();     // start from the earliest record possible
+myConsumer.setStartFromLatest();       // start from the latest record
+myConsumer.setStartFromTimestamp(...); // start from specified epoch timestamp (milliseconds)
+myConsumer.setStartFromGroupOffsets(); // the default behaviour
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<ul>
+<li>默认setStartFromGroupOffsets: 基于consumer group（由consumer属性中group.id指定）提交到kafka brokers的offsets开始读取partition数据。如果从某个partition没有找到对应的offsets，将基于配置的属性：auto.offset.reset 来读取数据。</li>
+<li>setStartFromEarliest() / setStartFromLatest() ： 从最早或最新位置开始读取。在这种模式下提交到kafka的offset将被忽略，不会作为起始位置。如果offsets超出了partition的范围，将根据配置属性：auto.offset.reset 来读取数据</li>
+<li>setStartFromTimestamp(long)：从指定的timestamp开始读取数据。对于每一个partition，时间戳等于或大于指定时间的记录将用作开始位置。如果某个partition的最新记录早于指定的时间戳，分区将简单地从最新数据开始读取。在这种模式下，提交给kafka的offset将会被忽略，不会作为起始位置。</li>
+<li>指定每个partition的准确offsets.</li>
+</ul>
+<pre><code class="language-java">Map&lt;KafkaTopicPartition, Long&gt; specificStartOffsets = new HashMap&lt;&gt;();
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 0), 23L);
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 1), 31L);
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 2), 43L);
+
+myConsumer.setStartFromSpecificOffsets(specificStartOffsets);
+</code></pre>
+<p>注意：如果consumer读取的分区在提供的偏移量映射中没有指定偏移量，该分区的起始位置策略将回退到默认的group offsets行为（setStartFromGroupOffsets）</p>
+<p><strong>注意：</strong><br>
+<em>当作业从故障中自动恢复或使用保存点手动恢复时，这些起始位置配置将不会起作用。在恢复时，每个kafka 分区的起始位置由存储在保存点或检查点的偏移量决定</em></p>
+<h3 id="kafka-consumer及容错">kafka consumer及容错</h3>
+<p>启用Flink checkpoint，Flink kafka consumer消费topic的记录的同时会定期checkpoint kafka偏移量，以及其他的操作状态。在作业失败时，Flink将流程序恢复到最新的检查点状态，并从存储在检查点的偏移量位置开始消费kafka中的记录。<br>
+检查点的间隔定义了程序在失败的情况下，最多回退消费的数据量。为了使用容错的kafka consumer，需要在作业中开启拓扑checkpoint。<br>
+如果不开启checkpoint，kafka consumer经周期提交offsets给zookeeper。<br>
+<strong>Checkpointing 配置</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>execution.checkpointing.externalized-checkpoint-retention</td>
+<td>none</td>
+<td>枚举值<br>可能取值：DELETE_ON_CANCELLATION，RETAIN_ON_CANCELLATION</td>
+<td>外部化的检查点将其元数据写到外部持久化存储中，在拥有的作业失败或被挂起（以作业状态JobStatus＃FAILED或JobStatus＃SUSPENDED终止）时，不会自动清除。在这种情况下，您必须手动清除检查点状态 ，包括元数据以及具体程序状态数据.<br>该模式定义了在作业取消时应该如何清除外部检查点。 如果您选择在“取消时保留外部检查点”，则在取消作业（以作业状态JobStatus＃CANCELED终止）时也必须手动处理检查点清除.<br> 外部检查点目录通过：state.checkpoints.dir配置</td>
+</tr>
+<tr>
+<td>execution.checkpointing.interval</td>
+<td>none</td>
+<td>Duration</td>
+<td>checkpoint 周期调度的间隔<br>该设置是checkpoint的基本间隔，checkpoint的触发可能会受：execution.checkpointing.max-concurrent-checkpoints和execution.checkpointing.min-pause影响而延迟</td>
+</tr>
+<tr>
+<td>execution.checkpointing.min-pause</td>
+<td>1</td>
+<td>Integer</td>
+<td>可能同时进行的最大检查点尝试次数。如果该值为n，则当当前有n个检查点尝试时，不会触发任何检查点。要触发下一个检查点，一次检查点尝试需要完成或过期</td>
+</tr>
+<tr>
+<td>execution.checkpointing.min-pause</td>
+<td>0ms</td>
+<td>Duration</td>
+<td>checkpoint的最小间隔。相对于并发点指定的最大并发数量，次设置定义了在可能触发另一个检查点之后，检查点协调器多久可以触发两一个检查点</td>
+</tr>
+<tr>
+<td>execution.checkpointing.mode</td>
+<td>EXACTLY_ONCE</td>
+<td>枚举值<br>可能的取值:<br> EXACTLY_ONCE, AT_LEAST_ONCE</td>
+<td>checkpoint 模式</td>
+</tr>
+<tr>
+<td>execution.checkpointing.prefer-checkpoint-for-recovery</td>
+<td>false</td>
+<td>Boolean</td>
+<td>如果开启，那job恢复时，将从最近的检查点恢复，而不是更新的savepoint</td>
+</tr>
+<tr>
+<td>execution.checkpointing.timeout</td>
+<td>10min</td>
+<td>Duration</td>
+<td>checkpoint被丢弃之前可以执行的最大时间</td>
+</tr>
+<tr>
+<td>execution.checkpointing.tolerable-failed-checkpoints</td>
+<td>none</td>
+<td>Integer</td>
+<td>容忍失败的checkpoint数。如果设置为0，表示不能容忍任何的checkpoint失败</td>
+</tr>
+<tr>
+<td>execution.checkpointing.unaligned</td>
+<td>false</td>
+<td>Boolean</td>
+<td>开启未对齐的checkpoints，这在背压的情况下能极大减少checkpoint时间.<br>未对齐的检查点将存储在buffers的数据作为状态的一部分，这将允许检查点屏障越过这些buffer数据。因此，检查点的持续时间将与当前的吞吐量无关，因为嵌入到数据流中的检查点屏障将不再起到实质作用<br>未对齐的检查点仅在如下情况下可以开启：execution.checkpointing.mode是EXACTLY_ONCE 并且 execution.checkpointing.max-concurrent-checkpoints=1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kafka-consumer-topic-and-partition-discovery">kafka Consumer topic and partition discovery</h3>
+<ul>
+<li>Partition discovery<br>
+Flink Kafka Consumer 支持发现动态创建的kafka分区，并提供exactly-once 保证。默认，<strong>partition discovery</strong> 未开启，通过在提供的属性配置中，设置flink.partition-discovery.interval-millis为非负值开启此功能。单位：毫秒</li>
+<li>topic discovery<br>
+Kafka消费者还能够通过使用正则表达式匹配主题名称来发现</li>
+</ul>
+<pre><code class="language-java">    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(
+    java.util.regex.Pattern.compile(&quot;test-topic-[0-9]&quot;),
+    new SimpleStringSchema(),
+    properties);
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<p>为了允许consumer在作业开始运行后发现动态创建的主题，请为flink.partition-discovery.interval-millis设置一个非负值。这使consumer可以发现名称匹配指定模式的新主题的分区。</p>
+<h3 id="kafka-consumer-offset-提交行为配置">kafka consumer offset 提交行为配置</h3>
+<p>Flink kafka consumer支持配置offset如何提交给kafka broker。注意：flink kafka consumer并不依赖于提交给kafka broker的offset来进行容错。提交的offset仅为了监控的目的暴露消费进度的一种途径。<br>
+依赖于是否启动了检查点，配置offset提交行为的方法不同：</p>
+<ul>
+<li>未开启checkpoint：在没有开启检查点时，flink kafka consumer依赖于内部使用的kafka客户端自动的定期offset提交功能。因此，在提供的属性配置中简单地设置enable.auto.commit / auto.commit.interval.ms 键的合适值，就能开启/关闭offset的提交。</li>
+<li>开启checkpoint：如果开启检查点，在checkpoint完成之后，flink kafka consumer将保存在检查点状态中的offsets提交给kafka。这将确保提交给kafka broker的offset与保存在检查点状态中的offset是一致的。用户可以通过调用setCommitOffsetsOnCheckpoints(boolean)方法来选择开启或关闭offset的提交。默认为true。注意：在这种情况下，属性中配置的自动周期offset提交设置将完全被忽略。</li>
+</ul>
+<h3 id="kafka-consumers-and-timestamp-extractionwatermark-emission">kafka consumers and TimeStamp Extraction/WaterMark Emission</h3>
+<p>在大多数场景下，记录的时间戳是嵌入在数据本身，或者ConsumerRecord元数据中的。另外，用户可能想要周期性地或者不定期地发出水印。比如：基于kafka流中的特殊记录，这些记录包含了时间时间水印。对于这些情况，Flink kafka consumer 可以指定<strong>WaterMark Strategy</strong>.<br>
+可以按如下自定义WaterMark Strategy，也可以使用预定义的：</p>
+<pre><code class="language-java">Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer =
+    new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties);
+myConsumer.assignTimestampsAndWatermarks(
+    WatermarkStrategy.
+        .forBoundedOutOfOrderness(Duration.ofSeconds(20)));
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<p>如果一个水印分配器依赖于从Kafka读取的记录来提升其水印(这是通常的情况)，那么所有的主题和分区都需要有连续的记录流。否则，整个应用程序的水印无法前进，所有基于时间的操作(如时间窗口或带有计时器的函数)都无法前进。单个空闲的Kafka分区会导致这种行为。考虑设置适当的idness超时来缓解这个问题</p>
+<p>Kafka Producer<br>
+Flink的kafka producer—FlinkKafkaProducer允许将流记录写到一个或多个kafka topic中。<br>
+构造方法接受如下参数：<br>
+(1)事件需要写入的默认topic<br>
+(2)SerializationSchema/KafkaSerializationSchema用于将数据序列化到kafka<br>
+(3) kafka client 配置，如下配置项是必须的：bootstrap.servers<br>
+(4)默认的容错语义<br>
+<img src="https://wangyemao-github.github.io/post-images/1611501777416.png" alt="" loading="lazy"></p>
+<p>The SerializationSchema<br>
+Flink kafka Producer需要知道如何将Java/Scala 对象转化为二进制数据。<strong>KafkaSerializationSchema</strong>允许用户去指定这样一个模式。每一条记录都会调用方法：ProducerRecord&lt;byte[], byte[]&gt; serialize(T element, @Nullable Long timestamp) ；生成一个ProducerRecord，写到kafka。<br>
+这让用户可以细粒度地控制数据如何写入kafka，通过producer record，你可以：<br>
+（1）设置header values<br>
+（2）为每一条记录定义keys<br>
+（3）指定自定义数据分区</p>
+<p>Kafka Producers 以及容错<br>
+在开启Fink checkpoint的情况下，FlinkKafkaProducer可以提供exactly-once 传送保证。<br>
+除了启用FlinkKafkaProducer的检查点之外，您还可以通过向FlinkKafkaProducer传递适当的语义参数来选择三种不同的操作模式：<br>
+Semantic.NONE：Flink不会做任何保证。Producer records可能会丢失，也可能会重复<br>
+Semantic.AT_LEAST_ONCE（默认设置）：保证没有记录会丢失，但是可能会重复<br>
+Semantic.Exactly_ONCE: kafka事务将用于提供exactly-once 语义。当你使用事务写入Kafka时，对于从kafka消费数据的任何应用程序都不要忘记设置期望的隔离级别（read_committed or read_uncommitted，默认为后者）</p>
+<p>注意事项：<br>
+Semantic.Exactly_Once 依赖于commit transaction 功能，commit transanction从检查点恢复之后，执行下一次checkpoint之前启动。如果Flink应用程序崩溃到完成重启之间的时间大于Kafka的事务超时时间，则将丢失数据（Kafka将自动中止超过超时时间的事务）。 考虑到这一点，请根据您的预期停机时间适当配置事务超时。<br>
+默认，kafka broker将transaction.max.timeout.ms设置为15分钟。该属性不允许producer设置大于该值的事务超时时间。默认情况下，FlinkKafkaProducer将生产者配置中的transaction.timeout.ms属性设置为1小时，因此使用Semantic.EXACTLY_ONCE模式之前，应先增大transaction.max.timeout.ms的设置。<br>
+在kafkaConsumer的read_committed模式下，任何未完成的事务（既未中止也未完成）将阻止来自给定kafka topic的所有未完成事务的读取。话句话说，在以下事件序列之后：<br>
+（1）用户启动transaction 1，写入一些记录<br>
+（2）用户启动transaction 2，写入一些其他记录<br>
+（3）用户提交了transaction 2<br>
+即便transaction 2中的记录已经提交，但是直到transaction 1 被提交或中止之前，它们对用户仍旧是不可见的。这包含了两层含义：</p>
+<ol>
+<li>首先，在Flink应用程序的正常工作中，用户可以预计生产到kafka topic的记录的可见性延迟，该延迟等于完成checkpoint之间的平均时间。</li>
+<li>其次，在Flink应用程序失败的情况下，应用正在写入的记录对用户不具有可见性。直到应用程序重新启动或经过到达配置的事务超时时间为止。此注释仅适用于有多个代理/应用程序写入同一个Kafka主题的情况。</li>
+</ol>
+<p><strong>注意</strong> ：Semantic.EXACTLY_ONCE模式为每个FlinkKafkaProducer实例使用固定大小的KafkaProducer池。 每个检查点使用这些生产者中的每一个。 如果并发检查点的数量超过池大小，则FlinkKafkaProducer将引发异常，并使整个应用程序失败。 请相应地配置最大池大小和最大并发检查点数。</p>
 
         </div>
 
@@ -165,6 +418,15 @@ DataStream#split方法在几个版本中被标记为已弃用后被删除，替�
 
 
         <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  upgrading applications and flink version —翻译from官网
+                </h3>
+              </a>
+            </div>
           
 
           

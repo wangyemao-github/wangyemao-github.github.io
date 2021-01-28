@@ -1,0 +1,339 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1611800152462">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1611800152462" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#%E9%87%8D%E5%90%AF%E6%B5%81%E7%A8%8B%E5%BA%8F">重启流程序</a></li>
+<li><a href="#%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%8A%B6%E6%80%81%E5%85%BC%E5%AE%B9%E6%80%A7">应用程序状态兼容性</a>
+<ul>
+<li><a href="#%E5%8C%B9%E9%85%8D%E6%93%8D%E4%BD%9C%E7%8A%B6%E6%80%81">匹配操作状态</a></li>
+<li><a href="#%E6%9C%89%E7%8A%B6%E6%80%81%E7%9A%84%E6%93%8D%E4%BD%9C%E4%B8%8E%E7%94%A8%E6%88%B7%E5%87%BD%E6%95%B0">有状态的操作与用户函数</a></li>
+<li><a href="#%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E6%8B%93%E6%89%91">应用程序拓扑</a></li>
+</ul>
+</li>
+<li><a href="#%E5%8D%87%E7%BA%A7flink%E6%A1%86%E6%9E%B6%E7%89%88%E6%9C%AC">升级Flink框架版本</a>
+<ul>
+<li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+<li><a href="#step1-%E5%AF%B9%E7%8E%B0%E6%9C%89job%E5%81%9Asavepoint%E5%B9%B6%E5%81%9Cjob">STEP1: 对现有job做savepoint并停job</a></li>
+<li><a href="#step2-%E5%8D%87%E7%BA%A7%E9%9B%86%E7%BE%A4%E5%88%B0%E6%96%B0flinl%E7%89%88%E6%9C%AC">STEP2: 升级集群到新Flinl版本</a></li>
+<li><a href="#step3%E5%9F%BA%E4%BA%8Esavepoint%E5%9C%A8%E6%96%B0%E7%9A%84flink%E7%89%88%E6%9C%AC%E4%B8%8B%E6%81%A2%E5%A4%8D%E4%BD%9C%E4%B8%9A">STEP3：基于savepoint在新的Flink版本下恢复作业</a></li>
+<li><a href="#compatibility-table">Compatibility Table</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">upgrading applications and flink version —翻译from官网</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-20 / 12 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>Flink 流程序(DataStream Programs)通常设计为长时间运行，比如几周、几个月甚至几年。同所有长时间运行的服务一样，Flink流程序需要不断进行维护，包括：<strong>bug修复</strong>，<strong>实现改进</strong>，或<strong>将应用程序迁移到更高版本的Flink集群</strong><br>
+<strong>本文主要描述：如何更新Flink流程序，以及如何将正在运行的流程序迁移到不同的Flink集群</strong></p>
+<h1 id="重启流程序">重启流程序</h1>
+<p>升级Flink流应用程序以及将应用程序迁移到不同的集群操作路线都是基于Flink的<strong>Savepoint特性</strong>。一个savepoint就是应用在某个特定时间点的一致性快照。<br>
+有两种方式可以从正在运行的流应用程序中获取savepoint：</p>
+<ol>
+<li>应用程序继续运行的同时执行savepoint：
+<blockquote>
+<p>./bin/flink savepoint <jobID> [pathToSavepoint]<br>
+推荐定期获取savepoint，以便能从之前的时间点重新重启应用程序。</p>
+</blockquote>
+</li>
+<li>停止应用程序的同时，执行savepoint：
+<blockquote>
+<p>./bin/flink cancel -s [pathToSavepoint] <jobID><br>
+这意味着应用程序在完成savepoint之后会立即被取消。也就是说，在此次savepoint发生之后不会再有其他的checkpoint发生</p>
+</blockquote>
+</li>
+</ol>
+<p>给定从某个应用程序获取的savepoint，可以从savepoint（保存点）启动相同或者兼容的应用（具体参见应用状态兼容章节）。从savepoint的位置启动意味着：应用程序的操作状态是使用持久化到savepoint中的操作状态来做初始化的。这是通过使用保存点启动应用程序来完成的。</p>
+<blockquote>
+<p>./bin/flink run -d -s [pathToSavepoint] ~/application.jar</p>
+</blockquote>
+<p>启动的应用程序的操作使用执行savepoint(保存点)时，原始应用程序(即，执行savepoint(保存点)的应用程序)的操作状态进行初始化。启动的应用程序将准确地从此状态点开始继续处理。</p>
+<p><strong>注意</strong>：即便Flink始终会恢复应用的状态，它仍然不能恢复(回退)对外部系统的写操作。如果你的应用程序是基于应用程序未停止时获取的savepoint(保存点) 恢复的，这可能是一个问题。在这种情况下，应用程序在执行savepoint之后，可能又发出了很多数据，重启的应用程序（取决于你是否更改了应用程序的逻辑）可能会再次发出相同的数据。这种行为的确切影响可能会因为SinkFunction和存储系统的不同而有很大的不同。对于像幂等写入到Cassandra这样的键值存储系统来说，发送两次数据可能不会有什么问题；但是在追加数据到kafka这样的持久日志的情况下，就会存在问题。在任何情况下，你都应该仔细检查和测试重新启动的应用程序的行为。</p>
+<h1 id="应用程序状态兼容性">应用程序状态兼容性</h1>
+<p>为了修复bug或者改进应用程序而升级应用程序时，通常的目标都是在保留其状态的同时替换应用程序逻辑。我们通过从原始应用程序的保存点（savepoint）启动升级后的应用程序来实现。但是，这只有在两个应用程序的状态是兼容时，才是有效的。也就是说，升级后的应用程序的操作能够从原始应用程序的操作状态初始化它们的状态。<br>
+本节，主要讨论如何修改应用程序以保持状态的兼容。</p>
+<h2 id="匹配操作状态">匹配操作状态</h2>
+<p>当应用程序基于某个savepoint重启时，Flink将存储在savepoint中的操作状态与启动应用的有状态操作进行匹配。匹配是基于操作ID，操作ID也会存储在savepoint中。根据操作在应用程序操作拓扑的位置，每个操作都有一个默认的操作ID。因此，一个未修改的应用总是可以从它自己的savepoints重启。但是，如果应用程序修改了，操作的默认ID很可能会被修改。因此，修改的应用程序只有在它的操作ID都已经显示指定的情况下，才能从savepoint中重启。给操作分配ID非常简单，使用uid(String)方法完成，如下：</p>
+<pre><code class="language-scala">val mappedEvents: DataStream[(Int, Long)] = events
+  .map(new MyStatefulMapFunc()).uid(&quot;mapper-1&quot;)
+</code></pre>
+<p><strong>注意</strong>：因为存储在savepoint中的IDs和重启的应用程序的操作IDs必须相同，因此，强烈推荐，强烈建议为将来可能升级的应用程序的所有操作符分配唯一id。此建议适用于所有的操作，即，所有显示申明或没有申明操作状态的操作，因为有的操作它的内部状态对用户而言是不可见的（比如Window操作）。升级没有分配操作ID的应用程序要困难的多，可能只能通过使用setUidHash()方法的低级解决方法实现。<br>
+<strong>重要的</strong>：自1.3.X版本开始，上述也使用与操作链中的操作<br>
+默认地，所有存储在savepoint中的状态都必须与重启应用的操作匹配。然而，在从某个savepoint启动应用程序时，用户可能会显示地同意跳过（丢弃）那些不能匹配上操作的状态。<strong>对于在savepoint中未查找到状态的有状态操作，它会使用默认的状态进行初始化</strong>。用户可以通过调用ExecutionConfig#disableAutoGeneratedUIDs来强制执行最佳实践，如果任何操作符不包含自定义唯一ID，那么该操作将导致作业提交失败</p>
+<h2 id="有状态的操作与用户函数">有状态的操作与用户函数</h2>
+<p>在升级应用时，用户函数和操作都可以自由修改，除了一条限制。<strong>也就是操作状态的数据类型不能修改</strong>。这是很重要的，因为从某个savepoint中获取的状态在加载到某个操作之前，(当前)不能转换为不同的数据类型。因此，因此，在升级应用程序时更改操作符状态的数据类型会破坏应用程序状态的一致性，并阻止从保存点重新启动升级的应用程序。<br>
+操作状态可以是用户自定义状态也可以是内部状态</p>
+<ul>
+<li>用户定义操作状态：在包含了用户定义操作状态的函数中，状态的类型是由用户显示定义的。虽然不能更改操作符状态的数据类型，但克服这一限制的解决方案是使用不同的数据类型定义第二个状态，并实现将状态从原始状态迁移到新状态的逻辑。这种方法需要良好的迁移策略和对<strong>键分区状态行为</strong>的充分理解。</li>
+<li>内部操作状态：诸如window或join操作，都维持了用户不可见的内部的操作状态。对于这些操作，内部状态的数据类型依赖于操作的输入和输出类型。因此，变更各自的输入或输出类型会破坏应用程序的一致性，并阻止升级。下表列出了具有内部状态的操作，并显示了状态数据类型如何与它的输入和输出类型相关联。对于应用于keyed Stream的操作，key的类型也时状态数据类型的一部分<br>
+<img src="https://wangyemao-github.github.io/post-images/1611160060748.png" alt="" loading="lazy"></li>
+</ul>
+<h2 id="应用程序拓扑">应用程序拓扑</h2>
+<p>除了变更一个或多个现有操作外，还可以通过变更程序拓扑来升级应用程序。即，通过增加或移除操作，变更操作的并行度，或者修改操作的链行为。<br>
+通过改变程序拓扑升级应用程序时，为了保持应用状态的一致性，需要考虑如下几点：</p>
+<ul>
+<li><strong>增加或移除无状态的操作</strong>：这个没有问题除非下述情况之一</li>
+<li><strong>增加一个有状态操作</strong>：操作的状态将被初始化为默认状态，除非它接管另一个操作的状态</li>
+<li><strong>移除一个有状态的操作</strong>：被移除的操作的状态将丢失，除非被另一个操作接管。当启动升级应用程序时，您必须明确同意放弃该状态</li>
+<li><strong>变更操作的输入或输出类型</strong>：当在具有内部状态的操作之前或之后添加新操作时，您必须确保有状态操作的输入或输出类型不会被修改以保持内部操作状态的数据类型不变</li>
+<li><strong>变更操作链</strong>：多操作操作可以连接在一起以提高性能。自Flink1.3.X版本之后，当从savepoint恢复时，保持状态的一致性的同时修改操作链是有可能。可以中断链，将有状态操作移出链。还可以将新的或现有的有状态操作追加或注入到链中，或者修改链中的操作顺序。但是，当将基于保存点升级到1.3.x版本时，最重要的是要保证在链接方面拓扑结构没有改变。如上面的匹配操作符状态部分所述，应该为链中的所有操作符分配一个ID。</li>
+</ul>
+<h1 id="升级flink框架版本">升级Flink框架版本</h1>
+<p>本节描述在不同版本之间升级Flink和在不同版本之间迁移作业的一般方法。<br>
+简而言之，这个过程包括两个基本步骤：</p>
+<ol>
+<li>在前面的旧Flink版本中获取要迁移的作业的保存点</li>
+<li>在新的Flink版本下从以前版本获取的保存点恢复您的job<br>
+除了这两个基本步骤之外，还需要一些额外的步骤，这取决于您想要更改Flink版本的方式。在本指南中，我们区分了跨Flink版本升级的两种方法:就地升级和阴影复制升级。<br>
+对于就地升级，在获取保存点之后，您需要：</li>
+<li>停止/取消所有运行的作业</li>
+<li>停掉旧版本的flink集群</li>
+<li>升级flink到新版本集群</li>
+<li>重启新版本集群<br>
+对于影子拷贝，你需要：</li>
+<li>在从保存点恢复之前，除了旧版本的Flink安装外，还要安装新版本的Flink</li>
+<li>使用新版本的Flink从保存点恢复</li>
+<li>如果一切正常，请停止并关闭旧版本的Flink群集<br>
+下面，我们将首先介绍成功的工作迁移的先决条件，然后详细介绍我们前面概述的步骤。</li>
+</ol>
+<h2 id="前提条件">前提条件</h2>
+<p>在开始迁移之前，请检查要迁移的作业是否遵循保存点的最佳实践。另外，请查看API迁移指南，看看是否有任何与将保存点迁移到新版本相关的API更改。<br>
+特别地，我们建议您检查作业是否为操作设置了显式的uid。<br>
+这是一个软先决条件，如果您忘记分配uid，那么恢复应该仍然有效。如果遇到行不通的情况，你可以使用setUidHash(String hash)调用，手动将以前Flink版本中生成的legacy vertex ids添加到作业中。对于每个操作(在操作链中：只有head 操作)你必须分配32位的十六进制字符串，你可以在web ui或者日志中查看，它代表了对应操作的hash值。<br>
+除了操作符uid之外，目前还有两个会导致迁移失败的作业迁移的先决条件：</p>
+<ol>
+<li>不支持RocksDB半异步模式下的状态迁移。如果旧的作业使用这种模式，您仍然可以在savepoint之前将作业更改为使用完全异步模式。</li>
+<li>另一个重要的前提条件是，所有的保存点数据必须对于从新安装Flink版本在相同的(绝对的)路径下都是可访问的。这还包括访问从保存点文件(状态后端快照的输出)中引用的任何其他文件，包括但不限于通过状态处理器API修改而引用的其他保存点。任何保存点数据目前都是由元数据文件中的绝对路径引用的，因此保存点不能通过典型的文件系统操作进行重定位</li>
+</ol>
+<h2 id="step1-对现有job做savepoint并停job">STEP1: 对现有job做savepoint并停job</h2>
+<p>版本迁移的第一个主要步骤是获取一个保存点，并停止在旧的Flink版本上运行的作业<br>
+您可以使用这个命令来做到这一点：</p>
+<blockquote>
+<p>$ bin/flink stop [--savepointPath :savepointPath] :jobId<br>
+更多信息，参看 savepoint documentation.</p>
+</blockquote>
+<h2 id="step2-升级集群到新flinl版本">STEP2: 升级集群到新Flinl版本</h2>
+<p>在这一步中，我们更新集群的框架版本。这基本上意味着用新版本替换Flink安装的内容。这个步骤取决于你在你的集群中运行Flink的方式(例如单机，Mesos)<br>
+如果您不熟悉在集群中安装Flink，请阅读部署和集群设置文档</p>
+<h2 id="step3基于savepoint在新的flink版本下恢复作业">STEP3：基于savepoint在新的Flink版本下恢复作业</h2>
+<p>作为作业迁移的最后一步，从上面更新的集群上的保存点恢复。您可以使用这个命令来做到这一点：</p>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
+同样，要了解更多细节，请查看savepoint文档。</p>
+</blockquote>
+<h2 id="compatibility-table">Compatibility Table</h2>
+<p>保存点在Flink版本之间是兼容的，如下表所示:</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/savepoint/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Savepoint
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/">
+                <h3 class="post-title">
+                  Upgrade Flink to 1.12 —Release Notes(翻译官网)
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

@@ -1,0 +1,337 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1611800152462">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1611800152462" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#%E4%BB%80%E4%B9%88%E6%98%AFsavepoint-savepoint-%E4%B8%8Echeckpoint%E7%9A%84%E5%B7%AE%E5%BC%82">什么是savepoint ？ savepoint 与checkpoint的差异？</a></li>
+<li><a href="#%E5%88%86%E9%85%8D%E6%93%8D%E4%BD%9Cidsoperator-ids">分配操作IDs(Operator IDs)</a>
+<ul>
+<li><a href="#savepoint-state">Savepoint State</a></li>
+</ul>
+</li>
+<li><a href="#operations%E6%93%8D%E4%BD%9C">Operations（操作）</a>
+<ul>
+<li><a href="#%E8%A7%A6%E5%8F%91savepoints">触发savepoints</a></li>
+<li><a href="#trigger-a-savepoint">Trigger a Savepoint</a></li>
+<li><a href="#cancel-job-with-savepoint">Cancel Job with Savepoint</a></li>
+<li><a href="#resuming-from-savepoints">Resuming from Savepoints</a></li>
+<li><a href="#allowing-non-restored-state">Allowing Non-Restored State</a></li>
+<li><a href="#disposing-savepoints">Disposing Savepoints</a></li>
+</ul>
+</li>
+<li><a href="#default-savepoint-target-directory">Default savepoint target directory</a></li>
+<li><a href="#q-a">Q &amp; A</a></li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Savepoint</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-21 / 10 min read
+        </div>
+        
+        <div class="post-content yue">
+          <h1 id="什么是savepoint-savepoint-与checkpoint的差异">什么是savepoint ？ savepoint 与checkpoint的差异？</h1>
+<p>savepoint(保存点)是流作业执行状态的一致性镜像，通过flink的<strong>checkpoint机制</strong>创建的。你可以使用savepoint来停止和恢复，fork，或更新Flink作业。<strong>savepoint由两部分组成：一个基于稳定存储（比如，HDFS, S3）的包含二进制文件的目录（通常比较大）；一个元数据文件(相对较小)</strong>。稳定存储上的文件为作业指定状态镜像的网络数据。savepoint的元数据文件以绝对路径的形式(主要地)包含了指向保存点稳定存储的所有文件的指针。</p>
+<blockquote>
+<p><strong>注意</strong>：为了允许程序和Flink版本的升级，检查是否为操作分配了ID是非常重要的</p>
+</blockquote>
+<p>从概念上讲，Flink的savepoint与checkpoint的区别同传统数据库系统中的备份与恢复日志的区别很相似。checkpoint的主要目的是在作业意外失败时提供恢复机制。checkpoint的生命周期是由Flink管理的。也就是说，checkpoint是由Flink创建、持有和释放的，不需要与用户交互。作为一种恢复和周期性的触发方法，checkpoint实现的两个主要设计目标是：（1）轻量级的创建；（2）尽可能快递恢复。针对这些目标的优化可以利用某些属性，例如，作业代码在两次执行尝试之间不会改变。<strong>checkpoint通常在用户终止作业之后被删除(除非显式地配置为保checkpoint)</strong>。</p>
+<p>相反地，savepoint是由用户创建、持有和删除的。它们的用途就是计划性地手动备份和恢复。比如，Flink的版本更新，变更job图，变更并行度，像红/蓝部署那样派生另一个job，等等。当然，<strong>savepoint必须在作业停止之后继续存在</strong>。<strong>从概念上将，savepoint的生成和恢复成本可能会更高，并且它更对地关注与可以执行以及对前面提到的作业变更的支持</strong>。</p>
+<p>撇开这些概念上的差异，<strong>当前checkpoint和savepoint的实现基本上使用相同的代码并生成相同的格式。但是，目前存在一个例外</strong>，在未来可能会引入更多的差异。<strong>例外的情况是基于RocksDB 后备状态的增量checkpoint。这种情况使用的是RocksDB的内部格式，而不是flink的原生savepoint格式</strong>。这就是checkpoint比savepoint更轻量级的第一个具体事例。</p>
+<h1 id="分配操作idsoperator-ids">分配操作IDs(Operator IDs)</h1>
+<p>强烈建议您按照本节的描述调整您的程序，以便将来能够升级您的程序.<strong>主要需要的更改是通过uid(String)方法手动指定操作符id</strong>。这些id用于确定每个操作符的状态</p>
+<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
+  // Stateful source (e.g. Kafka) with ID
+  .addSource(new StatefulSource())
+  .uid(&quot;source-id&quot;) // ID for the source operator
+  .shuffle()
+  // Stateful mapper with ID
+  .map(new StatefulMapper())
+  .uid(&quot;mapper-id&quot;) // ID for the mapper
+  // Stateless printing sink
+  .print(); // Auto-generated ID
+</code></pre>
+<p>如果您不手动指定id，它们将自动生成。只要这些id不更改，就可以从保存点自动恢复。<strong>生成的id取决于程序的结构，并且对程序更改很敏感。因此，强烈建议手动分配这些id</strong></p>
+<h2 id="savepoint-state">Savepoint State</h2>
+<p>你可以将savepoint看成是Operator ID 与每个有状态操作的State之间的映射<br>
+<img src="https://wangyemao-github.github.io/post-images/1611209765479.png" alt="" loading="lazy"></p>
+<p>在上面的例子中，print sink是无状态的，因此它不是保存点状态的一部分。默认情况下，我们尝试将保存点的每个条目映射回新程序</p>
+<h1 id="operations操作">Operations（操作）</h1>
+<p>您可以使用命令行客户端来触发savepoints、完成savepoints并取消作业、从savepoint恢复以及删除savepoint<br>
+<strong>在Flink1.2.0版本之后，也可以使用webui，从savepoint恢复作业</strong></p>
+<h2 id="触发savepoints">触发savepoints</h2>
+<p>当触发一个savepoints时，将创建一个新的savepoints目录，其中存储数据和元数据。可以通过<strong>配置默认目标目录</strong>或使用触发器命令指定自定义目标目录来控制此目录的位置。<br>
+<strong>注意</strong>：目标目录必须是JobManager和TaskManager都可以访问的位置。比如，分布式文件系统上的某个目录<br>
+例如使用FsStateBackend或RocksDBStateBackend的savepoint目录结构：<br>
+<img src="https://wangyemao-github.github.io/post-images/1611210701803.png" alt="" loading="lazy"></p>
+<p><strong>注意</strong>：尽管看起来savepoint可以被移动，但由于元数据文件中保存的是状态文件的绝对路径，目前这是不可能的。请跟踪 FLINK-5778 查看为解除这一限制的处理进展</p>
+<p><strong>注意</strong>：如果你使用 MemoryStateBackend，元数据和savepoint状态数据都将存储在**_metadata** 文件中。由于它是自包含的，你可以移动文件并从任何位置恢复。</p>
+<p><strong>注意</strong>：不建议移动或删除正在运行的作业的最后一个保存点，因为这可能会妨碍故障恢复。保存点对“exactly-once”的sink是有副作用的，因此为了确保“exactly-once&quot; 语义，如果在最后一个savepoint之后没有新的检查点，那么savepoint将用于恢复。</p>
+<h2 id="trigger-a-savepoint">Trigger a Savepoint</h2>
+<blockquote>
+<p>bin/flink savepoint :jobId [:targetDirectory]<br>
+这将为ID:jobId的作业触发一个保存点，并返回创建的保存点的路径。您需要此路径来恢复和删除保存点</p>
+</blockquote>
+<h2 id="cancel-job-with-savepoint">Cancel Job with Savepoint</h2>
+<blockquote>
+<p>$ bin/flink cancel -s [:targetDirectory] :jobId<br>
+这将自动触发ID:jobid作业的保存点并取消作业。此外，还可以指定存放保存点的目标文件系统目录。该目录需要被JobManager(s)和TaskManager(s)访问。</p>
+</blockquote>
+<h2 id="resuming-from-savepoints">Resuming from Savepoints</h2>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
+这将提交作业并指定要从中恢复的保存点。您可以指定保存点目录或元数据文件的路径</p>
+</blockquote>
+<h2 id="allowing-non-restored-state">Allowing Non-Restored State</h2>
+<p>默认情况下，恢复操作将尝试将保存点的所有状态映射回您正在使用的程序。如果存在删除某些操作，可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态</p>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
+</blockquote>
+<h2 id="disposing-savepoints">Disposing Savepoints</h2>
+<blockquote>
+<p>$ bin/flink savepoint -d :savepointPath<br>
+该命令会处理保存在:savepointPath路径的保存点<br>
+<strong>注意</strong> ：也可以通过常规文件系统操作手动删除保存点，而不会影响其他保存点或检查点(记住，每个保存点都是自包含的)</p>
+</blockquote>
+<p><strong>configuration：</strong></p>
+<blockquote>
+<p>可以通过键<strong>state.savepoints.dir</strong>配置一个默认的savepoint目标目录。当触发savepoint时，该目录将用于存储savepoint。你也可以通过触发命令指定自定义的目标目录以覆盖默认值。</p>
+<h1 id="default-savepoint-target-directory">Default savepoint target directory</h1>
+<p>state.savepoints.dir: hdfs:///flink/savepoints</p>
+</blockquote>
+<h1 id="q-a">Q &amp; A</h1>
+<ol>
+<li>是否应该为job中的所有操作(operator)分配IDs<br>
+<strong>根据经验来说，是的</strong><br>
+严格来说，只需要通过uid()方法将IDs分配给job中有状态的操作就足够了。savepoint只保存有状态操作的状态，无状态的操作不是savepoint的一部分<br>
+实践中，建议为所有的操作都指定IDs。因为一些Flink内置的操作比如window操作也是有状态的，并且内置的操作实际上是否是有状态的也并不是很清楚。如果你确定某个操作时状态的，那么你可以直接跳过指定IDs。</li>
+<li>如果向job中添加了一个需要状态的新操作，会发生什么<br>
+当您向作业添加一个新的操作时，它将在没有任何状态的情况下被初始化。Savepoints包含了所有有状态操作的状态。无状态的操作并不是savepoint的一部分。新增有状态操作就类似于无状态操作的处理</li>
+<li>如果我从我的job中删除一个有状态的操作符会发生什么<br>
+默认情况下，savepoint恢复将尝试将所有保存状态与还原的作业匹配。因此，如果从包含已删除操作状态的保存点进行恢复，则将失败<br>
+可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态恢复：
+<blockquote>
+<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
+</blockquote>
+</li>
+<li>如果job中重新排序有状态操作会发生什么<br>
+如果您给这些操作分配了id，它们将像正常一样被恢复<br>
+如果您没有分配id，那么自动生成的有状态操作符的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
+<li>如果在job中添加、删除或重新排序没有状态的操作会发生什么情况<br>
+如果将id分配给有状态操作，则无状态操作符将不会影响保存点恢复。<br>
+如果没有分配id，则有状态操作符的自动生成的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
+<li>当我在恢复时改变程序的并行性时会发生什么<br>
+如果保存点是通过Flink &gt;= 1.2.0触发的，并且没有使用像checkpoint等过时的状态API，那么您可以简单地从保存点恢复程序并指定一个新的并行度。<br>
+如果你要从一个由Flink &lt; 1.2.0触发的保存点恢复，或者使用现在已经不支持的api，你必须首先将你的作业和保存点迁移到Flink &gt;= 1.2.0，然后才能改变并行度。<strong>请参阅升级作业和Flink版本指南</strong>。</li>
+<li>可以移动保存点文件在稳定存储<br>
+这个问题的快速答案是目前没有，因为元数据文件引用稳定存储文件作为绝对路径的技术原因。较长的答案是:如果由于某种原因必须移动文件，有两种可能的解决方法。首先，更简单但潜在更危险的是，您可以使用编辑器在元数据文件中找到旧路径，并用新路径替换它们。其次，可以使用SavepointV2Serializer类作为起点，以编程方式读取、操作和使用新路径重写元数据文件。</li>
+</ol>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/bu-shu/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  部署
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/">
+                <h3 class="post-title">
+                  upgrading applications and flink version —翻译from官网
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

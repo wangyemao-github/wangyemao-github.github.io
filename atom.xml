@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-18T03:21:09.813Z</updated>
+    <updated>2021-01-28T02:18:54.251Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -10,6 +10,226 @@
     <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[部署]]></title>
+        <id>https://wangyemao-github.github.io/post/bu-shu/</id>
+        <link href="https://wangyemao-github.github.io/post/bu-shu/">
+        </link>
+        <updated>2021-01-21T07:18:29.000Z</updated>
+        <content type="html"><![CDATA[<p>Standalone</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Savepoint]]></title>
+        <id>https://wangyemao-github.github.io/post/savepoint/</id>
+        <link href="https://wangyemao-github.github.io/post/savepoint/">
+        </link>
+        <updated>2021-01-21T01:04:58.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="什么是savepoint-savepoint-与checkpoint的差异">什么是savepoint ？ savepoint 与checkpoint的差异？</h1>
+<p>savepoint(保存点)是流作业执行状态的一致性镜像，通过flink的<strong>checkpoint机制</strong>创建的。你可以使用savepoint来停止和恢复，fork，或更新Flink作业。<strong>savepoint由两部分组成：一个基于稳定存储（比如，HDFS, S3）的包含二进制文件的目录（通常比较大）；一个元数据文件(相对较小)</strong>。稳定存储上的文件为作业指定状态镜像的网络数据。savepoint的元数据文件以绝对路径的形式(主要地)包含了指向保存点稳定存储的所有文件的指针。</p>
+<blockquote>
+<p><strong>注意</strong>：为了允许程序和Flink版本的升级，检查是否为操作分配了ID是非常重要的</p>
+</blockquote>
+<p>从概念上讲，Flink的savepoint与checkpoint的区别同传统数据库系统中的备份与恢复日志的区别很相似。checkpoint的主要目的是在作业意外失败时提供恢复机制。checkpoint的生命周期是由Flink管理的。也就是说，checkpoint是由Flink创建、持有和释放的，不需要与用户交互。作为一种恢复和周期性的触发方法，checkpoint实现的两个主要设计目标是：（1）轻量级的创建；（2）尽可能快递恢复。针对这些目标的优化可以利用某些属性，例如，作业代码在两次执行尝试之间不会改变。<strong>checkpoint通常在用户终止作业之后被删除(除非显式地配置为保checkpoint)</strong>。</p>
+<p>相反地，savepoint是由用户创建、持有和删除的。它们的用途就是计划性地手动备份和恢复。比如，Flink的版本更新，变更job图，变更并行度，像红/蓝部署那样派生另一个job，等等。当然，<strong>savepoint必须在作业停止之后继续存在</strong>。<strong>从概念上将，savepoint的生成和恢复成本可能会更高，并且它更对地关注与可以执行以及对前面提到的作业变更的支持</strong>。</p>
+<p>撇开这些概念上的差异，<strong>当前checkpoint和savepoint的实现基本上使用相同的代码并生成相同的格式。但是，目前存在一个例外</strong>，在未来可能会引入更多的差异。<strong>例外的情况是基于RocksDB 后备状态的增量checkpoint。这种情况使用的是RocksDB的内部格式，而不是flink的原生savepoint格式</strong>。这就是checkpoint比savepoint更轻量级的第一个具体事例。</p>
+<h1 id="分配操作idsoperator-ids">分配操作IDs(Operator IDs)</h1>
+<p>强烈建议您按照本节的描述调整您的程序，以便将来能够升级您的程序.<strong>主要需要的更改是通过uid(String)方法手动指定操作符id</strong>。这些id用于确定每个操作符的状态</p>
+<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
+  // Stateful source (e.g. Kafka) with ID
+  .addSource(new StatefulSource())
+  .uid(&quot;source-id&quot;) // ID for the source operator
+  .shuffle()
+  // Stateful mapper with ID
+  .map(new StatefulMapper())
+  .uid(&quot;mapper-id&quot;) // ID for the mapper
+  // Stateless printing sink
+  .print(); // Auto-generated ID
+</code></pre>
+<p>如果您不手动指定id，它们将自动生成。只要这些id不更改，就可以从保存点自动恢复。<strong>生成的id取决于程序的结构，并且对程序更改很敏感。因此，强烈建议手动分配这些id</strong></p>
+<h2 id="savepoint-state">Savepoint State</h2>
+<p>你可以将savepoint看成是Operator ID 与每个有状态操作的State之间的映射<br>
+<img src="https://wangyemao-github.github.io/post-images/1611209765479.png" alt="" loading="lazy"></p>
+<p>在上面的例子中，print sink是无状态的，因此它不是保存点状态的一部分。默认情况下，我们尝试将保存点的每个条目映射回新程序</p>
+<h1 id="operations操作">Operations（操作）</h1>
+<p>您可以使用命令行客户端来触发savepoints、完成savepoints并取消作业、从savepoint恢复以及删除savepoint<br>
+<strong>在Flink1.2.0版本之后，也可以使用webui，从savepoint恢复作业</strong></p>
+<h2 id="触发savepoints">触发savepoints</h2>
+<p>当触发一个savepoints时，将创建一个新的savepoints目录，其中存储数据和元数据。可以通过<strong>配置默认目标目录</strong>或使用触发器命令指定自定义目标目录来控制此目录的位置。<br>
+<strong>注意</strong>：目标目录必须是JobManager和TaskManager都可以访问的位置。比如，分布式文件系统上的某个目录<br>
+例如使用FsStateBackend或RocksDBStateBackend的savepoint目录结构：<br>
+<img src="https://wangyemao-github.github.io/post-images/1611210701803.png" alt="" loading="lazy"></p>
+<p><strong>注意</strong>：尽管看起来savepoint可以被移动，但由于元数据文件中保存的是状态文件的绝对路径，目前这是不可能的。请跟踪 FLINK-5778 查看为解除这一限制的处理进展</p>
+<p><strong>注意</strong>：如果你使用 MemoryStateBackend，元数据和savepoint状态数据都将存储在**_metadata** 文件中。由于它是自包含的，你可以移动文件并从任何位置恢复。</p>
+<p><strong>注意</strong>：不建议移动或删除正在运行的作业的最后一个保存点，因为这可能会妨碍故障恢复。保存点对“exactly-once”的sink是有副作用的，因此为了确保“exactly-once&quot; 语义，如果在最后一个savepoint之后没有新的检查点，那么savepoint将用于恢复。</p>
+<h2 id="trigger-a-savepoint">Trigger a Savepoint</h2>
+<blockquote>
+<p>bin/flink savepoint :jobId [:targetDirectory]<br>
+这将为ID:jobId的作业触发一个保存点，并返回创建的保存点的路径。您需要此路径来恢复和删除保存点</p>
+</blockquote>
+<h2 id="cancel-job-with-savepoint">Cancel Job with Savepoint</h2>
+<blockquote>
+<p>$ bin/flink cancel -s [:targetDirectory] :jobId<br>
+这将自动触发ID:jobid作业的保存点并取消作业。此外，还可以指定存放保存点的目标文件系统目录。该目录需要被JobManager(s)和TaskManager(s)访问。</p>
+</blockquote>
+<h2 id="resuming-from-savepoints">Resuming from Savepoints</h2>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
+这将提交作业并指定要从中恢复的保存点。您可以指定保存点目录或元数据文件的路径</p>
+</blockquote>
+<h2 id="allowing-non-restored-state">Allowing Non-Restored State</h2>
+<p>默认情况下，恢复操作将尝试将保存点的所有状态映射回您正在使用的程序。如果存在删除某些操作，可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态</p>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
+</blockquote>
+<h2 id="disposing-savepoints">Disposing Savepoints</h2>
+<blockquote>
+<p>$ bin/flink savepoint -d :savepointPath<br>
+该命令会处理保存在:savepointPath路径的保存点<br>
+<strong>注意</strong> ：也可以通过常规文件系统操作手动删除保存点，而不会影响其他保存点或检查点(记住，每个保存点都是自包含的)</p>
+</blockquote>
+<p><strong>configuration：</strong></p>
+<blockquote>
+<p>可以通过键<strong>state.savepoints.dir</strong>配置一个默认的savepoint目标目录。当触发savepoint时，该目录将用于存储savepoint。你也可以通过触发命令指定自定义的目标目录以覆盖默认值。</p>
+<h1 id="default-savepoint-target-directory">Default savepoint target directory</h1>
+<p>state.savepoints.dir: hdfs:///flink/savepoints</p>
+</blockquote>
+<h1 id="q-a">Q &amp; A</h1>
+<ol>
+<li>是否应该为job中的所有操作(operator)分配IDs<br>
+<strong>根据经验来说，是的</strong><br>
+严格来说，只需要通过uid()方法将IDs分配给job中有状态的操作就足够了。savepoint只保存有状态操作的状态，无状态的操作不是savepoint的一部分<br>
+实践中，建议为所有的操作都指定IDs。因为一些Flink内置的操作比如window操作也是有状态的，并且内置的操作实际上是否是有状态的也并不是很清楚。如果你确定某个操作时状态的，那么你可以直接跳过指定IDs。</li>
+<li>如果向job中添加了一个需要状态的新操作，会发生什么<br>
+当您向作业添加一个新的操作时，它将在没有任何状态的情况下被初始化。Savepoints包含了所有有状态操作的状态。无状态的操作并不是savepoint的一部分。新增有状态操作就类似于无状态操作的处理</li>
+<li>如果我从我的job中删除一个有状态的操作符会发生什么<br>
+默认情况下，savepoint恢复将尝试将所有保存状态与还原的作业匹配。因此，如果从包含已删除操作状态的保存点进行恢复，则将失败<br>
+可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态恢复：
+<blockquote>
+<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
+</blockquote>
+</li>
+<li>如果job中重新排序有状态操作会发生什么<br>
+如果您给这些操作分配了id，它们将像正常一样被恢复<br>
+如果您没有分配id，那么自动生成的有状态操作符的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
+<li>如果在job中添加、删除或重新排序没有状态的操作会发生什么情况<br>
+如果将id分配给有状态操作，则无状态操作符将不会影响保存点恢复。<br>
+如果没有分配id，则有状态操作符的自动生成的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
+<li>当我在恢复时改变程序的并行性时会发生什么<br>
+如果保存点是通过Flink &gt;= 1.2.0触发的，并且没有使用像checkpoint等过时的状态API，那么您可以简单地从保存点恢复程序并指定一个新的并行度。<br>
+如果你要从一个由Flink &lt; 1.2.0触发的保存点恢复，或者使用现在已经不支持的api，你必须首先将你的作业和保存点迁移到Flink &gt;= 1.2.0，然后才能改变并行度。<strong>请参阅升级作业和Flink版本指南</strong>。</li>
+<li>可以移动保存点文件在稳定存储<br>
+这个问题的快速答案是目前没有，因为元数据文件引用稳定存储文件作为绝对路径的技术原因。较长的答案是:如果由于某种原因必须移动文件，有两种可能的解决方法。首先，更简单但潜在更危险的是，您可以使用编辑器在元数据文件中找到旧路径，并用新路径替换它们。其次，可以使用SavepointV2Serializer类作为起点，以编程方式读取、操作和使用新路径重写元数据文件。</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[upgrading applications and flink version —翻译from官网]]></title>
+        <id>https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/</id>
+        <link href="https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/">
+        </link>
+        <updated>2021-01-20T14:36:40.000Z</updated>
+        <content type="html"><![CDATA[<p>Flink 流程序(DataStream Programs)通常设计为长时间运行，比如几周、几个月甚至几年。同所有长时间运行的服务一样，Flink流程序需要不断进行维护，包括：<strong>bug修复</strong>，<strong>实现改进</strong>，或<strong>将应用程序迁移到更高版本的Flink集群</strong><br>
+<strong>本文主要描述：如何更新Flink流程序，以及如何将正在运行的流程序迁移到不同的Flink集群</strong></p>
+<h1 id="重启流程序">重启流程序</h1>
+<p>升级Flink流应用程序以及将应用程序迁移到不同的集群操作路线都是基于Flink的<strong>Savepoint特性</strong>。一个savepoint就是应用在某个特定时间点的一致性快照。<br>
+有两种方式可以从正在运行的流应用程序中获取savepoint：</p>
+<ol>
+<li>应用程序继续运行的同时执行savepoint：
+<blockquote>
+<p>./bin/flink savepoint <jobID> [pathToSavepoint]<br>
+推荐定期获取savepoint，以便能从之前的时间点重新重启应用程序。</p>
+</blockquote>
+</li>
+<li>停止应用程序的同时，执行savepoint：
+<blockquote>
+<p>./bin/flink cancel -s [pathToSavepoint] <jobID><br>
+这意味着应用程序在完成savepoint之后会立即被取消。也就是说，在此次savepoint发生之后不会再有其他的checkpoint发生</p>
+</blockquote>
+</li>
+</ol>
+<p>给定从某个应用程序获取的savepoint，可以从savepoint（保存点）启动相同或者兼容的应用（具体参见应用状态兼容章节）。从savepoint的位置启动意味着：应用程序的操作状态是使用持久化到savepoint中的操作状态来做初始化的。这是通过使用保存点启动应用程序来完成的。</p>
+<blockquote>
+<p>./bin/flink run -d -s [pathToSavepoint] ~/application.jar</p>
+</blockquote>
+<p>启动的应用程序的操作使用执行savepoint(保存点)时，原始应用程序(即，执行savepoint(保存点)的应用程序)的操作状态进行初始化。启动的应用程序将准确地从此状态点开始继续处理。</p>
+<p><strong>注意</strong>：即便Flink始终会恢复应用的状态，它仍然不能恢复(回退)对外部系统的写操作。如果你的应用程序是基于应用程序未停止时获取的savepoint(保存点) 恢复的，这可能是一个问题。在这种情况下，应用程序在执行savepoint之后，可能又发出了很多数据，重启的应用程序（取决于你是否更改了应用程序的逻辑）可能会再次发出相同的数据。这种行为的确切影响可能会因为SinkFunction和存储系统的不同而有很大的不同。对于像幂等写入到Cassandra这样的键值存储系统来说，发送两次数据可能不会有什么问题；但是在追加数据到kafka这样的持久日志的情况下，就会存在问题。在任何情况下，你都应该仔细检查和测试重新启动的应用程序的行为。</p>
+<h1 id="应用程序状态兼容性">应用程序状态兼容性</h1>
+<p>为了修复bug或者改进应用程序而升级应用程序时，通常的目标都是在保留其状态的同时替换应用程序逻辑。我们通过从原始应用程序的保存点（savepoint）启动升级后的应用程序来实现。但是，这只有在两个应用程序的状态是兼容时，才是有效的。也就是说，升级后的应用程序的操作能够从原始应用程序的操作状态初始化它们的状态。<br>
+本节，主要讨论如何修改应用程序以保持状态的兼容。</p>
+<h2 id="匹配操作状态">匹配操作状态</h2>
+<p>当应用程序基于某个savepoint重启时，Flink将存储在savepoint中的操作状态与启动应用的有状态操作进行匹配。匹配是基于操作ID，操作ID也会存储在savepoint中。根据操作在应用程序操作拓扑的位置，每个操作都有一个默认的操作ID。因此，一个未修改的应用总是可以从它自己的savepoints重启。但是，如果应用程序修改了，操作的默认ID很可能会被修改。因此，修改的应用程序只有在它的操作ID都已经显示指定的情况下，才能从savepoint中重启。给操作分配ID非常简单，使用uid(String)方法完成，如下：</p>
+<pre><code class="language-scala">val mappedEvents: DataStream[(Int, Long)] = events
+  .map(new MyStatefulMapFunc()).uid(&quot;mapper-1&quot;)
+</code></pre>
+<p><strong>注意</strong>：因为存储在savepoint中的IDs和重启的应用程序的操作IDs必须相同，因此，强烈推荐，强烈建议为将来可能升级的应用程序的所有操作符分配唯一id。此建议适用于所有的操作，即，所有显示申明或没有申明操作状态的操作，因为有的操作它的内部状态对用户而言是不可见的（比如Window操作）。升级没有分配操作ID的应用程序要困难的多，可能只能通过使用setUidHash()方法的低级解决方法实现。<br>
+<strong>重要的</strong>：自1.3.X版本开始，上述也使用与操作链中的操作<br>
+默认地，所有存储在savepoint中的状态都必须与重启应用的操作匹配。然而，在从某个savepoint启动应用程序时，用户可能会显示地同意跳过（丢弃）那些不能匹配上操作的状态。<strong>对于在savepoint中未查找到状态的有状态操作，它会使用默认的状态进行初始化</strong>。用户可以通过调用ExecutionConfig#disableAutoGeneratedUIDs来强制执行最佳实践，如果任何操作符不包含自定义唯一ID，那么该操作将导致作业提交失败</p>
+<h2 id="有状态的操作与用户函数">有状态的操作与用户函数</h2>
+<p>在升级应用时，用户函数和操作都可以自由修改，除了一条限制。<strong>也就是操作状态的数据类型不能修改</strong>。这是很重要的，因为从某个savepoint中获取的状态在加载到某个操作之前，(当前)不能转换为不同的数据类型。因此，因此，在升级应用程序时更改操作符状态的数据类型会破坏应用程序状态的一致性，并阻止从保存点重新启动升级的应用程序。<br>
+操作状态可以是用户自定义状态也可以是内部状态</p>
+<ul>
+<li>用户定义操作状态：在包含了用户定义操作状态的函数中，状态的类型是由用户显示定义的。虽然不能更改操作符状态的数据类型，但克服这一限制的解决方案是使用不同的数据类型定义第二个状态，并实现将状态从原始状态迁移到新状态的逻辑。这种方法需要良好的迁移策略和对<strong>键分区状态行为</strong>的充分理解。</li>
+<li>内部操作状态：诸如window或join操作，都维持了用户不可见的内部的操作状态。对于这些操作，内部状态的数据类型依赖于操作的输入和输出类型。因此，变更各自的输入或输出类型会破坏应用程序的一致性，并阻止升级。下表列出了具有内部状态的操作，并显示了状态数据类型如何与它的输入和输出类型相关联。对于应用于keyed Stream的操作，key的类型也时状态数据类型的一部分<br>
+<img src="https://wangyemao-github.github.io/post-images/1611160060748.png" alt="" loading="lazy"></li>
+</ul>
+<h2 id="应用程序拓扑">应用程序拓扑</h2>
+<p>除了变更一个或多个现有操作外，还可以通过变更程序拓扑来升级应用程序。即，通过增加或移除操作，变更操作的并行度，或者修改操作的链行为。<br>
+通过改变程序拓扑升级应用程序时，为了保持应用状态的一致性，需要考虑如下几点：</p>
+<ul>
+<li><strong>增加或移除无状态的操作</strong>：这个没有问题除非下述情况之一</li>
+<li><strong>增加一个有状态操作</strong>：操作的状态将被初始化为默认状态，除非它接管另一个操作的状态</li>
+<li><strong>移除一个有状态的操作</strong>：被移除的操作的状态将丢失，除非被另一个操作接管。当启动升级应用程序时，您必须明确同意放弃该状态</li>
+<li><strong>变更操作的输入或输出类型</strong>：当在具有内部状态的操作之前或之后添加新操作时，您必须确保有状态操作的输入或输出类型不会被修改以保持内部操作状态的数据类型不变</li>
+<li><strong>变更操作链</strong>：多操作操作可以连接在一起以提高性能。自Flink1.3.X版本之后，当从savepoint恢复时，保持状态的一致性的同时修改操作链是有可能。可以中断链，将有状态操作移出链。还可以将新的或现有的有状态操作追加或注入到链中，或者修改链中的操作顺序。但是，当将基于保存点升级到1.3.x版本时，最重要的是要保证在链接方面拓扑结构没有改变。如上面的匹配操作符状态部分所述，应该为链中的所有操作符分配一个ID。</li>
+</ul>
+<h1 id="升级flink框架版本">升级Flink框架版本</h1>
+<p>本节描述在不同版本之间升级Flink和在不同版本之间迁移作业的一般方法。<br>
+简而言之，这个过程包括两个基本步骤：</p>
+<ol>
+<li>在前面的旧Flink版本中获取要迁移的作业的保存点</li>
+<li>在新的Flink版本下从以前版本获取的保存点恢复您的job<br>
+除了这两个基本步骤之外，还需要一些额外的步骤，这取决于您想要更改Flink版本的方式。在本指南中，我们区分了跨Flink版本升级的两种方法:就地升级和阴影复制升级。<br>
+对于就地升级，在获取保存点之后，您需要：</li>
+<li>停止/取消所有运行的作业</li>
+<li>停掉旧版本的flink集群</li>
+<li>升级flink到新版本集群</li>
+<li>重启新版本集群<br>
+对于影子拷贝，你需要：</li>
+<li>在从保存点恢复之前，除了旧版本的Flink安装外，还要安装新版本的Flink</li>
+<li>使用新版本的Flink从保存点恢复</li>
+<li>如果一切正常，请停止并关闭旧版本的Flink群集<br>
+下面，我们将首先介绍成功的工作迁移的先决条件，然后详细介绍我们前面概述的步骤。</li>
+</ol>
+<h2 id="前提条件">前提条件</h2>
+<p>在开始迁移之前，请检查要迁移的作业是否遵循保存点的最佳实践。另外，请查看API迁移指南，看看是否有任何与将保存点迁移到新版本相关的API更改。<br>
+特别地，我们建议您检查作业是否为操作设置了显式的uid。<br>
+这是一个软先决条件，如果您忘记分配uid，那么恢复应该仍然有效。如果遇到行不通的情况，你可以使用setUidHash(String hash)调用，手动将以前Flink版本中生成的legacy vertex ids添加到作业中。对于每个操作(在操作链中：只有head 操作)你必须分配32位的十六进制字符串，你可以在web ui或者日志中查看，它代表了对应操作的hash值。<br>
+除了操作符uid之外，目前还有两个会导致迁移失败的作业迁移的先决条件：</p>
+<ol>
+<li>不支持RocksDB半异步模式下的状态迁移。如果旧的作业使用这种模式，您仍然可以在savepoint之前将作业更改为使用完全异步模式。</li>
+<li>另一个重要的前提条件是，所有的保存点数据必须对于从新安装Flink版本在相同的(绝对的)路径下都是可访问的。这还包括访问从保存点文件(状态后端快照的输出)中引用的任何其他文件，包括但不限于通过状态处理器API修改而引用的其他保存点。任何保存点数据目前都是由元数据文件中的绝对路径引用的，因此保存点不能通过典型的文件系统操作进行重定位</li>
+</ol>
+<h2 id="step1-对现有job做savepoint并停job">STEP1: 对现有job做savepoint并停job</h2>
+<p>版本迁移的第一个主要步骤是获取一个保存点，并停止在旧的Flink版本上运行的作业<br>
+您可以使用这个命令来做到这一点：</p>
+<blockquote>
+<p>$ bin/flink stop [--savepointPath :savepointPath] :jobId<br>
+更多信息，参看 savepoint documentation.</p>
+</blockquote>
+<h2 id="step2-升级集群到新flinl版本">STEP2: 升级集群到新Flinl版本</h2>
+<p>在这一步中，我们更新集群的框架版本。这基本上意味着用新版本替换Flink安装的内容。这个步骤取决于你在你的集群中运行Flink的方式(例如单机，Mesos)<br>
+如果您不熟悉在集群中安装Flink，请阅读部署和集群设置文档</p>
+<h2 id="step3基于savepoint在新的flink版本下恢复作业">STEP3：基于savepoint在新的Flink版本下恢复作业</h2>
+<p>作为作业迁移的最后一步，从上面更新的集群上的保存点恢复。您可以使用这个命令来做到这一点：</p>
+<blockquote>
+<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
+同样，要了解更多细节，请查看savepoint文档。</p>
+</blockquote>
+<h2 id="compatibility-table">Compatibility Table</h2>
+<p>保存点在Flink版本之间是兼容的，如下表所示:</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Upgrade Flink to 1.12 —Release Notes(翻译官网)]]></title>
         <id>https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/</id>
@@ -42,12 +262,12 @@
 在FLINK 1.12之前，KeyedStream.intervalJoin()操作基于全局设置的流的时间特性（TimeCharacteristic)来改变行为。在Flink 1.12中，在IntervalJoin类中显示地引入了inProcessingTime() 和 inEventTime()方法，join不再基于全局的时间特性改变行为。</p>
 </li>
 <li>
-<p>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318<br>
+<p><em>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318</em><br>
 在Flink 1.12中，DataStream API中的timeWindow()方法设置为过期。请使用window(WindowAssigner) + TumblingEventTimeWindows/SlidingEventTimeWindows/TumblingProcessingTimeWindows/SlidingProcessingTimeWindows 替代。更多的信息，请查看TimeCharacteristic/setStreamTimeCharacteristic的过期描述</p>
 </li>
 <li>
-<p>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319<br>
-在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。在Event-time模式下，显示使用处理时间（Processing Time）窗口和计时器是起作用的。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用的是通用的“time window”操作（比如，KeyedStream.timeWindow()），该操作基于设置的时间特性（time characteristic）改变行为，请使用显示指定Processing time 或event Time的等价操作。</p>
+<p><em>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319</em><br>
+在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。显示使用处理时间（Processing Time）窗口和计时器可以在Event-time模式下使用。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用基于时间特性（time characteristic）更改行为的通用的“time window”操作（比如，KeyedStream.timeWindow()），请使用等效的显示指定Processing time 或event Time的操作。</p>
 </li>
 <li>
 <p>允许在CEP PatternStream中显示配置时间行为  FLINK-19326<br>
@@ -58,17 +278,239 @@
 <ol>
 <li>移除了剩余的UdfAnalyzer 配置 FLINK-13857<br>
 移除了ExecutionConfig#get/setCodeAnalysisMode方法和 SkipCodeAnalysis 类。在这个变更之前，这些类或方法也没有启作用，所以也没有必要使用</li>
-<li>移除过期的DataStream#split FLINK-19083<br>
+<li><em>移除过期的DataStream#split FLINK-19083</em><br>
 DataStream#split方法在几个版本中被标记为已弃用后被删除，替代方法：请使用Side Outputs 替换</li>
-<li>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035<br>
+<li><em>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035</em><br>
 长时间弃用的（Window）DataStream#fold方法在Flink 1.12版本中已经移除。请使用其他操作比如：（Window）DataStream#reduce方法替代，该方法在分布式系统中具有更好的性能</li>
 </ol>
 <h2 id="extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</h2>
 <p>CompositeTypeSerializerSnapshot # isOuterSnapshotCompatible(TypeSerializer)方法已经设置为过期，为了支持新的OuterSchemaCompatibility#resolveOuterSchemaCompatibility(TypeSerializer)方法。请自行实现它。与旧方法相比，新方法允许复合序列化器基于外部模式和配置来指示状态模式迁移。</p>
 <h2 id="bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</h2>
-<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持Scala&lt;2.11.11的版本</p>
+<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持(Scala&lt;&quot;2.11.11&quot;)的版本</p>
 <h1 id="connectors-and-formats">Connectors and Formats</h1>
 <h2 id="移除了kafka-010x-和011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</h2>
+<p>在Flink 1.12中，移除了kafka 0.10.x 和 0.11.x connectors。请使用通用的kafka链接器（universal kafka connector），它支持所有0.10.2.x 版本之后的kafka集群版本。<br>
+请参阅文档，链接如何升级Flink kafka connector 版本 https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/connectors/kafka.html</p>
+<h2 id="csv序列化模式包含了行分隔符-flink-19868">Csv序列化模式包含了行分隔符 FLINK-19868</h2>
+<p>csv.line-delimiter 选项已经从CSV格式中移除。因为行分隔符应该由连接器定义，而不是由格式(format)去定义。如果用户已经在以前的Flink版本中使用了这个选项，在升级到Flink 1.12时，应该alter such table to remove this option。应该没有太多用户使用了这个选项。</p>
+<h2 id="升级到kafka-schema-registry-client-550-flink-18546">升级到Kafka Schema Registry Client 5.5.0 FLINK-18546</h2>
+<p>flink-avro-confluent-schema-registry模块不再作为fat-jar提供。你应该将它所依赖的添加到你的fat-jar中。Sql-客户端用户可以使用 flink-sql-avro-confluent-schema-registry  fat -jar。</p>
+<h2 id="将avro-version-版本从182升级到1100-flink-18192">将Avro version 版本从1.8.2升级到1.10.0 FLINK-18192</h2>
+<p>flink-avro模块的Avro默认版本已经升级到1.10.如果由于某些原因，你需要使用一个旧版本（有来自Hadoop的Avro，或者你使用了基于旧版本Avro的类），请在项目中显示地降低Avro版本。<br>
+注意：我们发现Avro 1.10版本的性能比1.8.2版本有所下降。如果你关心性能，并且你可以很好地使用旧版本的Avro，考虑降级Avro的版本。</p>
+<h2 id="为sql-客户端打包flink-avro时创建一个uber-jar">为SQL 客户端打包flink-avro时，创建一个uber jar</h2>
+<p>SQL客户端jar被重命名为flink-sql-avro-1.12.0.jar，之前为： flink-avro-1.12.0-sql-jar.jar。并且不再需要手动增加Avro依赖。</p>
+<h1 id="部署">部署</h1>
+<h2 id="默认log4j配置在达到100mb后滚动日志-flink-8357">默认log4j配置：在达到100MB后滚动日志  FLINK-8357</h2>
+<p>默认的log4j配置已经变更：除了已有的在Flink启动时滚动日志文件外，当日志文件大小达到100MB时，也会滚动日志文件。Flink总共保存了10个日志文件，有效地将日志目录总大小限制为1GB。</p>
+<h2 id="在flink的docker镜像中默认使用jemalloc-flink-19125">在Flink的docker镜像中默认使用jemalloc FLINK-19125</h2>
+<p>在Flink的docker镜像中，使用jemalloc作为默认的内存分配器，以减少内存碎片问题。在docker-entrypoint.sh 脚本中设置“disable-jemalloc”，可以回滚到使用glibc内存分配器。更多细节，请参考https://ci.apache.org/projects/flink/flink-docs-release-1.12/deployment/resource-providers/standalone/docker.html</p>
+<h2 id="升级mesos版本到17-flink-19783">升级Mesos版本到1.7 FLINK-19783</h2>
+<p>Mesos依赖从1.0.1升级到了1.7</p>
+<h2 id="如果flink进程超时之后还没有终止会发送sigkill信号-flink-17470">如果FLINK进程超时之后还没有终止会发送SIGKILL信号  FLINK-17470</h2>
+<p>在Flink 1.12版本中，变更了standalong 脚本的行为：如果SIGTERM信号没有成功地终止Flink进程，就发出SIGKILL信号</p>
+<h2 id="引入了非阻塞的job提交-flink-16866">引入了非阻塞的job提交 FLINK-16866</h2>
+<p>提交job的语义稍有改变。提交的调用会立即返回，此时作业处于新的初始化状态。当作业处于该状态时，诸如触发保存点或检索完整作业详细信息等操作不可用<br>
+一旦job的JobManager已经创建，该job处于created状态，所有的调用都是可用的</p>
+<h1 id="运行时runtime">运行时Runtime</h1>
+<h2 id="flip-141intra-slot-managed-memory-sharing-槽内托管的内存共享">FLIP-141：Intra-Slot Managed Memory Sharing （槽内托管的内存共享）</h2>
+<p>配置项：python.fn-execution.buffer.memory.size和python.fn-execution.framework.memory.size 已经移除，因此不再产生具体作用。python.fn-execution.memory.managed的默认值变更为True，因此托管的内存将默认被Python workers 使用。当同时使用Python udf 和 RocksDB状态后端时，或者在批处理中使用内存批处理算法时，用户可以通过覆盖“managed memory consumer weights”，以控制在数据处理和Python之间如何共享托管内存（RocksDB状态后端或者批处理算法）。</p>
+<h2 id="flip-119-pipeline-region-schedling-flink-16430">FLIP-119 Pipeline Region Schedling FLINK-16430</h2>
+<p>从Flink 1.12 开始，jobs将以pipelined regions 为单元进行调度。<strong>a pipelined region</strong> 就是一个流水线任务集。这就意味着，对于由多个pipelined regions组成的流作业，不再等待所有的任务获得slot之后才开始部署任务。相反，一旦某个region包含的任务获得了足够的slot，就可以进行部署。对于批作业，将不会为任务分配slots，也不会单独部署任务；相反，某个region获得了足够的slots，在该region中的所有task将一起部署。<br>
+使用jobmanager.scheduler.scheduling-strategy: legacy 可以启用原有调度。</p>
+<h1 id="flink-112-apache-kafka-connector">Flink 1.12 Apache Kafka Connector</h1>
+<p>universal kafka connector 向后兼容kafka 0.10.0及之后的客户端版本。<br>
+依赖：</p>
+<blockquote>
+<dependency>
+>	<groupId>org.apache.flink</groupId>
+>	<artifactId>flink-connector-kafka_2.11</artifactId>
+>	<version>1.12.0</version>
+</dependency>
+</blockquote>
+<h2 id="kafka-consumer">kafka consumer</h2>
+<p>使用同之前版本：</p>
+<pre><code class="language-java">Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+DataStream&lt;String&gt; stream = env
+	.addSource(new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties));
+</code></pre>
+<p>###配置如何确定分区的起始位置----同之前版本</p>
+<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(...);
+myConsumer.setStartFromEarliest();     // start from the earliest record possible
+myConsumer.setStartFromLatest();       // start from the latest record
+myConsumer.setStartFromTimestamp(...); // start from specified epoch timestamp (milliseconds)
+myConsumer.setStartFromGroupOffsets(); // the default behaviour
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<ul>
+<li>默认setStartFromGroupOffsets: 基于consumer group（由consumer属性中group.id指定）提交到kafka brokers的offsets开始读取partition数据。如果从某个partition没有找到对应的offsets，将基于配置的属性：auto.offset.reset 来读取数据。</li>
+<li>setStartFromEarliest() / setStartFromLatest() ： 从最早或最新位置开始读取。在这种模式下提交到kafka的offset将被忽略，不会作为起始位置。如果offsets超出了partition的范围，将根据配置属性：auto.offset.reset 来读取数据</li>
+<li>setStartFromTimestamp(long)：从指定的timestamp开始读取数据。对于每一个partition，时间戳等于或大于指定时间的记录将用作开始位置。如果某个partition的最新记录早于指定的时间戳，分区将简单地从最新数据开始读取。在这种模式下，提交给kafka的offset将会被忽略，不会作为起始位置。</li>
+<li>指定每个partition的准确offsets.</li>
+</ul>
+<pre><code class="language-java">Map&lt;KafkaTopicPartition, Long&gt; specificStartOffsets = new HashMap&lt;&gt;();
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 0), 23L);
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 1), 31L);
+specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 2), 43L);
+
+myConsumer.setStartFromSpecificOffsets(specificStartOffsets);
+</code></pre>
+<p>注意：如果consumer读取的分区在提供的偏移量映射中没有指定偏移量，该分区的起始位置策略将回退到默认的group offsets行为（setStartFromGroupOffsets）</p>
+<p><strong>注意：</strong><br>
+<em>当作业从故障中自动恢复或使用保存点手动恢复时，这些起始位置配置将不会起作用。在恢复时，每个kafka 分区的起始位置由存储在保存点或检查点的偏移量决定</em></p>
+<h3 id="kafka-consumer及容错">kafka consumer及容错</h3>
+<p>启用Flink checkpoint，Flink kafka consumer消费topic的记录的同时会定期checkpoint kafka偏移量，以及其他的操作状态。在作业失败时，Flink将流程序恢复到最新的检查点状态，并从存储在检查点的偏移量位置开始消费kafka中的记录。<br>
+检查点的间隔定义了程序在失败的情况下，最多回退消费的数据量。为了使用容错的kafka consumer，需要在作业中开启拓扑checkpoint。<br>
+如果不开启checkpoint，kafka consumer经周期提交offsets给zookeeper。<br>
+<strong>Checkpointing 配置</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>execution.checkpointing.externalized-checkpoint-retention</td>
+<td>none</td>
+<td>枚举值<br>可能取值：DELETE_ON_CANCELLATION，RETAIN_ON_CANCELLATION</td>
+<td>外部化的检查点将其元数据写到外部持久化存储中，在拥有的作业失败或被挂起（以作业状态JobStatus＃FAILED或JobStatus＃SUSPENDED终止）时，不会自动清除。在这种情况下，您必须手动清除检查点状态 ，包括元数据以及具体程序状态数据.<br>该模式定义了在作业取消时应该如何清除外部检查点。 如果您选择在“取消时保留外部检查点”，则在取消作业（以作业状态JobStatus＃CANCELED终止）时也必须手动处理检查点清除.<br> 外部检查点目录通过：state.checkpoints.dir配置</td>
+</tr>
+<tr>
+<td>execution.checkpointing.interval</td>
+<td>none</td>
+<td>Duration</td>
+<td>checkpoint 周期调度的间隔<br>该设置是checkpoint的基本间隔，checkpoint的触发可能会受：execution.checkpointing.max-concurrent-checkpoints和execution.checkpointing.min-pause影响而延迟</td>
+</tr>
+<tr>
+<td>execution.checkpointing.min-pause</td>
+<td>1</td>
+<td>Integer</td>
+<td>可能同时进行的最大检查点尝试次数。如果该值为n，则当当前有n个检查点尝试时，不会触发任何检查点。要触发下一个检查点，一次检查点尝试需要完成或过期</td>
+</tr>
+<tr>
+<td>execution.checkpointing.min-pause</td>
+<td>0ms</td>
+<td>Duration</td>
+<td>checkpoint的最小间隔。相对于并发点指定的最大并发数量，次设置定义了在可能触发另一个检查点之后，检查点协调器多久可以触发两一个检查点</td>
+</tr>
+<tr>
+<td>execution.checkpointing.mode</td>
+<td>EXACTLY_ONCE</td>
+<td>枚举值<br>可能的取值:<br> EXACTLY_ONCE, AT_LEAST_ONCE</td>
+<td>checkpoint 模式</td>
+</tr>
+<tr>
+<td>execution.checkpointing.prefer-checkpoint-for-recovery</td>
+<td>false</td>
+<td>Boolean</td>
+<td>如果开启，那job恢复时，将从最近的检查点恢复，而不是更新的savepoint</td>
+</tr>
+<tr>
+<td>execution.checkpointing.timeout</td>
+<td>10min</td>
+<td>Duration</td>
+<td>checkpoint被丢弃之前可以执行的最大时间</td>
+</tr>
+<tr>
+<td>execution.checkpointing.tolerable-failed-checkpoints</td>
+<td>none</td>
+<td>Integer</td>
+<td>容忍失败的checkpoint数。如果设置为0，表示不能容忍任何的checkpoint失败</td>
+</tr>
+<tr>
+<td>execution.checkpointing.unaligned</td>
+<td>false</td>
+<td>Boolean</td>
+<td>开启未对齐的checkpoints，这在背压的情况下能极大减少checkpoint时间.<br>未对齐的检查点将存储在buffers的数据作为状态的一部分，这将允许检查点屏障越过这些buffer数据。因此，检查点的持续时间将与当前的吞吐量无关，因为嵌入到数据流中的检查点屏障将不再起到实质作用<br>未对齐的检查点仅在如下情况下可以开启：execution.checkpointing.mode是EXACTLY_ONCE 并且 execution.checkpointing.max-concurrent-checkpoints=1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kafka-consumer-topic-and-partition-discovery">kafka Consumer topic and partition discovery</h3>
+<ul>
+<li>Partition discovery<br>
+Flink Kafka Consumer 支持发现动态创建的kafka分区，并提供exactly-once 保证。默认，<strong>partition discovery</strong> 未开启，通过在提供的属性配置中，设置flink.partition-discovery.interval-millis为非负值开启此功能。单位：毫秒</li>
+<li>topic discovery<br>
+Kafka消费者还能够通过使用正则表达式匹配主题名称来发现</li>
+</ul>
+<pre><code class="language-java">    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(
+    java.util.regex.Pattern.compile(&quot;test-topic-[0-9]&quot;),
+    new SimpleStringSchema(),
+    properties);
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<p>为了允许consumer在作业开始运行后发现动态创建的主题，请为flink.partition-discovery.interval-millis设置一个非负值。这使consumer可以发现名称匹配指定模式的新主题的分区。</p>
+<h3 id="kafka-consumer-offset-提交行为配置">kafka consumer offset 提交行为配置</h3>
+<p>Flink kafka consumer支持配置offset如何提交给kafka broker。注意：flink kafka consumer并不依赖于提交给kafka broker的offset来进行容错。提交的offset仅为了监控的目的暴露消费进度的一种途径。<br>
+依赖于是否启动了检查点，配置offset提交行为的方法不同：</p>
+<ul>
+<li>未开启checkpoint：在没有开启检查点时，flink kafka consumer依赖于内部使用的kafka客户端自动的定期offset提交功能。因此，在提供的属性配置中简单地设置enable.auto.commit / auto.commit.interval.ms 键的合适值，就能开启/关闭offset的提交。</li>
+<li>开启checkpoint：如果开启检查点，在checkpoint完成之后，flink kafka consumer将保存在检查点状态中的offsets提交给kafka。这将确保提交给kafka broker的offset与保存在检查点状态中的offset是一致的。用户可以通过调用setCommitOffsetsOnCheckpoints(boolean)方法来选择开启或关闭offset的提交。默认为true。注意：在这种情况下，属性中配置的自动周期offset提交设置将完全被忽略。</li>
+</ul>
+<h3 id="kafka-consumers-and-timestamp-extractionwatermark-emission">kafka consumers and TimeStamp Extraction/WaterMark Emission</h3>
+<p>在大多数场景下，记录的时间戳是嵌入在数据本身，或者ConsumerRecord元数据中的。另外，用户可能想要周期性地或者不定期地发出水印。比如：基于kafka流中的特殊记录，这些记录包含了时间时间水印。对于这些情况，Flink kafka consumer 可以指定<strong>WaterMark Strategy</strong>.<br>
+可以按如下自定义WaterMark Strategy，也可以使用预定义的：</p>
+<pre><code class="language-java">Properties properties = new Properties();
+properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
+properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
+
+FlinkKafkaConsumer&lt;String&gt; myConsumer =
+    new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties);
+myConsumer.assignTimestampsAndWatermarks(
+    WatermarkStrategy.
+        .forBoundedOutOfOrderness(Duration.ofSeconds(20)));
+
+DataStream&lt;String&gt; stream = env.addSource(myConsumer);
+</code></pre>
+<p>如果一个水印分配器依赖于从Kafka读取的记录来提升其水印(这是通常的情况)，那么所有的主题和分区都需要有连续的记录流。否则，整个应用程序的水印无法前进，所有基于时间的操作(如时间窗口或带有计时器的函数)都无法前进。单个空闲的Kafka分区会导致这种行为。考虑设置适当的idness超时来缓解这个问题</p>
+<p>Kafka Producer<br>
+Flink的kafka producer—FlinkKafkaProducer允许将流记录写到一个或多个kafka topic中。<br>
+构造方法接受如下参数：<br>
+(1)事件需要写入的默认topic<br>
+(2)SerializationSchema/KafkaSerializationSchema用于将数据序列化到kafka<br>
+(3) kafka client 配置，如下配置项是必须的：bootstrap.servers<br>
+(4)默认的容错语义<br>
+<img src="https://wangyemao-github.github.io/post-images/1611501777416.png" alt="" loading="lazy"></p>
+<p>The SerializationSchema<br>
+Flink kafka Producer需要知道如何将Java/Scala 对象转化为二进制数据。<strong>KafkaSerializationSchema</strong>允许用户去指定这样一个模式。每一条记录都会调用方法：ProducerRecord&lt;byte[], byte[]&gt; serialize(T element, @Nullable Long timestamp) ；生成一个ProducerRecord，写到kafka。<br>
+这让用户可以细粒度地控制数据如何写入kafka，通过producer record，你可以：<br>
+（1）设置header values<br>
+（2）为每一条记录定义keys<br>
+（3）指定自定义数据分区</p>
+<p>Kafka Producers 以及容错<br>
+在开启Fink checkpoint的情况下，FlinkKafkaProducer可以提供exactly-once 传送保证。<br>
+除了启用FlinkKafkaProducer的检查点之外，您还可以通过向FlinkKafkaProducer传递适当的语义参数来选择三种不同的操作模式：<br>
+Semantic.NONE：Flink不会做任何保证。Producer records可能会丢失，也可能会重复<br>
+Semantic.AT_LEAST_ONCE（默认设置）：保证没有记录会丢失，但是可能会重复<br>
+Semantic.Exactly_ONCE: kafka事务将用于提供exactly-once 语义。当你使用事务写入Kafka时，对于从kafka消费数据的任何应用程序都不要忘记设置期望的隔离级别（read_committed or read_uncommitted，默认为后者）</p>
+<p>注意事项：<br>
+Semantic.Exactly_Once 依赖于commit transaction 功能，commit transanction从检查点恢复之后，执行下一次checkpoint之前启动。如果Flink应用程序崩溃到完成重启之间的时间大于Kafka的事务超时时间，则将丢失数据（Kafka将自动中止超过超时时间的事务）。 考虑到这一点，请根据您的预期停机时间适当配置事务超时。<br>
+默认，kafka broker将transaction.max.timeout.ms设置为15分钟。该属性不允许producer设置大于该值的事务超时时间。默认情况下，FlinkKafkaProducer将生产者配置中的transaction.timeout.ms属性设置为1小时，因此使用Semantic.EXACTLY_ONCE模式之前，应先增大transaction.max.timeout.ms的设置。<br>
+在kafkaConsumer的read_committed模式下，任何未完成的事务（既未中止也未完成）将阻止来自给定kafka topic的所有未完成事务的读取。话句话说，在以下事件序列之后：<br>
+（1）用户启动transaction 1，写入一些记录<br>
+（2）用户启动transaction 2，写入一些其他记录<br>
+（3）用户提交了transaction 2<br>
+即便transaction 2中的记录已经提交，但是直到transaction 1 被提交或中止之前，它们对用户仍旧是不可见的。这包含了两层含义：</p>
+<ol>
+<li>首先，在Flink应用程序的正常工作中，用户可以预计生产到kafka topic的记录的可见性延迟，该延迟等于完成checkpoint之间的平均时间。</li>
+<li>其次，在Flink应用程序失败的情况下，应用正在写入的记录对用户不具有可见性。直到应用程序重新启动或经过到达配置的事务超时时间为止。此注释仅适用于有多个代理/应用程序写入同一个Kafka主题的情况。</li>
+</ol>
+<p><strong>注意</strong> ：Semantic.EXACTLY_ONCE模式为每个FlinkKafkaProducer实例使用固定大小的KafkaProducer池。 每个检查点使用这些生产者中的每一个。 如果并发检查点的数量超过池大小，则FlinkKafkaProducer将引发异常，并使整个应用程序失败。 请相应地配置最大池大小和最大并发检查点数。</p>
 ]]></content>
     </entry>
     <entry>
