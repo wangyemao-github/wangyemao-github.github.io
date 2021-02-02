@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-01-28T02:18:54.251Z</updated>
+    <updated>2021-02-02T11:24:53.662Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -11,12 +11,699 @@
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
     <entry>
-        <title type="html"><![CDATA[部署]]></title>
-        <id>https://wangyemao-github.github.io/post/bu-shu/</id>
-        <link href="https://wangyemao-github.github.io/post/bu-shu/">
+        <title type="html"><![CDATA[Set up Flink Memory——翻译]]></title>
+        <id>https://wangyemao-github.github.io/post/set-up-flink-de-process-memory/</id>
+        <link href="https://wangyemao-github.github.io/post/set-up-flink-de-process-memory/">
         </link>
-        <updated>2021-01-21T07:18:29.000Z</updated>
-        <content type="html"><![CDATA[<p>Standalone</p>
+        <updated>2021-02-01T02:40:19.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="set-up-flinks-process-memory">Set up Flink's Process Memory</h1>
+<p>从TaskManager 1.10版本和JobManager 1.11版本开始，进一步的描述内存配置成为可能。如果从早期版本升级Flink，请查看迁移指南，因此1.10版本和1.11版本引入了很多变更。</p>
+<h2 id="configure-total-memory配置总内存">Configure Total Memory（配置总内存）</h2>
+<p>Flink JVM进程的总进程内存由<strong>Flink应用程序（总Flink内存）<strong>和</strong>JVM运行该进程所消耗的内存</strong>组成。 Flink的总内存消耗包括<strong>JVM堆</strong>和**非堆内存（Direct and Native）**的使用</p>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1612157871063.png" alt="" loading="lazy"></figure>
+<ul>
+<li>
+<p>在Flink中设置内存的最简单方法是配置以下两个选项之一：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612158099424.png" alt="" loading="lazy"><br>
+注意：对于本地执行，请参阅TaskManager和JobManager进程的详细信息<br>
+其余的内存组件将根据默认值或其他配置的选项自动调整。 另请参阅如何为TaskManager和JobManager内存设置其他组件。<br>
+配置总Flink内存更适合于独立部署，在该部署中您需要声明为Flink本身分配了多少内存。 Flink的总内存分为JVM Heap和Off-heap内存。 另请参阅如何为独立部署配置内存。<br>
+如果配置了总进程内存，则声明应分配给Flink JVM进程总共多少内存。 对于容器化的部署，它与请求的容器的大小相对应，另请参阅如何为容器（Kubernetes，Yarn或Mesos）配置内存。</p>
+</li>
+<li>
+<p>设置内存的另一种方法是配置<strong>total flink memory</strong>(总Flink内存)必须的内部组成，这些内部组成与特定的Flink进程有关。 检查如何为TaskManager和JobManager配置它们。<br>
+<strong>注意</strong>：必须使用上述三种方式之一来配置Flink的内存（本地执行除外），否则Flink启动将会失败。 这意味着必须显式配置以下没有默认值的选项子集之一：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612158530384.png" alt="" loading="lazy"></p>
+</li>
+</ul>
+<p><strong>注意</strong>：不建议同时配置总进程内存和总Flink内存。 由于潜在的内存配置冲突，可能会导致部署失败。 配置其他内存组件也需要谨慎，因为它可能会导致进一步的配置冲突。</p>
+<h2 id="jvm-parameters">JVM Parameters</h2>
+<p>Flink根据配置的或派生的内存组件大小，在启动其进程时显式添加以下与内存相关的JVM参数：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612158811921.png" alt="" loading="lazy"></p>
+<p>（<em>）请记住，根据所使用的GC算法，您可能无法使用全部堆内存。一些GC算法会为自身分配一定数量的堆内存。这将导致堆度量标准返回不同的最大值。<br>
+（<strong>）注意，用户代码中的 native non-direct内存使用也可以解释为堆外内存的一部分。<br>
+（</strong></em>）仅当设置了相应的选项：jobmanager.memory.enable-jvm-direct-memory-limit ，才会为JobManager 进程添加JVM Direct内存限制。</p>
+<h2 id="capped-fractionated-components">Capped Fractionated Components</h2>
+<ul>
+<li><strong>JVM Overhead</strong>(JVM开销)仅占total process memory （总进程内存）的一小部分</li>
+<li><strong>Network memory</strong>（网络内存）可以是Flink memory的一小部分（仅适用于TaskManager）</li>
+</ul>
+<ol>
+<li>这些组件的大小必须始终在其最大值和最小值之间，否则Flink启动将失败。 最大值和最小值具有默认值，或者可以通过相应的配置选项明确设置。 例如，如果您仅设置以下内存选项：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612159667353.png" alt="" loading="lazy"></li>
+</ol>
+<p>那么，JVM开销将为：1000Mb * 0.1 = 100Mb，在64Mb-128Mb范围。<br>
+<strong>注意</strong>：如果您配置相同的最大值和最小值，则可以有效地将大小固定为该值。</p>
+<ol start="2">
+<li>
+<p>如果你没有显示设置组成部分的内存，那么Flink将基于total memory使用fraction计算内存大小。计算的结果由其相应的最大/最小值限制。比如，仅设置了如下内存选项：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612160004173.png" alt="" loading="lazy"><br>
+那么，JVM的开销将为：128Mb，因为根据fraction计算的内存大小为100Mb，小于了设置的最小值128Mb。</p>
+</li>
+<li>
+<p>如果定义了总内存及其其他组件的大小，也可能会忽略该fraction. 在这种情况下，JVM开销是总内存的剩余部分。 派生值仍必须在其最小/最大范围内，否则配置将失败。 例如，假设仅设置了以下内存选项：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612160242506.png" alt="" loading="lazy"><br>
+total process memory(进程总内存)中的所有其他组件都有默认值，包括默认的Managed Memory 部分（或JobManager中的堆外内存）。 这种情况下，JVM开销不是基于fraction（1000Mb x 0.1 = 100Mb），而是总的进程内存的其余部分，该部分必须在64-256Mb范围内，否则将失败</p>
+</li>
+</ol>
+<h1 id="set-up-taskmanager-memory">Set up TaskManager Memory</h1>
+<p>TaskManager在Flink中运行用户代码。 根据需要配置内存使用量可以大大减少Flink的资源占用并提高作业稳定性。进一步的内存配置描述从发行版1.10开始可用。<br>
+<strong>注意</strong>：本内存设置指南仅与TaskManager有关！ 与JobManager进程的内存模型相比，TaskManager内存组件具有相似但更复杂的结构。</p>
+<h2 id="configure-total-memory">Configure Total Memory</h2>
+<p>Flink JVM 进程的<em>total process memory</em>包含<strong>Flink 应用（total Flink memory）<strong>消耗内存和</strong>JVM运行Flink应用所消耗内存</strong>。<em>total Flink memory</em>包括JVM Heap，managed memory（由Flink管理的）和其他direct（或者native）memory。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612161359813.png" alt="" loading="lazy"><br>
+如果本地运行Flink（比如IDE）而没有创建集群，那么仅有一部分内存设置选项是相关的，更多详细信息，请参见本地执行。<em>否则，为TaskManager设置内存的最简单方法是配置总内存</em>，其余的内存组件将根据默认值或其他配置的选项自动调整。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612161593452.png" alt="" loading="lazy"></p>
+<h2 id="configure-heap-and-managed-memory">Configure Heap and Managed Memory</h2>
+<p><em>在Flink中设置内存的另一种方法是显式地指定task heap和managed memory</em>，<strong>它可以更好地控制Flink任务的可用JVM堆及托管内存</strong>。其余的内存组成部分将根据默认值或其他配置的选项自动调整。<br>
+<strong>注意</strong>：如果已经配置了task heap 和 managed memory，推荐不要在设置total process momory 和 total Flink memory。否则，可能更容易导致内存配置冲突问题。</p>
+<ul>
+<li>Task （Operator）Heap Memory<br>
+如果你想保证特定量的JVM Heap可用于你的用户代码，则可以显式设置<em>task heap memory</em>（taskmanager.memory.task.heap.size）。它将被添加到JVM堆大小中，并专门用于运行用户代码的Flink operator</li>
+<li>Managed Memory<br>
+Managed Memory由Flink管理，被分配为native memory（off-heap）。如下工作负载使用托管的内存：<br>
+（1）流式作业用于RocksDB state backend<br>
+（2）批作业用于排序，hash table，缓存中间结果<br>
+（3）流作业和批作业用它执行 user defined function in python processes<br>
+managed memory大小可以：</li>
+<li>或者显示通过taskmanager.memory.managed.size 配置</li>
+<li>或者通过taskmanager.memory.managed.fraction 基于<em>total Flink Memory</em> 的占比计算。<br>
+在两者都设置的情况下，配置的具体Size会覆盖占比。如果Size和fraction都没有指定，将使用默认的fraction。</li>
+</ul>
+<h2 id="configure-off-heap-memorydirect-or-native">Configure off-heap Memory（direct or native）</h2>
+<p>用户代码分配的off-heap内存应在<em>任务off-heap内存</em>(taskmanager.memory.task.off-heap.size)中考虑.<br>
+<strong>注意</strong>：您还可以调整框架的堆外内存。 仅在确定Flink框架需要更多内存的情况下，才应更改此值<br>
+Flink将*framework off-heap memory(框架的堆外内存)<em>和</em>task off-heap memory(任务的堆外内存)*纳入JVM的直接内存限制，另请参见JVM参数<br>
+<strong>注意</strong>：尽管native non-direct memory（本机非直接内存）使用量可以解释为框架堆外内存或任务堆外内存的一部分，但在这种情况下，它将导致更高的JVM直接内存限制<br>
+<strong>注意</strong> ： network memory 也是JVM direct memory 的一部分，但是它是有Flink管理的，并保证永远不会超过其配置的大小。因此，在这种情况下，调整网络内存大小将没有任何帮助。</p>
+<h2 id="detail-memory-model">Detail Memory Model</h2>
+<p><img src="https://wangyemao-github.github.io/post-images/1612164790742.png" alt="" loading="lazy"><br>
+下表列出了上面描述的所有内存组成部分，并引用了影响各个组件大小的Flink配置选项：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612165042476.png" alt="" loading="lazy"></p>
+<h2 id="framework-memory">Framework Memory</h2>
+<p>如果没有充分的理由，不应更改<em>framework heap memory（框架堆内存）</em> 和 <em>framework off-heap memory（框架堆外内存）</em>。 仅在确定Flink需要更多内存用于某些内部数据结构或操作时才进行调整。 它可能与特定的部署环境或工作结构有关，例如高并行度。 此外，在某些设置中，诸如Hadoop之类的Flink依赖项可能会消耗更多的直接或本地内存（direct or native memory ）。<br>
+<strong>注意</strong>：目前，Flink既不隔离框架和任务内存的堆版本，也不隔离堆版本。 框架和任务内存的分离可以在将来的版本中使用，以进行进一步的优化。</p>
+<h2 id="local-execution">Local Execution</h2>
+<p>如果您在计算机上作为单个Java程序在本地启动Flink而不创建集群（例如从IDE中创建），则除以下内容外，所有其他内存组成部分都将被忽略：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612165649391.png" alt="" loading="lazy"><br>
+<strong>注意</strong>：在这种情况下，任务堆大小与实际堆大小没有任何关系。 它可能与后续版本的未来优化相关。 启动的本地进程的实际JVM Heap大小不受Flink的控制，并且取决于您如何启动该进程。 如果要控制JVM堆大小，则必须显式传递相应的JVM参数，例如 -Xmx，-Xms</p>
+<h1 id="set-up-jobmanager-memory">Set up JobManager Memory</h1>
+<p>JobManager是Flink cluster的控制元素。 它由三个不同的组件组成：Resource Manager(资源管理器)，Dispatcher(分派器)和每个运行的Flink作业一个JobMaster。 本指南将引导您完成JobManager的高级和细粒度内存配置。以下内存配置描述在1.11版本之后可用。<br>
+<strong>注意</strong>：本内存设置指南仅与JobManager有关！与TaskManager的内存配置相比，JobManager的内存组件具有相似但更简单的结构</p>
+<h2 id="configure-total-memory-2">Configure Total Memory</h2>
+<p>设置内存配置的最简单方法是配置该进程的<em>total memory</em>(总内存)。 如果使用本地执行模式运行JobManager进程，则无需配置内存选项，它们将无效。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612166962045.png" alt="" loading="lazy"></p>
+<h2 id="detailed-configuration">Detailed configuration</h2>
+<p><img src="https://wangyemao-github.github.io/post-images/1612166775467.png" alt="" loading="lazy"><br>
+下表列出了上面描述的所有内存组件，并引用了影响各个组件大小的Flink配置选项：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612166871341.png" alt="" loading="lazy"></p>
+<h3 id="configure-jvm-heap">Configure JVM Heap</h3>
+<p><em>为JobManager设置内存的另一种方法是显式指定JVM堆大小（jobmanager.memory.heap.size）</em>。 它提供了对可用的JVM堆的更多控制，JVM堆内存用于：</p>
+<ul>
+<li>Flink framework</li>
+<li>job提交期间（比如，对于特定的批处理源）或者checkpoint完成回调中指定的用户代码。</li>
+</ul>
+<p>所需的JVM Heap大小主要取决于正在运行的作业的数量，其结构以及所提到的用户代码的要求。<br>
+<strong>注意</strong>：如果配置了JVM heap，推荐不要在设置total process memory 和total Flink memory，否则，很可能导致内存配置冲突。<br>
+Flink 脚本和CLI在启动JobManager进程时，通过<strong>JVM参数</strong>-Xms 和 -Xmx设置JVM heap 大小。</p>
+<h3 id="configure-off-heap-memory">Configure Off-heap Memory</h3>
+<p>堆外内存组件考虑了任何类型的JVM直接内存和本机内存使用情况。 因此，您还可以通过设置jobmanager.memory.enable-jvm-direct-memory-limit选项来启用JVM直接内存限制。 如果配置了此选项，则Flink将通过相应的JVM参数-XX：MaxDirectMemorySize将限制设置为堆外内存大小。<br>
+可以通过jobmanager.memory.off-heap.size选项配置此组件的大小。 可以调整此选项，例如 如果JobManager进程抛出“ OutOfMemoryError：直接缓冲内存”<br>
+堆外内存消耗可能有以下几种来源：</p>
+<ul>
+<li>Flink framework dependencies (e.g. Akka network communication)</li>
+<li>User code executed during job submission (e.g. for certain batch sources) or in checkpoint completion callbacks</li>
+</ul>
+<p><strong>注意</strong>：如果您已显式配置了总Flink内存和JVM堆，但尚未配置Off-heap内存，则将使用Total Flink Memory减去JVM Heap得出Off-heap内存的大小。 堆外内存选项的默认值将被忽略。</p>
+<h3 id="local-execution-2">Local Execution</h3>
+<p>如果您在本地（例如从IDE中）运行Flink而没有创建集群，则JobManager内存配置选项将被忽略。</p>
+<h1 id="内存调优指南">内存调优指南</h1>
+<p>本节说明根据不同的使用场景如何设置内存，以及在每种情况下的重要设置项：</p>
+<h2 id="configure-memory-for-standalone-deployment">Configure memory for standalone deployment</h2>
+<p>对于standalone 部署模式，在要声明给Flink分配多少内存的地方，推荐配置<em>total Flink memory</em> （taskmanager.memory.flink.size 或jobmanager.memory.flink.size）或者<em>其组成部分</em>。此外，如果JVM metaSpace引起问题，则可以对其进行调整。</p>
+<p><em>the total Process memory</em> 是无关紧要的，因为JVM 开销并不由Flink或者部署环境控制，在这种情况下，只有执行机器的物理资源是重要的。</p>
+<h2 id="configure-memory-for-containers">Configure memory for containers</h2>
+<p>对于容器部署模式（kubernetes，yarn或Mesos），推荐配置<em>total procss momery</em>（taskmanager.memory.process.size 或  jobmanager.memory.process.size）。它声明应总共为Flink JVM进程分配多少内存，并与请求的容器的大小相对应。</p>
+<p><strong>注意</strong>：<br>
+** 警告**：如果Flink或用户代码分配了超出容器大小的<em>unmanaged off-heap (native) memory</em>（非托管堆外（本机）内存），则作业可能会失败，因为部署环境会杀死有问题的容器</p>
+<h2 id="configure-memory-for-state-backends">Configure memory for state backends</h2>
+<p>这只与TaskManager有关。部署Flink 流应用程序时，使用的状态后端（state backend）类型将决定集群的最佳内存配置。</p>
+<h3 id="heap-state-backend">Heap state backend</h3>
+<p>当运行无状态作业或者使用heap state backend(MemoryStateBackend 或者 FsStateBackend)时，将Managed Memory设置为0. 这可以确保为JVM上的用户代码分配最大数量的堆内存。</p>
+<h3 id="rocksdb-state-backend">RocksDB state backend</h3>
+<p>RocksDBStateBackend 使用native memory。默认地，RocksDB设置将native memory限制为 managed memory的大小。因此，预留足够的managed memory给你的状态（state）是很重要的。如果禁用了RocksDB的内存控制，对于容器部署模式，当RocksDB分配的内存超过了请求的容器内存大小（the total process memory）时，TaskManager会被kill掉。</p>
+<h1 id="troubleshooting">Troubleshooting</h1>
+<h2 id="illegalconfigurationexception">IllegalConfigurationException</h2>
+<p>如果你看到<em>从TaskExecutorProcessUtils 或者 JobManagerProcessUtils抛出IIIegalConfigurationException异常</em>，通常表明：存在无效的配置值（比如，内存大小设置为负值，占比(fraction)设置大于1等）或者配置冲突。</p>
+<h2 id="outofmemoryerrorjava-heap-space">OutofMemoryError：Java heap space</h2>
+<p>该异常通常标识*JVM Heap *设置的太小。你可以尝试增大total memory的大小来增加JVM heap，你也可以直接增大TaskManager的task heap memory 或JobManager的JVM Heap memory。</p>
+<p><strong>注意</strong>：你也可以增大TaskManager的framework heap memory，但是当前只当你确定Flink framework 自身需要更多的内存时，你才考虑变更该选项值</p>
+<h2 id="outofmemoryerror-direct-buffer-memory">OutOfMemoryError: Direct buffer memory</h2>
+<p>该异常通常表明：JVM direct memory限制太小或者存在direct memory leak。检查用户代码或者外部依赖是否使用了JVM direct memory，以及是否很好地考虑了这部分内存的使用。你可以尝试通过调整direct off-heap memory来增大限制。-----可以参考TaskManager，JobManager以及JVM参数如何配置off-heap memory。</p>
+<h2 id="outofmemoryerror-metaspace">OutOfMemoryError: Metaspace</h2>
+<p>该异常通常表明JVM metaspace limit的配置太小。你可以尝试加大TaskManager或者JobManager的JVM metaspace配置项。</p>
+<h2 id="ioexception-insufficient-number-of-network-buffers">IOException: Insufficient number of network buffers</h2>
+<p>该异常只与TaskManager相关。该异常通常表明: 配置的network memory 不够大。你可以通过调整如下选项尝试加大network memory：</p>
+<ul>
+<li>taskmanager.memory.network.min</li>
+<li>taskmanager.memory.network.max</li>
+<li>taskmanager.memory.network.fraction</li>
+</ul>
+<h2 id="container-memory-exceeded">Container Memory Exceeded</h2>
+<h1 id="迁移指南migration-guide内存配置相关">迁移指南（Migration Guide）——内存配置相关</h1>
+<p>对于TaskManagers的1.10版本和JobManagers的1.11版本，内存设置发生了很大变化。 许多配置选项已删除或它们的语义已更改。 本指南将帮助您将TaskManager内存配置从Flink &lt;= 1.9迁移到&gt; = 1.10，并将JobManager内存配置从Flink &lt;= 1.10迁移到&gt; = 1.11。</p>
+<p><strong>警告</strong>：阅读本指南很重要，因为旧的和新的内存配置可能会导致内存组件的大小不同。 如果您尝试从适用于TaskManager的1.10之前或适用于JobManager的1.11之前的旧版本重用Flink配置，则可能导致应用程序的行为，性能甚至配置失败。</p>
+<p><strong>注意</strong>：对于1.10版之前的TaskManager，和1.11版本之前JobManager，Flink根本不需要设置与内存相关的选项，因为它们都有默认值。 新的内存配置要求显式配置以下选项的至少一个子集，否则配置将失败。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612149087148.png" alt="" loading="lazy"></p>
+<p>默认flink-conf.yaml中附带了Flink设置taskmanager.memory.process.size（从1.10开始）和jobmanager.memory.process.size（从1.11开始）以使默认内存配置一致。</p>
+<p>该表格还可以帮助评估新旧版本内存计算的结果。</p>
+<h1 id="migrate-task-manager-memory-configuration">Migrate Task Manager Memory Configuration</h1>
+<h2 id="配置项变更">配置项变更</h2>
+<p>本章简要列出了1.10版本引入的Flink内存配置选项的所有更改。也参考了其他章节，以获得迁移到新配置选项的更多详细信息。<br>
+以下选项已被完全删除。 如果仍然使用将被忽略。</p>
+<figure data-type="image" tabindex="2"><img src="https://wangyemao-github.github.io/post-images/1612149586700.png" alt="" loading="lazy"></figure>
+<p>不建议使用以下选项，但如果仍使用它们，则将它们解释为向后兼容的新选项</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Configuratio—翻译]]></title>
+        <id>https://wangyemao-github.github.io/post/configuratio-fan-yi/</id>
+        <link href="https://wangyemao-github.github.io/post/configuratio-fan-yi/">
+        </link>
+        <updated>2021-01-31T11:57:10.000Z</updated>
+        <content type="html"><![CDATA[<p>所有的配置都在conf/flink-conf.yaml中。配置子Flink程序启动时解析和执行，因此，配置文件的变更需要重启相关进程（jobmanager/taskmanager）<br>
+开箱即用的配置将使用默认的Java安装。你可以手动设置环境变量：JAVA_HOME或者如果你想要手动覆盖使用的java运行时，可以在conf/flink-conf.yaml文件中配置：env.java.home键值。</p>
+<h1 id="basic-setup">Basic Setup</h1>
+<p>默认的配置支持单节点的Flink session cluster，不需要任何变更。本节的设置项对于基本的Flink分布式设置是最常需要的。</p>
+<h2 id="hostnamesports">Hostnames/Ports</h2>
+<p>这些选项只对standalone application/ session （简单的standalone 或kubernetes）部署模式是需要的<br>
+如果你使用Flink集成Yarn，Mesos或者active kubernetes ，hostnames和ports是自动发现的。</p>
+<ul>
+<li>rest.address，rest.port ：用于client连接到Flink。<br>
+将其设置为运行的JobManager的主机名，或者设置为Jobmanager REST 接口前面的（kubernetes）服务的主机名。</li>
+<li>jobmanager.rpc.address（默认 “localhost”）和jobmanager.rpc.port (默认6123）.用于Taskmanager连接到jobmanager/ResourceManager.<br>
+将其设置为Jobmanager运行的主机名，或者Jobmanager的（kubernetes 内部）服务的主机名。该选项在设置为高可用时是被忽略的，这种情况下，jobmanager/resourceManager使用leader选举机制自动发现</li>
+</ul>
+<h2 id="memory-size">Memory Size</h2>
+<p>默认的内存大小设置支持简单的流式/批应用，但是对于更多复杂的应用，这个设置会太小而不能产生很好的性能</p>
+<ul>
+<li>jobmanager.memory.process.size : JobManager进程的总内存大小（JobMaster/ResourceManager/Dispatcher）</li>
+<li>taskmanager.memory.process.size: TaskManager 进程的总内存大小</li>
+</ul>
+<p>总大小包括了所有。Flink将为JVM自身的内存需求减去一些内存（metaspace以及其他的），并在组成部分（JVM 堆，堆外，对于TaskManager还有网络，托管内存等）中自动划分和分配剩下的内存。<br>
+这些选项配置为内存大小，例如：1536m 或者2g。</p>
+<h2 id="parallelism">Parallelism</h2>
+<ul>
+<li>taskmanager.numberOfTaskSlots： 一个TaskManager提供的slots数目(默认为1)。每一个slot可以执行一个task或者一个pipeline。在一个TaskManager中设置多个slots，有利于在并行的任务或pipelines之间分摊某些恒定的开销（JVM、应用程序库，网络连接）。**see Task Slots and Resources  **<br>
+运行更小的TaskManagers，比如每个TaskManager设置1个Slot是一个很好地起始点，可以实现最好的任务隔离。将相同的资源分配给数量更少、slots数更多的大型TaskManagers有助于提高资源利用率，但代价是削弱了任务之间的隔离性（更多的任务共享相同的JVM）。</li>
+<li>parallelism.default ： 当没有指定具体制定并行度时，默认的使用的并行度。（默认为1）</li>
+</ul>
+<h2 id="checkpointing">Checkpointing</h2>
+<p>你可以在Flink作业或应用代码中直接配置checkpointing。在应用没有做任何配置的情况下，配置文件中配置这些值会作为默认设置。</p>
+<ul>
+<li>state.backend : 要使用的state backend。该选项定义了快照的数据结构机制，常用的取值为filesystem和rockdb。</li>
+<li>state.checkpoints.dir : 要写入快照的目录。需要设置一个路径URI，比如：s3://mybucket/flink-app/checkpoints 或 hdfs://namenode:port/flink/checkpoints</li>
+<li>state.savepoints.dir: savepoint的默认目录。需要像state.checkpoints.dir一样，设置一个路径URI。</li>
+</ul>
+<h2 id="web-ui">Web UI</h2>
+<ul>
+<li>web.submit.enable : 开启通过Flink UI上传和启动jobs(默认为true)。请注意，即便该选项设置为false，session cluster仍然可以通过REST请求(HTTP调用)接受jobs。此标识只保护在UI上上传job的功能。</li>
+<li>web.upload.dir : 存储上传jobs的目录。只有在web.submit.enable开启的情况下使用</li>
+</ul>
+<h2 id="other">Other</h2>
+<p>io.tmp.dirs : Flink放置本地数据的目录，默认为系统临时目录（java.io.tmpdir 属性）。如果配置了目录列表，Flink will rotate files across the directories。<br>
+默认情况下，放在这些目录中的数据包括RocksDB创建的文件，溢出的中间结果（批处理算法）和缓存的jar文件。<br>
+<strong>持久化/恢复不依赖此数据，但是如果删除此数据，通常会导致很重的恢复操作。 因此，建议将其设置为不会自动定期清除的目录</strong>。<br>
+默认情况下，Yarn，Mesos和Kubernetes设置会自动将此值配置为本地工作目录。</p>
+<h1 id="通用配置项">通用配置项</h1>
+<h2 id="hosts-and-ports">Hosts and Ports</h2>
+<p>用于为Flink的不同组件配置主机名和端口的选项。<br>
+JobManager主机名和端口仅与非高可用的独立模式设置有关。 在该设置中，TaskManager使用该配置值来查找（并连接到）JobManager。 在所有高可用的设置中，TaskManager通过高可用服务（例如ZooKeeper）自动发现JobManager。<br>
+使用资源编排框架(K8，Yarn，Mesos)的设置，通常使用框架的服务发现机制。<br>
+除非安装程序要求使用特定的端口范围或特定的网络接口进行绑定，否则你无需配置任何TaskManager的主机和端口。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jobmanager.rpc.address</td>
+<td>(none)</td>
+<td>String</td>
+<td>该配置参数定义了与JobManager进行通信，需要连接的网络地址。仅在存在静态名称或地址的单个JobManager的设置中解释此值（简单的standalone 设置，或具有动态服务名称解析的容器设置）。在很多高可用设置中不会使用该选项，在这种情况下，比如zookeeper，会使用leader选举服务从潜在的多个后背JobManager中选举和发现JobManager leader。</td>
+</tr>
+<tr>
+<td>jobmanager.rpc.port</td>
+<td>6123</td>
+<td>Integer</td>
+<td>该配置参数定义了与JobManager进行通信，需要连接的网络端口。其他同上</td>
+</tr>
+<tr>
+<td>metrics.internal.query-service.port</td>
+<td>“0”</td>
+<td>String</td>
+<td>用于Flink内部指标查询服务的端口范围。推荐设置一个端口范围，避免多个Flink组件运行在同一台机器上时产生端口冲突。可以设置端口集合（“50100”，“50101”），范围（“50100-50200”）或两者的组合。</td>
+</tr>
+<tr>
+<td>rest.address</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于client连接到server的地址。注意：仅在高可用配置为NONE时，才使用此选项</td>
+</tr>
+<tr>
+<td>rest.bind-address</td>
+<td>（none）</td>
+<td>String</td>
+<td>server绑定的地址</td>
+</tr>
+<tr>
+<td>rest.bind-port</td>
+<td>“8081”</td>
+<td>String</td>
+<td>server绑定的端口。推荐设置为一个端口范围，以避免多个Rest servers运行在同一台机器上导致的端口冲突。可以设置端口集合（“50100”，“50101”），范围（“50100-50200”）或两者的组合</td>
+</tr>
+<tr>
+<td>rest.port</td>
+<td>8081</td>
+<td>Integer</td>
+<td>client连接的端口。如果未指定rest.bind-port，则REST server将绑定到该端口</td>
+</tr>
+<tr>
+<td>taskmanager.data.port</td>
+<td>0</td>
+<td>Integer</td>
+<td>task manager的外部端口，用于数据交换</td>
+</tr>
+<tr>
+<td>taskmanager.host</td>
+<td>（none）</td>
+<td>String</td>
+<td>TaskManager所在的网络接口的外部地址。 因为不同的TaskManager对此选项需要不同的值，所以通常在其他非共享TaskManager特定的配置文件中指定它</td>
+</tr>
+<tr>
+<td>taskmanager.rpc.port</td>
+<td>“0”</td>
+<td>String</td>
+<td>TaskManager所在的外部RPC端口。 接受端口列表（“ 50100,50101”），范围（“ 50100-50200”）或两者的组合。 建议设置一定范围的端口，以避免在同一台计算机上运行多个TaskManager时发生冲突</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fault-tolerance">Fault Tolerance</h2>
+<p>这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
+仅当没有通过ExecutionConfig配置任何特定于作业的重启策略时，默认重启策略才会生效。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy</td>
+<td>（none）</td>
+<td>String</td>
+<td>定义重启策略，以便在job失败时使用。可设置值为：(1)none,off,disable： 无重启策略；（2）fixeddelay，fixed-delay ： 固定延迟的重启策略；（3）failurerate，failure-rate ： 故障率重启策略；</td>
+</tr>
+<tr>
+<td>如果禁用checkpointing ，默认取值为none。如果开启checkpointing，默认值为fixed-delay，并且重启尝试次数为Integer.MAX_VALUE, 1秒延迟。</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="fixed-delay-restart-strategy">Fixed Delay Restart Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy.fixed-delay.attempts</td>
+<td>1</td>
+<td>Integer</td>
+<td>如果重新启动策略已设置为固定延迟，则Flink在宣布作业失败之前重试执行的次数</td>
+</tr>
+<tr>
+<td>restart-strategy.fixed-delay.delay</td>
+<td>1s</td>
+<td>Duration</td>
+<td>如果重新启动策略已设置为固定延迟，则两次连续的重新启动尝试之间的延迟。当程序与外部系统进行交互（例如，连接或挂起的事务在尝试重新执行之前应达到超时）时，延迟重试可能会有所帮助。可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+</tbody>
+</table>
+<h3 id="failure-rate-restart-strategy">Failure Rate Restart Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy.failure-rate.delay</td>
+<td>1s</td>
+<td>Duration</td>
+<td>如果将重新启动策略设置为故障率，则两次连续的重新启动尝试之间的延迟。 可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+<tr>
+<td>restart-strategy.failure-rate.failure-rate-interval</td>
+<td>1min</td>
+<td>Duration</td>
+<td>如果将重新启动策略设置为失败率，则测量失败率的时间间隔。 可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+<tr>
+<td>restart-strategy.failure-rate.max-failures-per-interval</td>
+<td>1</td>
+<td>Integer</td>
+<td>如果重新启动策略已设置为失败率，则在使作业失败之前的给定时间间隔内的最大重新启动次数</td>
+</tr>
+</tbody>
+</table>
+<h2 id="checkpoints-and-state-backends">Checkpoints and State Backends</h2>
+<p>这些选项控制状态后端和检查点行为的基本设置<br>
+这些选项仅与以连续流方式执行的作业/应用程序相关。 以批处理方式执行的作业/应用程序不使用状态后端和检查点，而是使用针对批处理而优化的不同内部数据结构。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>state.backend</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于存储和快照状态的状态后端</td>
+</tr>
+<tr>
+<td>state.checkpoints.dir</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于在Flink支持的文件系统中存储检查点的数据文件和元数据的默认目录。存储路径必须是所有参与进程/节点可访问的（即，所有的Taskmanegers和JobManagers）</td>
+</tr>
+<tr>
+<td>state.savepoints.dir</td>
+<td>（none）</td>
+<td>String</td>
+<td>savepoint的默认目录。用于状态后端（MemoryStateBackend，FsStateBackend，RocksDBStateBackend）将savepoints写入到文件系统</td>
+</tr>
+<tr>
+<td>state.backend.incremental</td>
+<td>false</td>
+<td>Boolean</td>
+<td>选择状态后端是否应创建增量检查点（如果可能）。 对于增量检查点，仅存储与前一个检查点的差异，而不是完整的检查点状态。 启用后，显示在Web UI中或从rest API获取的状态大小仅代表增量检查点大小，而不是完整的检查点大小。 某些状态后端可能不支持增量检查点，因此会忽略此选项。</td>
+</tr>
+<tr>
+<td>state.backend.local-recovery</td>
+<td>false</td>
+<td>Boolean</td>
+<td>此选项为此状态后端配置本地恢复。 默认情况下，本地恢复处于禁用状态。 本地恢复当前仅涵盖键控状态后端。 当前，MemoryStateBackend不支持本地恢复，会忽略此选项。</td>
+</tr>
+<tr>
+<td>state.checkpoints.num-retained</td>
+<td>1</td>
+<td>Integer</td>
+<td>保留的最大已完成检查点数</td>
+</tr>
+<tr>
+<td>taskmanager.state.local.root-dirs</td>
+<td>（none）</td>
+<td>String</td>
+<td>config参数定义用于存储基于文件的状态以进行本地恢复的根目录。 本地恢复当前仅涵盖键控状态后端。 当前，MemoryStateBackend不支持本地恢复，请忽略此选项</td>
+</tr>
+</tbody>
+</table>
+<h2 id="memory-configuration">Memory Configuration</h2>
+<p>,</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Flink Uid剖析]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-uid-pou-xi/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-uid-pou-xi/">
+        </link>
+        <updated>2021-01-29T07:16:44.000Z</updated>
+        <summary type="html"><![CDATA[<p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
+<!-- more -->
+<h1 id="flink-uid-简介">Flink UID 简介</h1>
+<p>下面对uid的解释摘自Flink源码中的相关注释：</p>
+<h2 id="uid-notition">uid notition</h2>
+<pre><code class="language-text">uid: The unique user-specified ID of this transformation. The specified ID is used to assign the same operator ID across job submissions. this ID needs to be unique per transformation and job. Otherwise, job submission will fail.
+</code></pre>
+<p>大意就是说：uid 就是用户为transformation指定的，唯一的ID。当我们提交Flink作业时，指定的ID会分配给对应的operator，因此uid实际上就是operator id。并且需要注意用户为每一个转换指定的id应该在job和job内的转换中是惟一的，否则作业提交会失败。</p>
+<h2 id="uid设置及使用推荐">uid设置及使用推荐</h2>
+<p>Flink提供了为operator设置uid的方法：SingleOutputStreamOperator#uid()。 下面为一个简单的应用代码片段：</p>
+<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
+  // Stateful source (e.g. Kafka) with ID
+  .addSource(new StatefulSource())
+  .uid(&quot;source-id&quot;) // ID for the source operator
+  .shuffle()
+  // Stateful mapper with ID
+  .map(new StatefulMapper())
+  .uid(&quot;mapper-id&quot;) // ID for the mapper
+  // Stateless printing sink
+  .print(); // Auto-generated ID
+</code></pre>
+<p><strong>Flink官网推荐用户为作业中的每一个operator设置uid</strong>。主要原因在于方便后续Flink应用程序的升级和Flink版本的升级。<br>
+在流式作业运行过程中，通常会涉及到：Flink版本更新，作业拓扑图变更，作业并行度调整，红蓝部署派生新作业等操作。Flink savepoint为这些有计划地变更提供了手动的备份和作业恢复机制。它的实现原理为：savepoint中保存了operator ID 与有状态的operator state的映射的关系。<br>
+<strong>注意</strong>：savepoint中保存的只是有状态operator的id和对应的state数据。无状态operator不会保存在savepoint中。</p>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1611907382714.png" alt="" loading="lazy"></figure>
+<p>当基于savepoint恢复作业时，Flink会读取保存在savepoint中的映射数据，并与提交作业的operator相匹配，匹配基于operator ID。如果都能匹配上，则基于保存的状态初始化operator；否则，作业会失败。当然，如果设置了“--allowNonRestoredState”选项，对于未匹配上的操作，使用默认状态进行初始化，而不是抛出异常。<br>
+因此，对于升级前后相同的operator，主要是有状态的operator，保证它的uid的稳定、一致性是很重要的。因此，强烈推荐用户为作业中每一个operator指定uid。当然，如果用户没有手动指定，那Flink内部也会为operator自动生成id。</p>
+<h1 id="flink-operator-id-生成">Flink operator id 生成</h1>
+<p>本节主要基于Flink原来，剖析operator id生成、实现原理：<br>
+在提交Flink作业之后，首先会生成SteamGraph；然后基于StreamGraph会构建JobGraph。也就是在将StreamGraph转换为JobGraph的过程中会为每个operator 生成一个唯一的hash值，也就是operator id。入口方法为：StreamGraphHasherV2#traverseStreamGraphAndGenerateHashes：</p>
+<pre><code class="language-java">	public Map&lt;Integer, byte[]&gt; traverseStreamGraphAndGenerateHashes(StreamGraph streamGraph) {
+		// The hash function used to generate the hash
+		final HashFunction hashFunction = Hashing.murmur3_128(0);
+		final Map&lt;Integer, byte[]&gt; hashes = new HashMap&lt;&gt;();
+
+		Set&lt;Integer&gt; visited = new HashSet&lt;&gt;();
+		Queue&lt;StreamNode&gt; remaining = new ArrayDeque&lt;&gt;();
+
+		// We need to make the source order deterministic. The source IDs are
+		// not returned in the same order, which means that submitting the same
+		// program twice might result in different traversal, which breaks the
+		// deterministic hash assignment.
+		List&lt;Integer&gt; sources = new ArrayList&lt;&gt;();
+		for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
+			sources.add(sourceNodeId);
+		}
+		Collections.sort(sources);
+
+		//
+		// Traverse the graph in a breadth-first manner. Keep in mind that
+		// the graph is not a tree and multiple paths to nodes can exist.
+		//
+
+		// Start with source nodes
+		for (Integer sourceNodeId : sources) {
+			remaining.add(streamGraph.getStreamNode(sourceNodeId));
+			visited.add(sourceNodeId);
+		}
+
+		StreamNode currentNode;
+		while ((currentNode = remaining.poll()) != null) {
+			// Generate the hash code. Because multiple path exist to each
+			// node, we might not have all required inputs available to
+			// generate the hash code.
+			if (generateNodeHash(currentNode, hashFunction, hashes, streamGraph.isChainingEnabled(), streamGraph)) {
+				// Add the child nodes
+				for (StreamEdge outEdge : currentNode.getOutEdges()) {
+					StreamNode child = streamGraph.getTargetVertex(outEdge);
+
+					if (!visited.contains(child.getId())) {
+						remaining.add(child);
+						visited.add(child.getId());
+					}
+				}
+			} else {
+				// We will revisit this later.
+				visited.remove(currentNode.getId());
+			}
+		}
+
+		return hashes;
+	}
+</code></pre>
+<p>从StreamGraph的sourceNode开始，<strong>对于有多个SourceNode的作业，按sourceId进行排序</strong>，按照广度优先遍历的方式，计算StreamGraph中每一个Node的Hash值。这个hash值就是对应node的operator id。每一个node的hash值具体生成看generateNodeHash()方法：</p>
+<pre><code class="language-java">	private boolean generateNodeHash(
+			StreamNode node,
+			HashFunction hashFunction,
+			Map&lt;Integer, byte[]&gt; hashes,
+			boolean isChainingEnabled,
+			StreamGraph streamGraph) {
+
+		// Check for user-specified ID
+		String userSpecifiedHash = node.getTransformationUID();
+
+		if (userSpecifiedHash == null) {
+			// Check that all input nodes have their hashes computed
+			for (StreamEdge inEdge : node.getInEdges()) {
+				// If the input node has not been visited yet, the current
+				// node will be visited again at a later point when all input
+				// nodes have been visited and their hashes set.
+				if (!hashes.containsKey(inEdge.getSourceId())) {
+					return false;
+				}
+			}
+
+			Hasher hasher = hashFunction.newHasher();
+			byte[] hash = generateDeterministicHash(node, hasher, hashes, isChainingEnabled, streamGraph);
+
+			if (hashes.put(node.getId(), hash) != null) {
+				// Sanity check
+				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
+						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
+			}
+
+			return true;
+		} else {
+			Hasher hasher = hashFunction.newHasher();
+			byte[] hash = generateUserSpecifiedHash(node, hasher);
+
+			for (byte[] previousHash : hashes.values()) {
+				if (Arrays.equals(previousHash, hash)) {
+					throw new IllegalArgumentException(&quot;Hash collision on user-specified ID &quot; +
+							&quot;\&quot;&quot; + userSpecifiedHash + &quot;\&quot;. &quot; +
+							&quot;Most likely cause is a non-unique ID. Please check that all IDs &quot; +
+							&quot;specified via `uid(String)` are unique.&quot;);
+				}
+			}
+
+			if (hashes.put(node.getId(), hash) != null) {
+				// Sanity check
+				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
+						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
+			}
+
+			return true;
+		}
+	}
+</code></pre>
+<p>该方法首先会获取对应node的transformationUID，它实际上就是用户调用uid()方法指定的uid值。接着处理逻辑分为两部分：<br>
+（1）transformationUID不为null，也就是用户指定了uid的情况下，基于用户指定的uid，计算hash值；</p>
+<pre><code class="language-java">Hasher hasher = hashFunction.newHasher();
+byte[] hash = generateUserSpecifiedHash(node, hasher);
+
+	/**
+	 * Generates a hash from a user-specified ID.
+	 */
+	private byte[] generateUserSpecifiedHash(StreamNode node, Hasher hasher) {
+		hasher.putString(node.getTransformationUID(), Charset.forName(&quot;UTF-8&quot;));
+		return hasher.hash().asBytes();
+	}
+</code></pre>
+<p>（2）transformationUID为null的情况下，自动生成确定性的hash值。对于这种情况，首先要检查该node的所有入节点的hash值都已经计算。在满足条件的情况下，调用generateDeterministicHash()方法：</p>
+<pre><code class="language-java">	/**
+	 * Generates a deterministic hash from node-local properties and input and
+	 * output edges.
+	 */
+	private byte[] generateDeterministicHash(
+			StreamNode node,
+			Hasher hasher,
+			Map&lt;Integer, byte[]&gt; hashes,
+			boolean isChainingEnabled,
+			StreamGraph streamGraph) {
+
+		// Include stream node to hash. We use the current size of the computed
+		// hashes as the ID. We cannot use the node's ID, because it is
+		// assigned from a static counter. This will result in two identical
+		// programs having different hashes.
+		generateNodeLocalHash(hasher, hashes.size());
+		// Include chained nodes to hash
+		for (StreamEdge outEdge : node.getOutEdges()) {
+			if (isChainable(outEdge, isChainingEnabled, streamGraph)) {
+
+				// Use the hash size again, because the nodes are chained to
+				// this node. This does not add a hash for the chained nodes.
+				generateNodeLocalHash(hasher, hashes.size());
+			}
+		}
+
+		byte[] hash = hasher.hash().asBytes();
+		// Make sure that all input nodes have their hash set before entering
+		// this loop (calling this method).
+		for (StreamEdge inEdge : node.getInEdges()) {
+			byte[] otherHash = hashes.get(inEdge.getSourceId());
+
+			// Sanity check
+			if (otherHash == null) {
+				throw new IllegalStateException(&quot;Missing hash for input node &quot;
+						+ streamGraph.getSourceVertex(inEdge) + &quot;. Cannot generate hash for &quot;
+						+ node + &quot;.&quot;);
+			}
+
+			for (int j = 0; j &lt; hash.length; j++) {
+				hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
+			}
+		}
+
+		if (LOG.isDebugEnabled()) {
+			String udfClassName = &quot;&quot;;
+			if (node.getOperator() instanceof AbstractUdfStreamOperator) {
+				udfClassName = ((AbstractUdfStreamOperator&lt;?, ?&gt;) node.getOperator())
+						.getUserFunction().getClass().getName();
+			}
+
+			LOG.debug(&quot;Generated hash '&quot; + byteToHexString(hash) + &quot;' for node &quot; +
+					&quot;'&quot; + node.toString() + &quot;' {id: &quot; + node.getId() + &quot;, &quot; +
+					&quot;parallelism: &quot; + node.getParallelism() + &quot;, &quot; +
+					&quot;user function: &quot; + udfClassName + &quot;}&quot;);
+		}
+
+		return hash;
+	}
+</code></pre>
+<p>该方法为节点自动生成对应hash值的具体实现，从实现代码可看到：<br>
+(1) 首先会基于hashs这个Map中已经保存的hash值个数计算该node的hash值，Map中已经保存的hash值的个数跟当前节点对应的操作在作业中的顺序是息息相关的。<br>
+(2) 遍历当前节点的所有出边，如果判断是可以与当前节点链接在一起的，会再次执行(1)处hash计算<br>
+(3) 遍历当前节点的所有入节点，当前节点的hash值会与每一个入节点的hash值做如下计算得到最终的hash值：</p>
+<pre><code class="language-java">for (StreamEdge inEdge : node.getInEdges()){
+    byte[] otherHash = hashes.get(inEdge.getSourceId());
+    for (int j = 0; j &lt; hash.length; j++){
+        hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
+    }
+}
+</code></pre>
+<p>根据上述处理逻辑，可以发现：</p>
+<ul>
+<li>对于用户指定uid情况，计算出来的operator hash值也是确定、一致的；</li>
+<li>对于未指定uid的情况，具体operator 的hash值会受到如下一些因素的影响：
+<ol>
+<li>operator 在作业图中的顺序；</li>
+<li>当前operator与出边的isChainable判断，包括：作业并行度，slotSharingGroup，chainingStrategy，StreamPartitioner等</li>
+<li>当前operator的入节点的hash值、顺序等</li>
+</ol>
+</li>
+</ul>
+<h1 id="写在最后">写在最后</h1>
+<p>那如果应用代码中没有指定uid；而又想要能保证升级之后的作业中有状态operator的uid与升级前是一致的，能否做到呢？<br>
+实际上，Flink 还提供了另外一个方法：SingleOutputStreamOperator#setUidHash()。该方法会直接为operator设置用户指定的hash值。当Flink版本升级时，或者是用户代码的调整导致自动生成的hash值变更时，通过这种方法直接设置升级前作业的hash值（该hash值可以从web ui 界面或者用户日志中获取），从而可以帮助重建建立保存状态到目标operator的映射。</p>
+<p><strong>需要注意的是</strong>：<br>
+该方法的使用是有门槛的，不想设置uid一样，我可以不区分是否为有状态操作，对所有operator都指定uid；对于uidHash的指定，一个重要的关注点就是：对于操作链中的operator，只需要为Head operator指定hash，为中间operator指定hash会导致作业提交失败。</p>
 ]]></content>
     </entry>
     <entry>
@@ -514,43 +1201,6 @@ Semantic.Exactly_Once 依赖于commit transaction 功能，commit transanction�
 ]]></content>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Flink 时间操作—Window]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-shi-jian-cao-zuo-window/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-shi-jian-cao-zuo-window/">
-        </link>
-        <updated>2021-01-17T06:51:32.000Z</updated>
-        <summary type="html"><![CDATA[<p>本文主要讲解Flink中window相关设计、原理和应用。</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>本文主要讲解Flink中window相关设计、原理和应用。</p>
-<!-- more -->
-<h1 id="flink窗口的概述及分类">Flink窗口的概述及分类</h1>
-<p>Flink<br>
-在Google的Dataflow编程模型论文《The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost in Massive-Scale, Unbounded, Out-of-Order Data Processing》中介绍了该模型流批一体计算中的核心设计，其中重点是Window操作。流处理的本质是处理无限持续产生的数据集，批处理的本质是处理有限不变的数据集，因此，批处理实际上是流处理的一种特列，而窗口就是流和批一体的桥梁。<br>
-可见，Window操作就是用来将一个无限的流切分为一个个有限的数据集，并在有界数据集上进行操作的一种机制。Flink中提供了3类默认的窗口：计数窗口(Count Window)、时间窗口（Time Window）和会话窗口（Session Window）。</p>
-<ol>
-<li><strong>Count Window</strong>
-<ul>
-<li><strong>Tumble Count Window</strong> : 累计固定个数的元素就视为一个窗口，该类型窗口无法像时间窗口一样实现切分好</li>
-<li><strong>Sliding Count Window</strong> ：累计固定的个数视为一个窗口，每超过一定个数的滑动个数，则产生一个新的窗口</li>
-</ul>
-</li>
-<li><strong>Time Window</strong>
-<ul>
-<li><strong>Tumble Time Window</strong> : 在时间上按照事先约定的窗口大小切分的窗口，窗口之间不会相互重叠</li>
-<li><strong>Sliding Time Window</strong> ：在时间上按照事先约定的窗口大小、滑动步长切分的窗口，滑动窗口之间可能会存在相互重叠的情况</li>
-</ul>
-</li>
-<li><strong>Session Window</strong><br>
-一种特殊的窗口，当超过一段时间，该窗口没有收到新的数据元素，则视为该窗口结束。因此，无法事先确定窗口的长度、元素个数，窗口之间也不会相互重叠</li>
-</ol>
-<!--  画图说明 几种window的区别   -->
-<h1 id="flink-window的实现原理与机制">Flink Window的实现原理与机制</h1>
-<p>数据进入窗口之后，如何分配窗口，如何驱逐数据，以及如何触发计算的逻辑如下图所示：<br>
-<img src="https://wangyemao-github.github.io/post-images/1610883497379.png" alt="" loading="lazy"><br>
-数据流中每一个数据进入Window算子时，</p>
-]]></content>
-    </entry>
-    <entry>
         <title type="html"><![CDATA[Flink Time]]></title>
         <id>https://wangyemao-github.github.io/post/flink-time/</id>
         <link href="https://wangyemao-github.github.io/post/flink-time/">
@@ -1020,195 +1670,6 @@ Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对�
 <li>https://ci.apache.org/projects/flink/flink-docs-release-1.12/concepts/timely-stream-processing.html</li>
 <li>http://www.54tianzhisheng.cn/2018/12/11/Flink-time/</li>
 </ol>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Flink State 之 KeyedState]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-state-zhi-keyedstate/">
-        </link>
-        <updated>2021-01-03T02:44:22.000Z</updated>
-        <summary type="html"><![CDATA[<p>本文主要总结Flink State 中KeyedState，以及KeyedState的应用</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>本文主要总结Flink State 中KeyedState，以及KeyedState的应用</p>
-<!-- more -->
-<h1 id="keyedstate">KeyedState</h1>
-<p>KeyedState在KeyedStream中使用。状态跟特定Key绑定的，即KeyedStream流上的每一个Key对应一个State对象。。</p>
-<h2 id="keyedstate-支持的状态类型">KeyedState 支持的状态类型</h2>
-<p>KeyedState可以使用所有Flink支持的State类型。FoldingState跟ReducingState类似，但是已标记为废弃，不建议再使用<br>
-<img src="https://wangyemao-github.github.io/post-images/1609670108841.png" alt="" loading="lazy"></p>
-<h2 id="statedescriptor">StateDescriptor</h2>
-<p>对应于每一类State，Flink内部都设计了对应的<strong>StateDescriptor</strong>状态描述。它指定了状态的一些属性，包括：State名称，State中类型信息，序列化/反序列化器，State生存时间等。</p>
-<h3 id="valuestatedescriptor定义">ValueStateDescriptor定义</h3>
-<pre><code class="language-java">ValueStateDescriptor&lt;Tuple2&lt;Long,Long&gt;&gt; descriptor = 
-              new ValueStateDescriptor&lt;&gt;(&quot;average&quot;,
-                    TypeInformation.of(new TypeHint&lt;Tuple2&lt;Long,Long&gt;&gt;(){}),
-                    Tuple2.of(0L,0L));
-</code></pre>
-<p>代码片段定义了一个ValueStateDescriptor，指定状态名称为“average”，状态类型为Tuple2&lt;Long,Long&gt;，默认值为：Tuple2&lt;0L,0L&gt;</p>
-<h2 id="不同状态类型详细对比">不同状态类型详细对比</h2>
-<table>
-<thead>
-<tr>
-<th>State类型</th>
-<th>存储数据类型</th>
-<th>StateDescriptor</th>
-<th>使用</th>
-<th>操作</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ValueState<T></td>
-<td>T类型的单值状态</td>
-<td>ValueStateDescriptor<T></td>
-<td>ValueState<T> getState(ValueStateDescriptor<T>)</td>
-<td>更新：update(T);<br>获取：T value();</td>
-<td>每一个Key与T类型状态值绑定</td>
-</tr>
-<tr>
-<td>ListState<T></td>
-<td>Key上的状态值为一个列表</td>
-<td>ListStateDescriptor<T></td>
-<td>ListState<T> getListState(ListStateDescriptor<T>)</td>
-<td>追加数据：add(T)/addAll(List<T>);<br>获取状态数据列表：Iterable<T> get()</td>
-<td></td>
-</tr>
-<tr>
-<td>ReducingState<T></td>
-<td>存储一个T类型的值</td>
-<td>ReducingStateDescriptor<T></td>
-<td>ReducingState<T> getReducingState(ReducingStateDescriptor<T>)</td>
-<td>添加数据：add(T);</td>
-<td>这种状态通过用户传入的reduceFunction，每次调用add方法添加值时，会调用reduceFunction，最后合并到一个单一的状态值</td>
-</tr>
-<tr>
-<td>AggregatingState&lt;IN, OUT&gt;</td>
-<td>存储一个值</td>
-<td>AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;</td>
-<td>AggregatingState&lt;IN, OUT&gt; getAggregatingState(AggregatingStateDescriptor&lt;IN, ACC, OUT&gt;)</td>
-<td>添加数据：add(IN)</td>
-<td>聚合State，与ReducingState不同的是，这里的聚合类型可以是不同的元素类型。每次添加值时，会调用AggregateFunction函数计算聚合结果</td>
-</tr>
-<tr>
-<td>MapState&lt;UK, UV&gt;</td>
-<td>Map</td>
-<td>MapStateDescriptor&lt;UK,UV&gt;</td>
-<td>MapState&lt;UK, UV&gt; getMapState(MapStateDescriptor&lt;UK, UV&gt;)</td>
-<td>添加：put(UK,UV)/putAll(UK,UV);<br>获取：UV get(UK);<br>遍历：Iterable&lt;Map.Entry&gt; entries()/Iterator&lt;Map.Entry&gt; iterator();</td>
-<td>key-value结构数据</td>
-</tr>
-</tbody>
-</table>
-<h1 id="keyedstate使用">KeyedState使用</h1>
-<p>##KeyedStream<br>
-KeyedState只能应用于KeyedStream，如果你想在DataStream上使用Keyed State，你需要首先指定<strong>Key</strong>，Key用于State（也用于流记录本身）的分区。<br>
-###指定Key的方式<br>
-DataStream的keyBy()方法用于指定Key，并将DataStream转换为KeyedStream。它有如下几种重载方法，官方</p>
-<blockquote>
-<p>KeySelector</p>
-<blockquote>
-<p>KeyedStream&lt;T, K&gt; keyBy(KeySelector&lt;T, K&gt; key)<br>
-通过实现KeySelector Function中的getKey()方法，自由指定Key的提取<br>
-Tuple Keys<br>
-KeyedStream&lt;T, Tuple&gt; keyBy(int... fields)<br>
-应用于数据类型为简单Tuple类型，通过Tuple下表索引指定Key，当指定多个时为组合键<br>
-Expression Keys<br>
-KeyedStream&lt;T, Tuple&gt; keyBy(String... fields)<br>
-应用于复杂的Tuple类型或POJO类型，对于POJO类型，String参数用于指定字段名</p>
-</blockquote>
-</blockquote>
-<p>Flink的数据模型并不是基于键值对的。因此，KeyedStream并不会将物理上将数据处理为键何值。Key是“虚拟的”：它被定义为在实际数据上用于指导分组操作的函数。</p>
-<p>KeyedState保存在StateBackend中</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Flink State 之 Operator State 应用]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-state-zhi-operator-state-ying-yong/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-state-zhi-operator-state-ying-yong/">
-        </link>
-        <updated>2020-12-29T12:34:38.000Z</updated>
-        <summary type="html"><![CDATA[<p>上文已经说到：Flink中，根据数据集是否根据Key进行分区，将状态分为Keyde State和Operator State两种类型。本文主要关注Operator State以及Operator State相关应用。</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>上文已经说到：Flink中，根据数据集是否根据Key进行分区，将状态分为Keyde State和Operator State两种类型。本文主要关注Operator State以及Operator State相关应用。</p>
-<!-- more -->  
-<h1 id="operator-state">Operator State</h1>
-<p>Operator State，也称作non-keyed State。每一个Operator State与一个并行的Operator实例绑定，每个Operator实例中都持有所有数据元素的一部分状态。<br>
-在典型的Flink有状态应用中，并不需要用到Operator State。它主要是作为一种特殊类型的状态，应用于Source/Sink的实现，以及在没有键进行状态分区的场景。</p>
-<h2 id="支持的数据类型">支持的数据类型</h2>
-<p>目前Operator State只支持使用<strong>ListState</strong></p>
-<h2 id="重分布机制">重分布机制</h2>
-<p>当并行度改变时，Operator State接口支持在并行的操作实例之间重分布State，并且支持多种重分布方案：</p>
-<ul>
-<li>均匀重分布：每一个并行Operator都返回一个状态列表（List）。整个状态空间逻辑上就是所有状态列表的并集。在恢复/重分布阶段，整个状态列表根据并行操作数目均分为子状态列表。每一个并行操作分配一个子状态列表，子状态列表可能为空，也可能包含一个或多个元素。</li>
-<li>合并重分布：这种方式将状态的划分交给用户，与均匀重分布方式相比具有更好的灵活性。在恢复/重分布阶段，每一个并行操作都获得了完整的一份状态列表。如果状态基数很大，不建议使用这种方式。因为Checkpoint 元数据会存储每个列表项的偏移量，这可能导致RPC帧大小或内存不足错误。</li>
-</ul>
-<h1 id="operator-state-应用">Operator State 应用</h1>
-<h2 id="如何初始化一个状态state">如何初始化一个状态(State)</h2>
-<p>在Flink中，使用状态描述<strong>StateDescriptor</strong>来初始化State，它包含了State的名称以及保存的State值的类型信息</p>
-<pre><code class="language-java">ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
-    new ListStateDescriptor&lt;&gt;(
-        &quot;buffered-elements&quot;,
-        TypeInformation.of(new TypeHint&lt;Tuple2&lt;String,Integer&gt;&gt;() {}));
-</code></pre>
-<p>上面的代码片段中定义了一个State名称为：buffered-elements，State值类型为：Tuple2&lt;String,Integer&gt; 的状态描述<br>
-##CheckpointedFunction<br>
-要使用Operator State，有状态的函数需要实现<strong>CheckpointedFunction</strong>接口，该接口需要实现两个方法：</p>
-<pre><code class="language-java">void snapshotState(FunctionSnapshotContext context) throws Exception;
-void initializeState(FunctionInitializationContext context) throws Exception;
-</code></pre>
-<p>无论什么时候执行checkpoint，都会调用snapshotState()方法。因此该方法主要定义状态的快照保存逻辑；相应地，每当用户定义的函数被初始化时（无论是函数首次初始化，还是函数实际上从更早一个检查点恢复），都会调用initializeState()方法。因此，initializeState()不仅是不同类型状态初始化的地方，而且也包含了状态恢复的逻辑。</p>
-<h2 id="sinkfunction-sample">SinkFunction Sample</h2>
-<pre><code class="language-java">public class BufferingSink implements SinkFunction&lt;Tuple2&lt;String, Integer&gt;&gt;,            CheckpointedFunction {
-
-    private final int threshold;
-
-    private transient ListState&lt;Tuple2&lt;String, Integer&gt;&gt; checkpointedState;
-
-    private List&lt;Tuple2&lt;String, Integer&gt;&gt; bufferedElements;
-
-    public BufferingSink(int threshold) {
-        this.threshold = threshold;
-        this.bufferedElements = new ArrayList&lt;&gt;();
-    }
-
-    @Override
-    public void invoke(Tuple2&lt;String, Integer&gt; value, Context contex) throws Exception {
-        bufferedElements.add(value);
-        if (bufferedElements.size() == threshold) {
-            for (Tuple2&lt;String, Integer&gt; element: bufferedElements) {
-                // send it to the sink
-            }
-            bufferedElements.clear();
-        }
-    }
-
-    @Override
-    public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        checkpointedState.clear();
-        for (Tuple2&lt;String, Integer&gt; element : bufferedElements) {
-            checkpointedState.add(element);
-        }
-    }
-
-    @Override
-    public void initializeState(FunctionInitializationContext context) throws Exception {
-        ListStateDescriptor&lt;Tuple2&lt;String, Integer&gt;&gt; descriptor =
-            new ListStateDescriptor&lt;&gt;(
-                &quot;buffered-elements&quot;,
-                TypeInformation.of(new TypeHint&lt;Tuple2&lt;String, Integer&gt;&gt;() {}));
-
-        checkpointedState = context.getOperatorStateStore().getListState(descriptor);
-
-        if (context.isRestored()) {
-            for (Tuple2&lt;String, Integer&gt; element : checkpointedState.get()) {
-                bufferedElements.add(element);
-            }
-        }
-    }
-}
-</code></pre>
 ]]></content>
     </entry>
     <entry>

@@ -1,0 +1,470 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1612265087142">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1612265087142" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#flink-uid-%E7%AE%80%E4%BB%8B">Flink UID 简介</a>
+<ul>
+<li><a href="#uid-notition">uid notition</a></li>
+<li><a href="#uid%E8%AE%BE%E7%BD%AE%E5%8F%8A%E4%BD%BF%E7%94%A8%E6%8E%A8%E8%8D%90">uid设置及使用推荐</a></li>
+</ul>
+</li>
+<li><a href="#flink-operator-id-%E7%94%9F%E6%88%90">Flink operator id 生成</a></li>
+<li><a href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E">写在最后</a></li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Flink Uid剖析</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-29 / 11 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
+<!-- more -->
+<h1 id="flink-uid-简介">Flink UID 简介</h1>
+<p>下面对uid的解释摘自Flink源码中的相关注释：</p>
+<h2 id="uid-notition">uid notition</h2>
+<pre><code class="language-text">uid: The unique user-specified ID of this transformation. The specified ID is used to assign the same operator ID across job submissions. this ID needs to be unique per transformation and job. Otherwise, job submission will fail.
+</code></pre>
+<p>大意就是说：uid 就是用户为transformation指定的，唯一的ID。当我们提交Flink作业时，指定的ID会分配给对应的operator，因此uid实际上就是operator id。并且需要注意用户为每一个转换指定的id应该在job和job内的转换中是惟一的，否则作业提交会失败。</p>
+<h2 id="uid设置及使用推荐">uid设置及使用推荐</h2>
+<p>Flink提供了为operator设置uid的方法：SingleOutputStreamOperator#uid()。 下面为一个简单的应用代码片段：</p>
+<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
+  // Stateful source (e.g. Kafka) with ID
+  .addSource(new StatefulSource())
+  .uid(&quot;source-id&quot;) // ID for the source operator
+  .shuffle()
+  // Stateful mapper with ID
+  .map(new StatefulMapper())
+  .uid(&quot;mapper-id&quot;) // ID for the mapper
+  // Stateless printing sink
+  .print(); // Auto-generated ID
+</code></pre>
+<p><strong>Flink官网推荐用户为作业中的每一个operator设置uid</strong>。主要原因在于方便后续Flink应用程序的升级和Flink版本的升级。<br>
+在流式作业运行过程中，通常会涉及到：Flink版本更新，作业拓扑图变更，作业并行度调整，红蓝部署派生新作业等操作。Flink savepoint为这些有计划地变更提供了手动的备份和作业恢复机制。它的实现原理为：savepoint中保存了operator ID 与有状态的operator state的映射的关系。<br>
+<strong>注意</strong>：savepoint中保存的只是有状态operator的id和对应的state数据。无状态operator不会保存在savepoint中。</p>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1611907382714.png" alt="" loading="lazy"></figure>
+<p>当基于savepoint恢复作业时，Flink会读取保存在savepoint中的映射数据，并与提交作业的operator相匹配，匹配基于operator ID。如果都能匹配上，则基于保存的状态初始化operator；否则，作业会失败。当然，如果设置了“--allowNonRestoredState”选项，对于未匹配上的操作，使用默认状态进行初始化，而不是抛出异常。<br>
+因此，对于升级前后相同的operator，主要是有状态的operator，保证它的uid的稳定、一致性是很重要的。因此，强烈推荐用户为作业中每一个operator指定uid。当然，如果用户没有手动指定，那Flink内部也会为operator自动生成id。</p>
+<h1 id="flink-operator-id-生成">Flink operator id 生成</h1>
+<p>本节主要基于Flink原来，剖析operator id生成、实现原理：<br>
+在提交Flink作业之后，首先会生成SteamGraph；然后基于StreamGraph会构建JobGraph。也就是在将StreamGraph转换为JobGraph的过程中会为每个operator 生成一个唯一的hash值，也就是operator id。入口方法为：StreamGraphHasherV2#traverseStreamGraphAndGenerateHashes：</p>
+<pre><code class="language-java">	public Map&lt;Integer, byte[]&gt; traverseStreamGraphAndGenerateHashes(StreamGraph streamGraph) {
+		// The hash function used to generate the hash
+		final HashFunction hashFunction = Hashing.murmur3_128(0);
+		final Map&lt;Integer, byte[]&gt; hashes = new HashMap&lt;&gt;();
+
+		Set&lt;Integer&gt; visited = new HashSet&lt;&gt;();
+		Queue&lt;StreamNode&gt; remaining = new ArrayDeque&lt;&gt;();
+
+		// We need to make the source order deterministic. The source IDs are
+		// not returned in the same order, which means that submitting the same
+		// program twice might result in different traversal, which breaks the
+		// deterministic hash assignment.
+		List&lt;Integer&gt; sources = new ArrayList&lt;&gt;();
+		for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
+			sources.add(sourceNodeId);
+		}
+		Collections.sort(sources);
+
+		//
+		// Traverse the graph in a breadth-first manner. Keep in mind that
+		// the graph is not a tree and multiple paths to nodes can exist.
+		//
+
+		// Start with source nodes
+		for (Integer sourceNodeId : sources) {
+			remaining.add(streamGraph.getStreamNode(sourceNodeId));
+			visited.add(sourceNodeId);
+		}
+
+		StreamNode currentNode;
+		while ((currentNode = remaining.poll()) != null) {
+			// Generate the hash code. Because multiple path exist to each
+			// node, we might not have all required inputs available to
+			// generate the hash code.
+			if (generateNodeHash(currentNode, hashFunction, hashes, streamGraph.isChainingEnabled(), streamGraph)) {
+				// Add the child nodes
+				for (StreamEdge outEdge : currentNode.getOutEdges()) {
+					StreamNode child = streamGraph.getTargetVertex(outEdge);
+
+					if (!visited.contains(child.getId())) {
+						remaining.add(child);
+						visited.add(child.getId());
+					}
+				}
+			} else {
+				// We will revisit this later.
+				visited.remove(currentNode.getId());
+			}
+		}
+
+		return hashes;
+	}
+</code></pre>
+<p>从StreamGraph的sourceNode开始，<strong>对于有多个SourceNode的作业，按sourceId进行排序</strong>，按照广度优先遍历的方式，计算StreamGraph中每一个Node的Hash值。这个hash值就是对应node的operator id。每一个node的hash值具体生成看generateNodeHash()方法：</p>
+<pre><code class="language-java">	private boolean generateNodeHash(
+			StreamNode node,
+			HashFunction hashFunction,
+			Map&lt;Integer, byte[]&gt; hashes,
+			boolean isChainingEnabled,
+			StreamGraph streamGraph) {
+
+		// Check for user-specified ID
+		String userSpecifiedHash = node.getTransformationUID();
+
+		if (userSpecifiedHash == null) {
+			// Check that all input nodes have their hashes computed
+			for (StreamEdge inEdge : node.getInEdges()) {
+				// If the input node has not been visited yet, the current
+				// node will be visited again at a later point when all input
+				// nodes have been visited and their hashes set.
+				if (!hashes.containsKey(inEdge.getSourceId())) {
+					return false;
+				}
+			}
+
+			Hasher hasher = hashFunction.newHasher();
+			byte[] hash = generateDeterministicHash(node, hasher, hashes, isChainingEnabled, streamGraph);
+
+			if (hashes.put(node.getId(), hash) != null) {
+				// Sanity check
+				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
+						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
+			}
+
+			return true;
+		} else {
+			Hasher hasher = hashFunction.newHasher();
+			byte[] hash = generateUserSpecifiedHash(node, hasher);
+
+			for (byte[] previousHash : hashes.values()) {
+				if (Arrays.equals(previousHash, hash)) {
+					throw new IllegalArgumentException(&quot;Hash collision on user-specified ID &quot; +
+							&quot;\&quot;&quot; + userSpecifiedHash + &quot;\&quot;. &quot; +
+							&quot;Most likely cause is a non-unique ID. Please check that all IDs &quot; +
+							&quot;specified via `uid(String)` are unique.&quot;);
+				}
+			}
+
+			if (hashes.put(node.getId(), hash) != null) {
+				// Sanity check
+				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
+						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
+			}
+
+			return true;
+		}
+	}
+</code></pre>
+<p>该方法首先会获取对应node的transformationUID，它实际上就是用户调用uid()方法指定的uid值。接着处理逻辑分为两部分：<br>
+（1）transformationUID不为null，也就是用户指定了uid的情况下，基于用户指定的uid，计算hash值；</p>
+<pre><code class="language-java">Hasher hasher = hashFunction.newHasher();
+byte[] hash = generateUserSpecifiedHash(node, hasher);
+
+	/**
+	 * Generates a hash from a user-specified ID.
+	 */
+	private byte[] generateUserSpecifiedHash(StreamNode node, Hasher hasher) {
+		hasher.putString(node.getTransformationUID(), Charset.forName(&quot;UTF-8&quot;));
+		return hasher.hash().asBytes();
+	}
+</code></pre>
+<p>（2）transformationUID为null的情况下，自动生成确定性的hash值。对于这种情况，首先要检查该node的所有入节点的hash值都已经计算。在满足条件的情况下，调用generateDeterministicHash()方法：</p>
+<pre><code class="language-java">	/**
+	 * Generates a deterministic hash from node-local properties and input and
+	 * output edges.
+	 */
+	private byte[] generateDeterministicHash(
+			StreamNode node,
+			Hasher hasher,
+			Map&lt;Integer, byte[]&gt; hashes,
+			boolean isChainingEnabled,
+			StreamGraph streamGraph) {
+
+		// Include stream node to hash. We use the current size of the computed
+		// hashes as the ID. We cannot use the node's ID, because it is
+		// assigned from a static counter. This will result in two identical
+		// programs having different hashes.
+		generateNodeLocalHash(hasher, hashes.size());
+		// Include chained nodes to hash
+		for (StreamEdge outEdge : node.getOutEdges()) {
+			if (isChainable(outEdge, isChainingEnabled, streamGraph)) {
+
+				// Use the hash size again, because the nodes are chained to
+				// this node. This does not add a hash for the chained nodes.
+				generateNodeLocalHash(hasher, hashes.size());
+			}
+		}
+
+		byte[] hash = hasher.hash().asBytes();
+		// Make sure that all input nodes have their hash set before entering
+		// this loop (calling this method).
+		for (StreamEdge inEdge : node.getInEdges()) {
+			byte[] otherHash = hashes.get(inEdge.getSourceId());
+
+			// Sanity check
+			if (otherHash == null) {
+				throw new IllegalStateException(&quot;Missing hash for input node &quot;
+						+ streamGraph.getSourceVertex(inEdge) + &quot;. Cannot generate hash for &quot;
+						+ node + &quot;.&quot;);
+			}
+
+			for (int j = 0; j &lt; hash.length; j++) {
+				hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
+			}
+		}
+
+		if (LOG.isDebugEnabled()) {
+			String udfClassName = &quot;&quot;;
+			if (node.getOperator() instanceof AbstractUdfStreamOperator) {
+				udfClassName = ((AbstractUdfStreamOperator&lt;?, ?&gt;) node.getOperator())
+						.getUserFunction().getClass().getName();
+			}
+
+			LOG.debug(&quot;Generated hash '&quot; + byteToHexString(hash) + &quot;' for node &quot; +
+					&quot;'&quot; + node.toString() + &quot;' {id: &quot; + node.getId() + &quot;, &quot; +
+					&quot;parallelism: &quot; + node.getParallelism() + &quot;, &quot; +
+					&quot;user function: &quot; + udfClassName + &quot;}&quot;);
+		}
+
+		return hash;
+	}
+</code></pre>
+<p>该方法为节点自动生成对应hash值的具体实现，从实现代码可看到：<br>
+(1) 首先会基于hashs这个Map中已经保存的hash值个数计算该node的hash值，Map中已经保存的hash值的个数跟当前节点对应的操作在作业中的顺序是息息相关的。<br>
+(2) 遍历当前节点的所有出边，如果判断是可以与当前节点链接在一起的，会再次执行(1)处hash计算<br>
+(3) 遍历当前节点的所有入节点，当前节点的hash值会与每一个入节点的hash值做如下计算得到最终的hash值：</p>
+<pre><code class="language-java">for (StreamEdge inEdge : node.getInEdges()){
+    byte[] otherHash = hashes.get(inEdge.getSourceId());
+    for (int j = 0; j &lt; hash.length; j++){
+        hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
+    }
+}
+</code></pre>
+<p>根据上述处理逻辑，可以发现：</p>
+<ul>
+<li>对于用户指定uid情况，计算出来的operator hash值也是确定、一致的；</li>
+<li>对于未指定uid的情况，具体operator 的hash值会受到如下一些因素的影响：
+<ol>
+<li>operator 在作业图中的顺序；</li>
+<li>当前operator与出边的isChainable判断，包括：作业并行度，slotSharingGroup，chainingStrategy，StreamPartitioner等</li>
+<li>当前operator的入节点的hash值、顺序等</li>
+</ol>
+</li>
+</ul>
+<h1 id="写在最后">写在最后</h1>
+<p>那如果应用代码中没有指定uid；而又想要能保证升级之后的作业中有状态operator的uid与升级前是一致的，能否做到呢？<br>
+实际上，Flink 还提供了另外一个方法：SingleOutputStreamOperator#setUidHash()。该方法会直接为operator设置用户指定的hash值。当Flink版本升级时，或者是用户代码的调整导致自动生成的hash值变更时，通过这种方法直接设置升级前作业的hash值（该hash值可以从web ui 界面或者用户日志中获取），从而可以帮助重建建立保存状态到目标operator的映射。</p>
+<p><strong>需要注意的是</strong>：<br>
+该方法的使用是有门槛的，不想设置uid一样，我可以不区分是否为有状态操作，对所有operator都指定uid；对于uidHash的指定，一个重要的关注点就是：对于操作链中的operator，只需要为Head operator指定hash，为中间operator指定hash会导致作业提交失败。</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/configuratio-fan-yi/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Configuratio—翻译
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/savepoint/">
+                <h3 class="post-title">
+                  Savepoint
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

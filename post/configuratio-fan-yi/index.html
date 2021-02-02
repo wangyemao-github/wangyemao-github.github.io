@@ -1,0 +1,510 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1612265087142">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1612265087142" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#basic-setup">Basic Setup</a>
+<ul>
+<li><a href="#hostnamesports">Hostnames/Ports</a></li>
+<li><a href="#memory-size">Memory Size</a></li>
+<li><a href="#parallelism">Parallelism</a></li>
+<li><a href="#checkpointing">Checkpointing</a></li>
+<li><a href="#web-ui">Web UI</a></li>
+<li><a href="#other">Other</a></li>
+</ul>
+</li>
+<li><a href="#%E9%80%9A%E7%94%A8%E9%85%8D%E7%BD%AE%E9%A1%B9">通用配置项</a>
+<ul>
+<li><a href="#hosts-and-ports">Hosts and Ports</a></li>
+<li><a href="#fault-tolerance">Fault Tolerance</a>
+<ul>
+<li><a href="#fixed-delay-restart-strategy">Fixed Delay Restart Strategy</a></li>
+<li><a href="#failure-rate-restart-strategy">Failure Rate Restart Strategy</a></li>
+</ul>
+</li>
+<li><a href="#checkpoints-and-state-backends">Checkpoints and State Backends</a></li>
+<li><a href="#memory-configuration">Memory Configuration</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Configuratio—翻译</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-01-31 / 11 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>所有的配置都在conf/flink-conf.yaml中。配置子Flink程序启动时解析和执行，因此，配置文件的变更需要重启相关进程（jobmanager/taskmanager）<br>
+开箱即用的配置将使用默认的Java安装。你可以手动设置环境变量：JAVA_HOME或者如果你想要手动覆盖使用的java运行时，可以在conf/flink-conf.yaml文件中配置：env.java.home键值。</p>
+<h1 id="basic-setup">Basic Setup</h1>
+<p>默认的配置支持单节点的Flink session cluster，不需要任何变更。本节的设置项对于基本的Flink分布式设置是最常需要的。</p>
+<h2 id="hostnamesports">Hostnames/Ports</h2>
+<p>这些选项只对standalone application/ session （简单的standalone 或kubernetes）部署模式是需要的<br>
+如果你使用Flink集成Yarn，Mesos或者active kubernetes ，hostnames和ports是自动发现的。</p>
+<ul>
+<li>rest.address，rest.port ：用于client连接到Flink。<br>
+将其设置为运行的JobManager的主机名，或者设置为Jobmanager REST 接口前面的（kubernetes）服务的主机名。</li>
+<li>jobmanager.rpc.address（默认 “localhost”）和jobmanager.rpc.port (默认6123）.用于Taskmanager连接到jobmanager/ResourceManager.<br>
+将其设置为Jobmanager运行的主机名，或者Jobmanager的（kubernetes 内部）服务的主机名。该选项在设置为高可用时是被忽略的，这种情况下，jobmanager/resourceManager使用leader选举机制自动发现</li>
+</ul>
+<h2 id="memory-size">Memory Size</h2>
+<p>默认的内存大小设置支持简单的流式/批应用，但是对于更多复杂的应用，这个设置会太小而不能产生很好的性能</p>
+<ul>
+<li>jobmanager.memory.process.size : JobManager进程的总内存大小（JobMaster/ResourceManager/Dispatcher）</li>
+<li>taskmanager.memory.process.size: TaskManager 进程的总内存大小</li>
+</ul>
+<p>总大小包括了所有。Flink将为JVM自身的内存需求减去一些内存（metaspace以及其他的），并在组成部分（JVM 堆，堆外，对于TaskManager还有网络，托管内存等）中自动划分和分配剩下的内存。<br>
+这些选项配置为内存大小，例如：1536m 或者2g。</p>
+<h2 id="parallelism">Parallelism</h2>
+<ul>
+<li>taskmanager.numberOfTaskSlots： 一个TaskManager提供的slots数目(默认为1)。每一个slot可以执行一个task或者一个pipeline。在一个TaskManager中设置多个slots，有利于在并行的任务或pipelines之间分摊某些恒定的开销（JVM、应用程序库，网络连接）。**see Task Slots and Resources  **<br>
+运行更小的TaskManagers，比如每个TaskManager设置1个Slot是一个很好地起始点，可以实现最好的任务隔离。将相同的资源分配给数量更少、slots数更多的大型TaskManagers有助于提高资源利用率，但代价是削弱了任务之间的隔离性（更多的任务共享相同的JVM）。</li>
+<li>parallelism.default ： 当没有指定具体制定并行度时，默认的使用的并行度。（默认为1）</li>
+</ul>
+<h2 id="checkpointing">Checkpointing</h2>
+<p>你可以在Flink作业或应用代码中直接配置checkpointing。在应用没有做任何配置的情况下，配置文件中配置这些值会作为默认设置。</p>
+<ul>
+<li>state.backend : 要使用的state backend。该选项定义了快照的数据结构机制，常用的取值为filesystem和rockdb。</li>
+<li>state.checkpoints.dir : 要写入快照的目录。需要设置一个路径URI，比如：s3://mybucket/flink-app/checkpoints 或 hdfs://namenode:port/flink/checkpoints</li>
+<li>state.savepoints.dir: savepoint的默认目录。需要像state.checkpoints.dir一样，设置一个路径URI。</li>
+</ul>
+<h2 id="web-ui">Web UI</h2>
+<ul>
+<li>web.submit.enable : 开启通过Flink UI上传和启动jobs(默认为true)。请注意，即便该选项设置为false，session cluster仍然可以通过REST请求(HTTP调用)接受jobs。此标识只保护在UI上上传job的功能。</li>
+<li>web.upload.dir : 存储上传jobs的目录。只有在web.submit.enable开启的情况下使用</li>
+</ul>
+<h2 id="other">Other</h2>
+<p>io.tmp.dirs : Flink放置本地数据的目录，默认为系统临时目录（java.io.tmpdir 属性）。如果配置了目录列表，Flink will rotate files across the directories。<br>
+默认情况下，放在这些目录中的数据包括RocksDB创建的文件，溢出的中间结果（批处理算法）和缓存的jar文件。<br>
+<strong>持久化/恢复不依赖此数据，但是如果删除此数据，通常会导致很重的恢复操作。 因此，建议将其设置为不会自动定期清除的目录</strong>。<br>
+默认情况下，Yarn，Mesos和Kubernetes设置会自动将此值配置为本地工作目录。</p>
+<h1 id="通用配置项">通用配置项</h1>
+<h2 id="hosts-and-ports">Hosts and Ports</h2>
+<p>用于为Flink的不同组件配置主机名和端口的选项。<br>
+JobManager主机名和端口仅与非高可用的独立模式设置有关。 在该设置中，TaskManager使用该配置值来查找（并连接到）JobManager。 在所有高可用的设置中，TaskManager通过高可用服务（例如ZooKeeper）自动发现JobManager。<br>
+使用资源编排框架(K8，Yarn，Mesos)的设置，通常使用框架的服务发现机制。<br>
+除非安装程序要求使用特定的端口范围或特定的网络接口进行绑定，否则你无需配置任何TaskManager的主机和端口。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jobmanager.rpc.address</td>
+<td>(none)</td>
+<td>String</td>
+<td>该配置参数定义了与JobManager进行通信，需要连接的网络地址。仅在存在静态名称或地址的单个JobManager的设置中解释此值（简单的standalone 设置，或具有动态服务名称解析的容器设置）。在很多高可用设置中不会使用该选项，在这种情况下，比如zookeeper，会使用leader选举服务从潜在的多个后背JobManager中选举和发现JobManager leader。</td>
+</tr>
+<tr>
+<td>jobmanager.rpc.port</td>
+<td>6123</td>
+<td>Integer</td>
+<td>该配置参数定义了与JobManager进行通信，需要连接的网络端口。其他同上</td>
+</tr>
+<tr>
+<td>metrics.internal.query-service.port</td>
+<td>“0”</td>
+<td>String</td>
+<td>用于Flink内部指标查询服务的端口范围。推荐设置一个端口范围，避免多个Flink组件运行在同一台机器上时产生端口冲突。可以设置端口集合（“50100”，“50101”），范围（“50100-50200”）或两者的组合。</td>
+</tr>
+<tr>
+<td>rest.address</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于client连接到server的地址。注意：仅在高可用配置为NONE时，才使用此选项</td>
+</tr>
+<tr>
+<td>rest.bind-address</td>
+<td>（none）</td>
+<td>String</td>
+<td>server绑定的地址</td>
+</tr>
+<tr>
+<td>rest.bind-port</td>
+<td>“8081”</td>
+<td>String</td>
+<td>server绑定的端口。推荐设置为一个端口范围，以避免多个Rest servers运行在同一台机器上导致的端口冲突。可以设置端口集合（“50100”，“50101”），范围（“50100-50200”）或两者的组合</td>
+</tr>
+<tr>
+<td>rest.port</td>
+<td>8081</td>
+<td>Integer</td>
+<td>client连接的端口。如果未指定rest.bind-port，则REST server将绑定到该端口</td>
+</tr>
+<tr>
+<td>taskmanager.data.port</td>
+<td>0</td>
+<td>Integer</td>
+<td>task manager的外部端口，用于数据交换</td>
+</tr>
+<tr>
+<td>taskmanager.host</td>
+<td>（none）</td>
+<td>String</td>
+<td>TaskManager所在的网络接口的外部地址。 因为不同的TaskManager对此选项需要不同的值，所以通常在其他非共享TaskManager特定的配置文件中指定它</td>
+</tr>
+<tr>
+<td>taskmanager.rpc.port</td>
+<td>“0”</td>
+<td>String</td>
+<td>TaskManager所在的外部RPC端口。 接受端口列表（“ 50100,50101”），范围（“ 50100-50200”）或两者的组合。 建议设置一定范围的端口，以避免在同一台计算机上运行多个TaskManager时发生冲突</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fault-tolerance">Fault Tolerance</h2>
+<p>这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
+仅当没有通过ExecutionConfig配置任何特定于作业的重启策略时，默认重启策略才会生效。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy</td>
+<td>（none）</td>
+<td>String</td>
+<td>定义重启策略，以便在job失败时使用。可设置值为：(1)none,off,disable： 无重启策略；（2）fixeddelay，fixed-delay ： 固定延迟的重启策略；（3）failurerate，failure-rate ： 故障率重启策略；</td>
+</tr>
+<tr>
+<td>如果禁用checkpointing ，默认取值为none。如果开启checkpointing，默认值为fixed-delay，并且重启尝试次数为Integer.MAX_VALUE, 1秒延迟。</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="fixed-delay-restart-strategy">Fixed Delay Restart Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy.fixed-delay.attempts</td>
+<td>1</td>
+<td>Integer</td>
+<td>如果重新启动策略已设置为固定延迟，则Flink在宣布作业失败之前重试执行的次数</td>
+</tr>
+<tr>
+<td>restart-strategy.fixed-delay.delay</td>
+<td>1s</td>
+<td>Duration</td>
+<td>如果重新启动策略已设置为固定延迟，则两次连续的重新启动尝试之间的延迟。当程序与外部系统进行交互（例如，连接或挂起的事务在尝试重新执行之前应达到超时）时，延迟重试可能会有所帮助。可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+</tbody>
+</table>
+<h3 id="failure-rate-restart-strategy">Failure Rate Restart Strategy</h3>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>restart-strategy.failure-rate.delay</td>
+<td>1s</td>
+<td>Duration</td>
+<td>如果将重新启动策略设置为故障率，则两次连续的重新启动尝试之间的延迟。 可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+<tr>
+<td>restart-strategy.failure-rate.failure-rate-interval</td>
+<td>1min</td>
+<td>Duration</td>
+<td>如果将重新启动策略设置为失败率，则测量失败率的时间间隔。 可以使用表示法指定：“ 1分钟”，“ 20秒”</td>
+</tr>
+<tr>
+<td>restart-strategy.failure-rate.max-failures-per-interval</td>
+<td>1</td>
+<td>Integer</td>
+<td>如果重新启动策略已设置为失败率，则在使作业失败之前的给定时间间隔内的最大重新启动次数</td>
+</tr>
+</tbody>
+</table>
+<h2 id="checkpoints-and-state-backends">Checkpoints and State Backends</h2>
+<p>这些选项控制状态后端和检查点行为的基本设置<br>
+这些选项仅与以连续流方式执行的作业/应用程序相关。 以批处理方式执行的作业/应用程序不使用状态后端和检查点，而是使用针对批处理而优化的不同内部数据结构。</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>default</th>
+<th>type</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>state.backend</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于存储和快照状态的状态后端</td>
+</tr>
+<tr>
+<td>state.checkpoints.dir</td>
+<td>（none）</td>
+<td>String</td>
+<td>用于在Flink支持的文件系统中存储检查点的数据文件和元数据的默认目录。存储路径必须是所有参与进程/节点可访问的（即，所有的Taskmanegers和JobManagers）</td>
+</tr>
+<tr>
+<td>state.savepoints.dir</td>
+<td>（none）</td>
+<td>String</td>
+<td>savepoint的默认目录。用于状态后端（MemoryStateBackend，FsStateBackend，RocksDBStateBackend）将savepoints写入到文件系统</td>
+</tr>
+<tr>
+<td>state.backend.incremental</td>
+<td>false</td>
+<td>Boolean</td>
+<td>选择状态后端是否应创建增量检查点（如果可能）。 对于增量检查点，仅存储与前一个检查点的差异，而不是完整的检查点状态。 启用后，显示在Web UI中或从rest API获取的状态大小仅代表增量检查点大小，而不是完整的检查点大小。 某些状态后端可能不支持增量检查点，因此会忽略此选项。</td>
+</tr>
+<tr>
+<td>state.backend.local-recovery</td>
+<td>false</td>
+<td>Boolean</td>
+<td>此选项为此状态后端配置本地恢复。 默认情况下，本地恢复处于禁用状态。 本地恢复当前仅涵盖键控状态后端。 当前，MemoryStateBackend不支持本地恢复，会忽略此选项。</td>
+</tr>
+<tr>
+<td>state.checkpoints.num-retained</td>
+<td>1</td>
+<td>Integer</td>
+<td>保留的最大已完成检查点数</td>
+</tr>
+<tr>
+<td>taskmanager.state.local.root-dirs</td>
+<td>（none）</td>
+<td>String</td>
+<td>config参数定义用于存储基于文件的状态以进行本地恢复的根目录。 本地恢复当前仅涵盖键控状态后端。 当前，MemoryStateBackend不支持本地恢复，请忽略此选项</td>
+</tr>
+</tbody>
+</table>
+<h2 id="memory-configuration">Memory Configuration</h2>
+<p>,</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/set-up-flink-de-process-memory/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Set up Flink Memory——翻译
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/flink-uid-pou-xi/">
+                <h3 class="post-title">
+                  Flink Uid剖析
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>
