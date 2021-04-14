@@ -33,7 +33,15 @@
             文章目录
           </p>
           <div class="toc-container hidden lg:block">
-            
+            <ul class="markdownIt-TOC">
+<li><a href="#docker-volume">Docker Volume</a>
+<ul>
+<li><a href="#the-main-use-case-for-volumes">The main use-case for Volumes</a></li>
+<li><a href="#%E4%BD%BF%E7%94%A8volume%E9%9D%A2%E4%B8%B4%E7%9A%84%E4%B8%A4%E4%B8%AA%E9%97%AE%E9%A2%98">使用volume面临的两个问题</a></li>
+</ul>
+</li>
+</ul>
+
           </div>
         </div>
       
@@ -78,13 +86,26 @@
 <div class="mask" onclick="closeMenu()">
 </div>
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
-        <h1 class="text-3xl font-bold lg:mt-16">部署</h1>
+        <h1 class="text-3xl font-bold lg:mt-16">Handleing  Permissions with Docker Volume</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-21 / 1 min read
+          2021-04-01 / 1 min read
         </div>
         
         <div class="post-content yue">
-          <p>Standalone</p>
+          <h1 id="docker-volume">Docker Volume</h1>
+<p>A data volume is a specially-designated directory within one or more containers that bypasses the Union File System.</p>
+<h2 id="the-main-use-case-for-volumes">The main use-case for Volumes</h2>
+<p>is for persisting data between container runs。</p>
+<ul>
+<li>在容器中运行数据库（比如Postgresql）时，对于数据目录很有用；</li>
+<li>在开发环境运行时，有助于共享主机系统的代码目录给容器</li>
+</ul>
+<h2 id="使用volume面临的两个问题">使用volume面临的两个问题</h2>
+<ul>
+<li>对于指定的Volume，你不能访问容器写入的文件。因为容器中的进程通常以root用户运行</li>
+<li>即便容器中以一个普通用户运行，它仍旧不能与宿主机上的用户相匹配。</li>
+</ul>
+<p>因为通常</p>
 
         </div>
 
@@ -93,7 +114,25 @@
 
         <div class="flex justify-between py-8">
           
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/flink-docker-an-zhuang-bu-shu/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Flink Docker 安装部署
+                </h3>
+              </a>
+            </div>
+          
 
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/dockerfile/">
+                <h3 class="post-title">
+                  DockerFile
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
           
         </div>
 

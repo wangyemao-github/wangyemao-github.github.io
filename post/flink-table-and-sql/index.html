@@ -1,0 +1,552 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#table-sql-%E7%BC%96%E7%A8%8B%E4%BE%9D%E8%B5%96dependency">Table &amp; SQL 编程依赖（Dependency）</a></li>
+<li><a href="#table-api-sql-%E7%BC%96%E7%A8%8B%E7%9A%84%E9%80%9A%E7%94%A8%E7%BB%93%E6%9E%84">Table API &amp; SQL 编程的通用结构</a>
+<ul>
+<li><a href="#%E5%88%9B%E5%BB%BAtableenvironment">创建TableEnvironment</a></li>
+<li><a href="#catalogs">Catalogs</a>
+<ul>
+<li><a href="#catalogs-types">Catalogs Types</a></li>
+</ul>
+</li>
+<li><a href="#table-indentifier">table indentifier</a></li>
+<li><a href="#table-types">table types</a></li>
+<li><a href="#%E5%88%9B%E5%BB%BA-table">创建 Table</a></li>
+</ul>
+</li>
+<li><a href="#%E6%9F%A5%E8%AF%A2table">查询Table</a>
+<ul>
+<li><a href="#table-api">Table API</a></li>
+<li><a href="#sql">SQL</a></li>
+</ul>
+</li>
+<li><a href="#emit-a-table">Emit a table</a></li>
+<li><a href="#convert-a-table-into-a-datastream-or-dataset">convert  a Table into a DataStream or DataSet</a>
+<ul>
+<li><a href="#conver-a-table-into-a-datastream">conver a Table into a DataStream</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Flink Table &amp; SQL</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-04-13 / 14 min read
+        </div>
+        
+        <div class="post-content yue">
+          <h1 id="table-sql-编程依赖dependency">Table &amp; SQL 编程依赖（Dependency）</h1>
+<ul>
+<li>为了使用Table API 或者SQL 定义pipeline，需要添加如下依赖（java 语言）：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-api-java-bridge_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+<li>另外，如果你想在本地IDE内运行Table API &amp; SQL程序，你需要添加如下modules集，不同的planner，依赖不一样。对应Blink planner 依赖如下：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-planner-blink_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency><br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-streaming-scala_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+<li>如果你想要实现一个定制化的format或connector，用于序列化/反序列化rows或用户定义的函数，添加如下依赖就足够了：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-common</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+</ul>
+<h1 id="table-api-sql-编程的通用结构">Table API &amp; SQL 编程的通用结构</h1>
+<p>对于批的、流式的Table API &amp; SQL 程序都遵从相同的模式。下面的例子显示了Table API &amp; SQL程序的相同结构：</p>
+<pre><code class="language-java">// create a TableEnvironment for specific planner batch or streaming
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// create an input Table
+tableEnv.executeSql(&quot;CREATE TEMPORARY TABLE table1 ... WITH ( 'connector' = ... )&quot;);
+// register an output Table
+tableEnv.executeSql(&quot;CREATE TEMPORARY TABLE outputTable ... WITH ( 'connector' = ... )&quot;);
+// create a Table object from a Table API query
+Table table2 = tableEnv.from(&quot;table1&quot;).select(...);
+// create a Table object from a SQL query
+Table table3 = tableEnv.sqlQuery(&quot;SELECT ... FROM table1 ... &quot;);
+// emit a Table API result Table to a TableSink, same for SQL result
+TableResult tableResult = table2.executeInsert(&quot;outputTable&quot;);
+tableResult...
+</code></pre>
+<h2 id="创建tableenvironment">创建TableEnvironment</h2>
+<p><strong>TableEnvironment</strong>是Table API &amp; SQL集成的核心概念。它负责：</p>
+<ul>
+<li>在internal catalog中注册Table</li>
+<li>注册catalog</li>
+<li>加载可插拔的模块（pluggable modules）</li>
+<li>执行SQL查询</li>
+<li>注册用户定义的函数（scalar、table、aggregation）</li>
+<li>将DataStream或DataSet转换为Table</li>
+<li>维护对ExecutionEnvironment或StreamExecutionEnvironment的引用<br>
+<strong>一个Table通常都绑定到一个具体的TableEnvironment。在同一个查询中不能将不同TableEnvironment中的table做组合</strong>（比如：join或union）<br>
+TableEnvironment的创建：BatchTableEnvironment.create(StreamExecutionEnvironment ) 或 StreamTableEnvironment.create(ExecutionEnvironment )。另外，还要注意指定具体使用的planner：如果在classpath 路径下两个planner jar 包都存在，你需要显示指定当前应用使用哪一个planner。</li>
+</ul>
+<pre><code class="language-java">// **********************
+// FLINK STREAMING QUERY
+// **********************
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+
+EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useOldPlanner().inStreamingMode().build();
+StreamExecutionEnvironment fsEnv = StreamExecutionEnvironment.getExecutionEnvironment();
+StreamTableEnvironment fsTableEnv = StreamTableEnvironment.create(fsEnv, fsSettings);
+// or TableEnvironment fsTableEnv = TableEnvironment.create(fsSettings);
+
+// ******************
+// FLINK BATCH QUERY
+// ******************
+import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.table.api.bridge.java.BatchTableEnvironment;
+
+ExecutionEnvironment fbEnv = ExecutionEnvironment.getExecutionEnvironment();
+BatchTableEnvironment fbTableEnv = BatchTableEnvironment.create(fbEnv);
+
+// **********************
+// BLINK STREAMING QUERY
+// **********************
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+
+StreamExecutionEnvironment bsEnv = StreamExecutionEnvironment.getExecutionEnvironment();
+EnvironmentSettings bsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+StreamTableEnvironment bsTableEnv = StreamTableEnvironment.create(bsEnv, bsSettings);
+// or TableEnvironment bsTableEnv = TableEnvironment.create(bsSettings);
+
+// ******************
+// BLINK BATCH QUERY
+// ******************
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.TableEnvironment;
+
+EnvironmentSettings bbSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inBatchMode().build();
+TableEnvironment bbTableEnv = TableEnvironment.create(bbSettings);
+</code></pre>
+<p>如果，在/lib目录下只有一个plananer jar 包，可以使用useAnyPlanner创建具体的EnvironmentSetting。</p>
+<p>#在catalog中创建Table</p>
+<h2 id="catalogs">Catalogs</h2>
+<p>提供了元数据，比如databases，tables，partitions，views和functions，以及需要去访问存储在数据库或外部系统数据的信息<br>
+数据处理的一个最重要的方面就是管理元数据。它可以是像临时表一样的临时元数据，也可以是注册在table environment上的UDFS，也可以是持久化元数据，比如Hive Metastore。Catalogs提供了统一的API用于管理元数据，使得其可以通过Table API或SQL查询访问。<br>
+Catalogs允许用户引用其数据系统的已有的元数据，并自动将其映射为Flink相应的元数据。比如，FLink可以自动地将JDBC表映射为Flink table，用户不用在Flink中手动重写DDLs。</p>
+<h3 id="catalogs-types">Catalogs Types</h3>
+<ul>
+<li>GenericInMemoryCatalog : 基于内存实现的catalog。所有的对象仅在会话声明周期可用</li>
+<li>JDBCCatalog ： 使得用户能通过JDBC协议连接Flink到关系型数据库。当前只实现了PostgresCatalog 。</li>
+<li>HiveCatalog：The HiveCatalog serves two purposes; as persistent storage for pure Flink metadata, and as an interface for reading and writing existing Hive metaUser-Defined Catalogdata</li>
+<li>User-Defined Catalog：通过实现Catalog接口，用户可以开发定制catalog。</li>
+</ul>
+<h2 id="table-indentifier">table indentifier</h2>
+<p>TableEnvironment维护一个表目录映射，这些表目录是用标识符构建的。每个标识符由三部分组成：catalog名称、database名称和对象名称（table名称）。如果没有指定catalog或database，将使用当前的默认值。===》也就是说Tables通常注册为包含三部分的标识符。用户可以指定一个catalog和一个database 为“current catalog”和“current database”，这样在指定标识符时，前两部分就为可选的。</p>
+<pre><code class="language-java">TableEnvironment tEnv = ...;
+tEnv.useCatalog(&quot;custom_catalog&quot;);
+tEnv.useDatabase(&quot;custom_database&quot;);
+Table table = ...;
+// register the view named 'exampleView' in the catalog named 'custom_catalog'
+// in the database named 'custom_database' 
+tableEnv.createTemporaryView(&quot;exampleView&quot;, table);
+// register the view named 'exampleView' in the catalog named 'custom_catalog'
+// in the database named 'other_database' 
+tableEnv.createTemporaryView(&quot;other_database.exampleView&quot;, table);
+// register the view named 'example.View' in the catalog named 'custom_catalog'
+// in the database named 'custom_database' 
+tableEnv.createTemporaryView(&quot;`example.View`&quot;, table);
+// register the view named 'exampleView' in the catalog named 'other_catalog'
+// in the database named 'other_database' 
+tableEnv.createTemporaryView(&quot;other_catalog.other_database.exampleView&quot;, table);
+</code></pre>
+<h2 id="table-types">table types</h2>
+<p>Table 可以是virtual（views） 也可以是正常的表（Tables）。views可以基于现有的Table创建，通常为一个Table API 或SQL查询的结果；Tables描述外部数据，比如一个文件，数据库表，或消息队列。</p>
+<ul>
+<li><strong>temporary table</strong> ： 与单个Flink 会话的生命周期关联。通常存储在内存中，仅在创建该Table的Flink会话期间存在。这些表对其他的Flink session是不可见的。它不与任何catalog或database绑定，但可以在其中的命名空间中创建。当对应的database被移除时，tempory table也不会被drop。</li>
+<li><strong>permanent table</strong>：跨多个Flink会话和集群可见的。需要一个catalog(类似Hive Metastore)去维护table的元数据。一旦创建了一张permanent table，它对连接到该catalog的任何一个Flink session都是可见的，直到该Table被显示地Drop掉。</li>
+</ul>
+<p>**shadowing **：</p>
+<h2 id="创建-table">创建 Table</h2>
+<ul>
+<li>virtual tables<br>
+在SQL术语中，一个Table API 对象对应一个VIEW（virtual table）。它封装了逻辑查询计划，可以在catalog中创建：</li>
+</ul>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// table is the result of a simple projection query 
+Table projTable = tableEnv.from(&quot;X&quot;).select(...);
+// register the Table projTable as table &quot;projectedTable&quot;
+tableEnv.createTemporaryView(&quot;projectedTable&quot;, projTable);
+</code></pre>
+<ul>
+<li>connector tables<br>
+还可以使用connector 申明创建Table。connector 描述了存储表数据的外部系统。这里可以申明，比如：kafka或正常的文件系统</li>
+</ul>
+<pre><code class="language-java">tableEnvironment
+  .connect(...)
+  .withFormat(...)
+  .withSchema(...)
+  .inAppendMode()
+  .createTemporaryTable(&quot;MyTable&quot;)
+</code></pre>
+<ul>
+<li>create a view from a DataStream or DataSet<br>
+一个DataStream或DataSet可以作为view注册到TableEnvironment中。结果视图的schema(模式)依赖于注册的DataStream或DataSet的数据类型。</li>
+</ul>
+<pre><code class="language-java">// get StreamTableEnvironment
+// registration of a DataSet in a BatchTableEnvironment is equivalent
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+DataStream&lt;Tuple2&lt;Long, String&gt;&gt; stream = ...
+// register the DataStream as View &quot;myTable&quot; with fields &quot;f0&quot;, &quot;f1&quot;
+tableEnv.createTemporaryView(&quot;myTable&quot;, stream);
+// register the DataStream as View &quot;myTable2&quot; with fields &quot;myLong&quot;, &quot;myString&quot;
+tableEnv.createTemporaryView(&quot;myTable2&quot;, stream, $(&quot;myLong&quot;), $(&quot;myString&quot;));
+</code></pre>
+<p>** Data Types到Table schema的映射**</p>
+<ol>
+<li><strong>position-based mapping （基于字段位置的映射）</strong><br>
+对于composite data types with a defined field order（such as tuples, rows, and case classes） 、atomic types可用；<br>
+POJO中的字段必须使用基于名字的映射;<br>
+字段可以被映射出来但是不能使用as 进行重命名;<br>
+当定义基于位置的映射时，指定的字段名不能在输入数据类型中存在，否则，API将假定为基于名字的映射。</li>
+</ol>
+<pre><code class="language-java">   // get a StreamTableEnvironment, works for BatchTableEnvironment equivalently
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section;
+DataStream&lt;Tuple2&lt;Long, Integer&gt;&gt; stream = ...
+// convert DataStream into Table with default field names &quot;f0&quot; and &quot;f1&quot;
+Table table = tableEnv.fromDataStream(stream);
+// convert DataStream into Table with field &quot;myLong&quot; only
+Table table = tableEnv.fromDataStream(stream, $(&quot;myLong&quot;));
+// convert DataStream into Table with field names &quot;myLong&quot; and &quot;myInt&quot;
+Table table = tableEnv.fromDataStream(stream, $(&quot;myLong&quot;), $(&quot;myInt&quot;));
+</code></pre>
+<ol start="2">
+<li><strong>Name-based mapping（基于字段名称的映射）</strong><br>
+可以用于所有包括POJO在内的数据类型。它是定义Table schema 映射的最灵活的方式。所有在映射中的字段都是通过名字引用，也可以使用 as 进行重命名。字段可以重排序投影。<br>
+在没有指定字段名称时，会使用组合类型的默认字段名和字段顺序。</li>
+</ol>
+<pre><code class="language-java">// get a StreamTableEnvironment, works for BatchTableEnvironment equivalently
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+DataStream&lt;Tuple2&lt;Long, Integer&gt;&gt; stream = ...
+// convert DataStream into Table with default field names &quot;f0&quot; and &quot;f1&quot;
+Table table = tableEnv.fromDataStream(stream);
+// convert DataStream into Table with field &quot;f1&quot; only
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;));
+// convert DataStream into Table with swapped fields
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;), $(&quot;f0&quot;));
+// convert DataStream into Table with swapped fields and field names &quot;myInt&quot; and &quot;myLong&quot;
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;).as(&quot;myInt&quot;), $(&quot;f0&quot;).as(&quot;myLong&quot;));
+</code></pre>
+<h1 id="查询table">查询Table</h1>
+<h2 id="table-api">Table API</h2>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// register Orders table
+// scan registered Orders table
+Table orders = tableEnv.from(&quot;Orders&quot;);
+// compute revenue for all customers from France
+Table revenue = orders
+  .filter($(&quot;cCountry&quot;).isEqual(&quot;FRANCE&quot;))
+  .groupBy($(&quot;cID&quot;), $(&quot;cName&quot;)
+  .select($(&quot;cID&quot;), $(&quot;cName&quot;), $(&quot;revenue&quot;).sum().as(&quot;revSum&quot;));
+// emit or convert Table
+// execute query
+</code></pre>
+<h2 id="sql">SQL</h2>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// register Orders table
+// compute revenue for all customers from France
+Table revenue = tableEnv.sqlQuery(
+    &quot;SELECT cID, cName, SUM(revenue) AS revSum &quot; +
+    &quot;FROM Orders &quot; +
+    &quot;WHERE cCountry = 'FRANCE' &quot; +
+    &quot;GROUP BY cID, cName&quot;
+  );
+
+  // compute revenue for all customers from France and emit to &quot;RevenueFrance&quot;
+tableEnv.executeSql(
+    &quot;INSERT INTO RevenueFrance &quot; +
+    &quot;SELECT cID, cName, SUM(revenue) AS revSum &quot; +
+    &quot;FROM Orders &quot; +
+    &quot;WHERE cCountry = 'FRANCE' &quot; +
+    &quot;GROUP BY cID, cName&quot;
+  );
+// emit or convert Table
+// execute query
+</code></pre>
+<p><strong>Table API 和 SQL 查询能够很容易地混合，因为两者都返回Table 对象</strong>：</p>
+<ul>
+<li>Table API 查询可以在SQL查询返回的Table 对象上定义</li>
+<li>SQL查询也可以定义在Table API 查询结果上。通过在TableEnvironment上注册结果表，然后再SQL查询的from子句中引用</li>
+</ul>
+<h1 id="emit-a-table">Emit a table</h1>
+<p>a Table is emitted by writing it to a TableSink。 TableSink 是一个支持各种不同文件格式（CSV，Apache Parquet，Apache Avro），存储系统（JDBC，Apache Hbase，Cassandra，Elasticsearch），消息系统（kafka，rabbitMQ）的通用接口。<br>
+batch table 只能写到BatchTableSink；streaming table 可以写到AppendStreamTableSink、RetractStreamTableSink或UpsertStreamTableSink<br>
+Table.executeInsert(String tableName) 方法emit the table to a registered TableSink。</p>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// create an output Table
+final Schema schema = new Schema()
+    .field(&quot;a&quot;, DataTypes.INT())
+    .field(&quot;b&quot;, DataTypes.STRING())
+    .field(&quot;c&quot;, DataTypes.BIGINT());
+tableEnv.connect(new FileSystem().path(&quot;/path/to/file&quot;))
+    .withFormat(new Csv().fieldDelimiter('|').deriveSchema())
+    .withSchema(schema)
+    .createTemporaryTable(&quot;CsvSinkTable&quot;);
+// compute a result Table using Table API operators and/or SQL queries
+Table result = ...
+// emit the result Table to the registered TableSink
+result.executeInsert(&quot;CsvSinkTable&quot;);
+</code></pre>
+<h1 id="convert-a-table-into-a-datastream-or-dataset">convert  a Table into a DataStream or DataSet</h1>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618299207727.png" alt="" loading="lazy"></figure>
+<h2 id="conver-a-table-into-a-datastream">conver a Table into a DataStream</h2>
+<p>对于流查询的结果表将会动态地更新。即，它会随着新记录达到查询输入流而变化。因此，将动态查询转换成的DataStream需要对表的更新进行编码。将Table转换为DataStream有两种模式：</p>
+<ol>
+<li>Append Mode : 这种模式仅仅用于动态Table仅被INSERT 修改的情况。也就是数据记录只有append，之前的数据不会被修改</li>
+<li>Retract Mode ： 这种模式经常被使用。它使用boolean 标识覆盖了INSERT和DELETE的变化</li>
+</ol>
+<pre><code class="language-java">// get StreamTableEnvironment. 
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// Table with two fields (String name, Integer age)
+Table table = ...
+// convert the Table into an append DataStream of Row by specifying the class
+DataStream&lt;Row&gt; dsRow = tableEnv.toAppendStream(table, Row.class);
+// convert the Table into an append DataStream of Tuple2&lt;String, Integer&gt; 
+//   via a TypeInformation
+TupleTypeInfo&lt;Tuple2&lt;String, Integer&gt;&gt; tupleType = new TupleTypeInfo&lt;&gt;(
+  Types.STRING(),
+  Types.INT());
+DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; dsTuple = 
+  tableEnv.toAppendStream(table, tupleType);
+// convert the Table into a retract DataStream of Row.
+//   A retract stream of type X is a DataStream&lt;Tuple2&lt;Boolean, X&gt;&gt;. 
+//   The boolean field indicates the type of the change. 
+//   True is INSERT, false is DELETE.
+DataStream&lt;Tuple2&lt;Boolean, Row&gt;&gt; retractStream = 
+  tableEnv.toRetractStream(table, Row.class);
+</code></pre>
+<p>一旦将Table转换为DataStream，需要使用StreamExecutionEnvironment.execute() 方法来执行DataStream程序。</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/table-and-sql-connectors/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Table &amp; SQL Connectors
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/jstack/">
+                <h3 class="post-title">
+                  JStack
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

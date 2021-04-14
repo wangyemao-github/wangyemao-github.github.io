@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://wangyemao-github.github.io</id>
     <title>Gridea</title>
-    <updated>2021-02-02T11:24:53.662Z</updated>
+    <updated>2021-04-14T03:30:43.783Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://wangyemao-github.github.io"/>
     <link rel="self" href="https://wangyemao-github.github.io/atom.xml"/>
@@ -10,6 +10,1161 @@
     <logo>https://wangyemao-github.github.io/images/avatar.png</logo>
     <icon>https://wangyemao-github.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, Gridea</rights>
+    <entry>
+        <title type="html"><![CDATA[Table API & SQL Streaming Concepts]]></title>
+        <id>https://wangyemao-github.github.io/post/table-api-and-sql-streaming-concepts/</id>
+        <link href="https://wangyemao-github.github.io/post/table-api-and-sql-streaming-concepts/">
+        </link>
+        <updated>2021-04-13T15:25:48.000Z</updated>
+        <content type="html"><![CDATA[<p>Flink 的Table API 和SQL 对batch 和stream处理支持统一的APIs。这就意味着不管它们的输入是否为有界的batch 输入还是无界的stream input，Table API 和SQL查询具有相同的语义。</p>
+<h1 id="dynamic-tables">Dynamic Tables</h1>
+<h2 id="relational-queries-on-data-streams">Relational Queries on Data Streams</h2>
+<p>关系代数/SQL 与 Stream Processing 比较<br>
+<img src="https://wangyemao-github.github.io/post-images/1618364966334.png" alt="" loading="lazy"><br>
+** 物化视图**<br>
+高级数据库系统中提供了物化视图的特性。物化视图被定义为SQL查询，就像常规的虚拟视图一样。与虚拟视图不同，物化视图缓存查询结果，因此在访问查询时不需要对查询进行计算。<br>
+缓存的一个常见挑战是防止缓存提供过时的结果。当定义查询物化视图的基表被修改时，物化视图中的数据就会过时。<br>
+Eager View Maintenance 是一种一旦基表更新，就更新物化视图的一种技术。<br>
+如果我们考虑以下问题，Eager View Maintenance和 SQL queries on streams的联系就会变得明显起来：</p>
+<ul>
+<li>a database table 由INSERT、UPDATE和DELETE DML语句流产生，通常称为changelog stream（更改日志流）</li>
+<li>A materialized view 定义为一个SQL 查询。为了更新视图，查询必须持续处理视图基表的变更日志流（changelog stream）</li>
+<li>materialized view 就是streaming SQL query 的结果</li>
+</ul>
+<h2 id="dynamic-tables-continuous-queries">Dynamic Tables &amp; Continuous Queries</h2>
+<p><strong>Dynamic tables</strong>为Flink Table API &amp; SQL 支持Streaming data的核心概念。与表示批处理数据的静态表不同，Dynamic tables会随时间变化。但就像静态批处理表一样，系统也可以对动态表执行查询。查询动态表产生持续的查询。持续查询永远不会终止并产生动态结果—另一个动态表。查询不断更新其(动态)结果表，以反映其(动态)输入表的更改。<strong>从本质上讲，动态表上的持续查询非常类似于定义物化视图的查询</strong>。<br>
+值得注意的是：持续查询的输出在语义上总是等同于在输入表的快照上以批处理模式执行的相同查询的结果。<br>
+Streams，dynamic tables, and continuous queries的关系：<br>
+<img src="https://wangyemao-github.github.io/post-images/1618367200840.png" alt="" loading="lazy"></p>
+<ol>
+<li>Stream 转换为 dynamic table</li>
+<li>在dynamic table上执行A continuous query 生成了一张新的dynamic table</li>
+<li>生成的dynamic table又转换回stream</li>
+</ol>
+<p>注意：dynamic table 是一个逻辑概念。在查询执行期间，它不一定完全物化。</p>
+<h2 id="defining-a-table-on-a-stream">Defining a Table on a Stream</h2>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618367649017.png" alt="" loading="lazy"></figure>
+<p>使用关系查询处理流需要将其转换为Table。从概念上讲，流的每条记录都被解释为对结果表的INSERT修改。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618367877328.png" alt="" loading="lazy"><br>
+注意: 上图是一种概念上的描述，实际上在流上定义的Table在内部没有物化</p>
+<h2 id="continuous-queries">Continuous Queries</h2>
+<p>在dynamic table上执行A continuous query 生成了一张新的dynamic table。与批查询不同，持续查询不会终止，它会根据输入表的更新不断更新结果表。</p>
+<ul>
+<li>simple GROUP-BY COUNT 聚合查询<br>
+<img src="https://wangyemao-github.github.io/post-images/1618368281876.png" alt="" loading="lazy"></li>
+<li>基于user + hourly tumbling window Group-BY COUNT 聚合查询<br>
+<img src="https://wangyemao-github.github.io/post-images/1618368506928.png" alt="" loading="lazy"></li>
+</ul>
+<h3 id="update-and-append-queries">Update and Append Queries</h3>
+<p>两个实例查询的差异：</p>
+<ul>
+<li>第一个查询会更新之前计算的结果。也就是说定义结果表的changelog stream 包含了INSERT 和UPDATE 变更</li>
+<li>第二个查询只会追加数据。也就是说定义结果表的changelog stream 只包含INSERT 变更<br>
+查询生成append-only table 还是 updated table 具有如下一些含义：</li>
+<li>具有变更的查询通常需要维护更多状态（state）</li>
+<li>append-only table 到Stream的转换 与 updated table 到stream的转换不同。</li>
+</ul>
+<h3 id="query-restrictions">Query Restrictions</h3>
+<p>很多（但是不是所有）语义有效查询可以作为流上的持续查询进行评估。由于需要维护的状态的大小或计算更新的开销太大，有些查询的计算成本太高。</p>
+<ul>
+<li>State Size ：连续查询在无界流上进行计算，通常需要运行数周或数月。因此，连续查询处理的数据总量可能非常大。需要更新以前发出的结果的查询需要维护所有发出的行来更新它们。例如，第一个示例查询需要存储每个用户的URL计数，以增加计数，并在输入表接收到新行时发送一个新结果。如果只跟踪注册用户，要维护的计数可能不会太高。但是，如果非注册用户分配了唯一的用户名，那么要维护的计数会随着时间的推移而增加，最终可能导致查询失败。</li>
+</ul>
+<pre><code class="language-text">SELECT user, COUNT(url) FROM clicks GROUP BY user;
+</code></pre>
+<ul>
+<li>Computing Updates: 有些查询需要重新计算和更新大部分发出的结果行，即使只添加或更新了单个输入记录.这样的查询不太适合作为连续查询执行.下面的查询是一个例子，它根据最后一次单击的时间计算每个用户的排名.一旦单击表收到一个新行，就更新用户的lastAction并计算一个新的排名。但是，由于两行不能具有相同的排名，所以还需要更新所有排名较低的行。</li>
+</ul>
+<pre><code class="language-text">SELECT user, RANK() OVER (ORDER BY lastAction)
+FROM (
+  SELECT user, MAX(cTime) AS lastAction FROM clicks GROUP BY user
+);
+</code></pre>
+<h3 id="table-to-stream-conversion">Table to Stream Conversion</h3>
+<p>dynamic table可以像普通的数据库表一样，通过插入、更新和删除更改来持续修改。它可能是一个只有一行且不断更新的表，也可能是一个只包含插入的表，而不包含更新和删除修改，或者介于两者之间的任何内容。<br>
+在将dynamic table转换为Stream或将其写入外部系统时，需要对这些更改进行编码.Flink的Table API和SQL支持三种方法来编码动态表的更改:</p>
+<ul>
+<li><strong>Append-only stream:</strong> 只有INSERT 修改的dynamic table 转换为Stream 可以通过发出插入的行</li>
+<li><strong>Retract stream:</strong> a retract  stream 是包含两种类型消息的流：add message 和 retract message。dynamic table转换为retract stream，通过将INSERT 变更编码为add message；将DELETE 变更编码为retract message；UPDATE 变更编码为对已更新的（先前的）行的retract message + 对正在更新的（新的）行编码add message。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618370395219.png" alt="" loading="lazy"></li>
+<li>**Upsert stream: **upsert stream 是包含两种类型的消息：upsert messages 和delete messages。dynamic table 转换为upsert stream需要一个唯一key（可能是组合字段）。具有唯一key的dynamic table转换为stream，通过将INSERT和UPDATE变更编码为 upsert messages；DELETE变更编码为delete message。流消费operator需要知道唯一key属性才能正确的应用消息。与retract  stream 的主要区别在于：UPDATE变更被编码为唯一的消息，因此更高效。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618370817342.png" alt="" loading="lazy"></li>
+</ul>
+<p>dynamic table into a DataStream 只支持：append and retract streams；</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Table & SQL Connectors]]></title>
+        <id>https://wangyemao-github.github.io/post/table-and-sql-connectors/</id>
+        <link href="https://wangyemao-github.github.io/post/table-and-sql-connectors/">
+        </link>
+        <updated>2021-04-13T08:13:09.000Z</updated>
+        <content type="html"><![CDATA[<p>Table API &amp; SQL 可以connect to 外部系统，读取、写入 batch 或streaming table。** a table source** 提供了访问存储在外部系统的数据（比如，数据库，key-value存储，消息队列，文件系统等）；** a table sink ** emit a table 到外部存储系统。<br>
+Flink 当前支持的Connectors：<br>
+<img src="https://wangyemao-github.github.io/post-images/1618302077330.png" alt="" loading="lazy"></p>
+<h1 id="how-to-use-connectors">how to use connectors</h1>
+<p>flink支持使用SQL create table 语句注册表。可以定义表名称，表模式，以及对于连接到外部系统的表选项。</p>
+<pre><code class="language-java">CREATE TABLE MyUserTable (
+  -- declare the schema of the table
+  `user` BIGINT,
+  `message` STRING,
+  `rowtime` TIMESTAMP(3) METADATA FROM 'timestamp',    -- use a metadata column to access Kafka's record timestamp
+  `proctime AS PROCTIME(),    -- use a computed column to define a proctime attribute
+  WATERMARK FOR `rowtime` AS `rowtime` - INTERVAL '5' SECOND    -- use a WATERMARK statement to define a rowtime attribute
+) WITH (
+  -- declare the external system to connect to
+  'connector' = 'kafka',
+  'topic' = 'topic_name',
+  'scan.startup.mode' = 'earliest-offset',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'format' = 'json'   -- declare a format for this system
+)
+</code></pre>
+<h2 id="sql-create-statements">SQL CREATE Statements</h2>
+<p>Ceate Statements 用于在当前或者指定的Catalog中注册table/view。注册的table/view可以在SQL查询中使用。FLINk SQL支持如下Create statements：CREATE TABLE / DATABASE/VIEW/FUNCTION。</p>
+<h3 id="run-a-sql-create-statements">RUN a SQL CREATE Statements</h3>
+<p>使用TableEnvironment的executeSql()方法执行。返回“ok”----》成功；否则抛出一个异常</p>
+<pre><code class="language-java">EnvironmentSettings settings = EnvironmentSettings.newInstance()...
+TableEnvironment tableEnv = TableEnvironment.create(settings);
+
+// SQL query with a registered table
+// register a table named &quot;Orders&quot;
+tableEnv.executeSql(&quot;CREATE TABLE Orders (`user` BIGINT, product STRING, amount INT) WITH (...)&quot;);
+// run a SQL query on the Table and retrieve the result as a new Table
+Table result = tableEnv.sqlQuery(
+  &quot;SELECT product, amount FROM Orders WHERE product LIKE '%Rubber%'&quot;);
+// Execute insert SQL with a registered table
+// register a TableSink
+tableEnv.executeSql(&quot;CREATE TABLE RubberOrders(product STRING, amount INT) WITH (...)&quot;);
+// run an insert SQL on the Table and emit the result to the TableSink
+tableEnv.executeSql(
+  &quot;INSERT INTO RubberOrders SELECT product, amount FROM Orders WHERE product LIKE '%Rubber%'&quot;);
+</code></pre>
+<h3 id="create-table">CREATE TABLE</h3>
+<p>建表语句语法：</p>
+<pre><code class="language-text">CREATE TABLE [catalog_name.][db_name.]table_name
+  (
+    { &lt;physical_column_definition&gt; | &lt;metadata_column_definition&gt; | &lt;computed_column_definition&gt; }[ , ...n]
+    [ &lt;watermark_definition&gt; ]
+    [ &lt;table_constraint&gt; ][ , ...n]
+  )
+  [COMMENT table_comment]
+  [PARTITIONED BY (partition_column_name1, partition_column_name2, ...)]
+  WITH (key1=val1, key2=val2, ...)
+  [ LIKE source_table [( &lt;like_options&gt; )] ]
+   
+&lt;physical_column_definition&gt;:
+  column_name column_type [ &lt;column_constraint&gt; ] [COMMENT column_comment]
+  
+&lt;column_constraint&gt;:
+  [CONSTRAINT constraint_name] PRIMARY KEY NOT ENFORCED
+
+&lt;table_constraint&gt;:
+  [CONSTRAINT constraint_name] PRIMARY KEY (column_name, ...) NOT ENFORCED
+
+&lt;metadata_column_definition&gt;:
+  column_name column_type METADATA [ FROM metadata_key ] [ VIRTUAL ]
+
+&lt;computed_column_definition&gt;:
+  column_name AS computed_column_expression [COMMENT column_comment]
+
+&lt;watermark_definition&gt;:
+  WATERMARK FOR rowtime_column_name AS watermark_strategy_expression
+
+&lt;source_table&gt;:
+  [catalog_name.][db_name.]table_name
+
+&lt;like_options&gt;:
+{
+   { INCLUDING | EXCLUDING } { ALL | CONSTRAINTS | PARTITIONS }
+ | { INCLUDING | EXCLUDING | OVERWRITING } { GENERATED | OPTIONS | WATERMARKS } 
+}[, ...]
+</code></pre>
+<h3 id="columns">Columns</h3>
+<h4 id="physical-regular-columns">Physical / Regular Columns</h4>
+<p>物理列是众所周知的数据库中常规列。它们定义物理数据中字段的名称、类型和顺序。因此，物理列表示从外部系统读取和写入的有效负载。connectors和formats使用这些列(按定义的顺序)来配置。其他类型的列可以在物理列之间声明，但不会影响最终的物理模式。</p>
+<pre><code class="language-text">CREATE TABLE MyTable (
+  `user_id` BIGINT,
+  `name` STRING
+) WITH (
+  ...
+);
+</code></pre>
+<h4 id="metadata-columns">Metadata Columns</h4>
+<p>元数据列是SQL标准的扩展，并允许访问表每一行中特定connectors和formats的字段。元数据列由METADATA关键字标识。比如，对于基于时间的操作，元数据列可以用于从kafka记录中读写时间戳。声明元数据列咋table模式中是可选的。<br>
+引用kafka 的timestamp字段作为元数据列：</p>
+<pre><code class="language-text">CREATE TABLE MyTable (
+  `user_id` BIGINT,
+  `name` STRING,
+  `record_time` TIMESTAMP(3) WITH LOCAL TIME ZONE METADATA FROM 'timestamp'    -- reads and writes a Kafka record's timestamp
+) WITH (
+  'connector' = 'kafka'
+  ...
+); 
+</code></pre>
+<p>每一个元数据标识为：字符串key+文本数据类型；比如上面kafka暴露了一个元数据字段，其key为：timestamp；数据类型为：TIMESTAMP(3) WITH LOCAL TIME ZONE。<br>
+元数据列record_time会作为table schema的一部分，可以像正常列一样做转换和存储：</p>
+<pre><code class="language-text">INSERT INTO MyTable SELECT user_id, name, record_time + INTERVAL '1' SECOND FROM MyTable;
+</code></pre>
+<p>如果元数据列名就是元数据key，FROM子句可以省略：</p>
+<pre><code class="language-text">`timestamp` TIMESTAMP(3) WITH LOCAL TIME ZONE METADATA    -- use column name as metadata key
+</code></pre>
+<p>为方便起见，如果列的数据类型不同于元数据字段的数据类型，则运行时将执行显式强制转换。当然，这要求这两种数据类型是兼容的。</p>
+<pre><code class="language-text">`timestamp` BIGINT METADATA    -- cast the timestamp as BIGINT
+</code></pre>
+<p>默认，planner假定元数据列可用于读写。但是，在许多情况下，外部系统提供的只读元数据字段比可写字段更多。因此，可以使用VIRTUAL关键字排除元数据列的持久化。</p>
+<pre><code class="language-text">`timestamp` BIGINT METADATA VIRTUAL ,       -- no part of the query-to-sink schema
+</code></pre>
+<p>=====&gt;</p>
+<pre><code class="language-text">source-to-query schema:
+MyTable(`timestamp` BIGINT, `user_id` BIGINT, `name` STRING)
+
+query-to-sink schema:
+MyTable(`user_id` BIGINT, `name` STRING)
+</code></pre>
+<p>####Computed Columns<br>
+Computed columns are virtual columns that are generated using the syntax column_name AS computed_column_expression.<br>
+计算字段不会在表中进行物理存储，<br>
+The planner will transform computed columns into a regular projection after the source。</p>
+<pre><code class="language-text"> `cost` AS price * quanitity,  -- evaluate expression and supply the result to queries
+</code></pre>
+<p>计算列可以包含任何列、常量、函数的组合，不能包含子查询。<br>
+计算列通常在CREATE TABLE statement中用于定义时间属性：</p>
+<ul>
+<li>processing time ：使用系统的PROCTIME() 函数定义。proc AS PROCTIME()</li>
+<li>event time ：可以在WATERMARK申明之前进行预处理。<br>
+计算列与元数据列相似，也不会进行持久化。因此计算列不能是INSERT INTO语句的目标。</li>
+</ul>
+<h3 id="wartermark">WARTERMARK</h3>
+<p>WARTERMARK语句定义了table的事件时间属性（event-time属性），采用如下的格式：WATERMARK FOR rowtime_column_name AS watermark_strategy_expression<br>
+<strong>rowtime_column_name</strong> 已有字段，标记为table的事件时间属性。该列数据类型必须是TIMESTAMP(3)，并且为模式中的顶级列。可以是计算列。<br>
+<strong>watermark_strategy_expression</strong>定义了watermark生成策略。它允许任意非查询表达式(包括计算的列)计算水印。表达式返回类型必须为TIMESTAMP(3)，表示从Epoch开始的时间戳。只有当返回的水印是非空且其值大于先前发出的本地水印时，才会发出返回的水印；水印生成表达式由框架基于每一条记录进行计算。框架会周期性地发出生成的最大水印，如果当前的水印仍就与之前的相同，或为null，或比之前的小，则都不会发出水印。水印发出间隔由pipeline.auto-watermark-interval 配置设置。如果watermark 间隔为0ms，那么对于每条记录，如果生成的水印不为null，并且比之前的水印值大，会发射水印。<br>
+Flink提供的几种常用的水印策略：</p>
+<ul>
+<li>严格升序时间戳：WATERMARK FOR rowtime_column AS rowtime_column</li>
+<li>升序时间戳：WATERMARK FOR rowtime_column AS rowtime_column - INTERVAL '0.001' SECOND</li>
+<li>有界的乱序时间戳：WATERMARK FOR rowtime_column AS rowtime_column - INTERVAL 'string'</li>
+</ul>
+<p>###WITH Options<br>
+table options ： 用于创建table source/sink。这些属性通常用于查找和创建底层connector。表达式中的key，value都应该为字符串字面量。不同的connector支持不同的table属性。</p>
+<h3 id="like">LIKE</h3>
+<h3 id="primary-key">Primary KEY</h3>
+<h1 id="schema-mapping">Schema Mapping</h1>
+<p>SQL CREATE TABLE语句的body子句定义物理列、约束和水印的名称和类型。Flink不保存数据，因此模式定义只声明如何将外部系统的物理列映射到Flink的表示。映射可能不是基于名称映射的，这依赖于formats和connector的实现。比如：mysql 数据库表通过字段名映射（不区分大小写）；CSV格式的文件系统按字段顺序进行映射。</p>
+<h1 id="primary-key-2">Primary KEY</h1>
+<p>主键约束表示表中的一列或一组列是唯一的，并且它们不包含空值。主键唯一标识表中的一行。<br>
+source table的primary key是用于优化的元数据信息。sink table的primary key 通常被sink 实现用于upserting。</p>
+<h1 id="time-attributes">Time Attributes</h1>
+<p>在无界流table处理中，时间属性必不可少。因此可以将proctime and rowtime attributes定义为模式的一部分。</p>
+<h2 id="introduction-to-time-attributes">Introduction to Time Attributes</h2>
+<p>Time attributes 可以是每个table schema的一部分。在使用CREATE TABLE DDL 或DataSteam创建table时定义。一旦定义了time attributes，就可以引用为字段，并在基于时间的操作中使用。只要time attribute（时间属性）没有被修改，只是从查询的一个部分转发到另一个部分，它就仍然是一个有效的时间属性。时间属性的行为类似于常规的时间戳，并且可以用于计算。当在计算中使用时，time attribute被物化，充当标准的时间戳。但是，常规时间戳办呢个用于替换或转换为时间属性。</p>
+<p>###Event Time<br>
+Event Time允许Table program根据每个记录中的时间戳产生结果，允许在无序或延迟事件的情况下产生一致的结果。它还确保了从持久存储读取记录时table program结果的可重复性。<br>
+此外，Event Time允许批处理和流环境中的Table program使用统一的语法。Streaming environment中的time attribute可以是batch environment行中的常规列。<br>
+为了处理无序事件并区分流中的准时事件和延迟事件，Flink需要知道每一行的时间戳，还需要定期指示到目前为止处理的事件时间进展了多少（通过所谓watermarks）<br>
+Event Time 可以在CREATE table DDL 或 DataStream 到Table转换期间。</p>
+<h4 id="defining-in-ddl">Defining in DDL</h4>
+<p>在CREATE table DDL 中，使用WATERMARK 语句定义event time attribute。watermark 语句在已有event time 字段上定义了watermark的生成表达式，将event time 字段标记为event time attribute。</p>
+<pre><code class="language-text">user_action_time TIMESTAMP(3),
+  -- declare user_action_time as event time attribute and use 5 seconds delayed watermark strategy
+  WATERMARK FOR user_action_time AS user_action_time - INTERVAL '5' SECOND
+</code></pre>
+<h4 id="during-datastream-to-table-conversion">During DataStream-to-Table Conversion</h4>
+<p>当将DataStream转换为table时，可以在模式定义期间使用.rowtime属性定义事件时间属性。TimeStamp 和 watermark 必须已经在DataStream中已经分配。<br>
+在将DataStream转换为Table时，有两种方式定义time attribute。依赖于指定的.rowtime字段名是否存在于DataStream的模式中，时间戳要么（1）append as a new column；要么（2）替换已经存在的某个列。</p>
+<h3 id="processing-time">Processing Time</h3>
+<p>Processing Time允许Table programe根据本地机器的时间产生结果。这是最简单的时间概念，但它会产生不确定性的结果。Processing Time不需要时间戳提取或水印生成<br>
+三种方式定义Processing Time attribute</p>
+<h4 id="defining-in-ddl-2">Defining in DDL</h4>
+<p>在CREATE table DDL语句中，使用系统的PROCTIME()函数，Processing time attribute作为计算列被定义。</p>
+<pre><code class="language-java">user_action_time AS PROCTIME() -- declare an additional field as a processing time attribute
+</code></pre>
+<h4 id="during-datastream-to-table-conversion-2">During DataStream-to-Table Conversion</h4>
+<p>在模式定义中，processing time attribute使用.proctime属性定义。time attribute 必须仅通过附加的逻辑字段扩展物理模式。因此，它只能在模式定义的末尾进行定义。</p>
+<pre><code class="language-java">// declare an additional logical field as a processing time attribute
+Table table = tEnv.fromDataStream(stream, $(&quot;user_name&quot;), $(&quot;data&quot;), $(&quot;user_action_time&quot;).proctime()); 
+</code></pre>
+<h2 id="proctime-attributes">Proctime Attributes</h2>
+<p>为了在模式中声明proctime属性，可以使用Computed Column语法声明从proctime()内置函数生成的Computed Column。计算列是一个虚拟列，它不存储在物理数据中</p>
+<h2 id="rowtime-attributes">Rowtime Attributes</h2>
+<p>为了控制表的event-time行为，Flink提供了预定义的时间戳提取器和水印策略。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Flink Table & SQL]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-table-and-sql/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-table-and-sql/">
+        </link>
+        <updated>2021-04-13T02:31:09.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="table-sql-编程依赖dependency">Table &amp; SQL 编程依赖（Dependency）</h1>
+<ul>
+<li>为了使用Table API 或者SQL 定义pipeline，需要添加如下依赖（java 语言）：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-api-java-bridge_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+<li>另外，如果你想在本地IDE内运行Table API &amp; SQL程序，你需要添加如下modules集，不同的planner，依赖不一样。对应Blink planner 依赖如下：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-planner-blink_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency><br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-streaming-scala_2.11</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+<li>如果你想要实现一个定制化的format或connector，用于序列化/反序列化rows或用户定义的函数，添加如下依赖就足够了：<br>
+<dependency><br>
+<groupId>org.apache.flink</groupId><br>
+<artifactId>flink-table-common</artifactId><br>
+<version>1.12.0</version><br>
+<scope>provided</scope><br>
+</dependency></li>
+</ul>
+<h1 id="table-api-sql-编程的通用结构">Table API &amp; SQL 编程的通用结构</h1>
+<p>对于批的、流式的Table API &amp; SQL 程序都遵从相同的模式。下面的例子显示了Table API &amp; SQL程序的相同结构：</p>
+<pre><code class="language-java">// create a TableEnvironment for specific planner batch or streaming
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// create an input Table
+tableEnv.executeSql(&quot;CREATE TEMPORARY TABLE table1 ... WITH ( 'connector' = ... )&quot;);
+// register an output Table
+tableEnv.executeSql(&quot;CREATE TEMPORARY TABLE outputTable ... WITH ( 'connector' = ... )&quot;);
+// create a Table object from a Table API query
+Table table2 = tableEnv.from(&quot;table1&quot;).select(...);
+// create a Table object from a SQL query
+Table table3 = tableEnv.sqlQuery(&quot;SELECT ... FROM table1 ... &quot;);
+// emit a Table API result Table to a TableSink, same for SQL result
+TableResult tableResult = table2.executeInsert(&quot;outputTable&quot;);
+tableResult...
+</code></pre>
+<h2 id="创建tableenvironment">创建TableEnvironment</h2>
+<p><strong>TableEnvironment</strong>是Table API &amp; SQL集成的核心概念。它负责：</p>
+<ul>
+<li>在internal catalog中注册Table</li>
+<li>注册catalog</li>
+<li>加载可插拔的模块（pluggable modules）</li>
+<li>执行SQL查询</li>
+<li>注册用户定义的函数（scalar、table、aggregation）</li>
+<li>将DataStream或DataSet转换为Table</li>
+<li>维护对ExecutionEnvironment或StreamExecutionEnvironment的引用<br>
+<strong>一个Table通常都绑定到一个具体的TableEnvironment。在同一个查询中不能将不同TableEnvironment中的table做组合</strong>（比如：join或union）<br>
+TableEnvironment的创建：BatchTableEnvironment.create(StreamExecutionEnvironment ) 或 StreamTableEnvironment.create(ExecutionEnvironment )。另外，还要注意指定具体使用的planner：如果在classpath 路径下两个planner jar 包都存在，你需要显示指定当前应用使用哪一个planner。</li>
+</ul>
+<pre><code class="language-java">// **********************
+// FLINK STREAMING QUERY
+// **********************
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+
+EnvironmentSettings fsSettings = EnvironmentSettings.newInstance().useOldPlanner().inStreamingMode().build();
+StreamExecutionEnvironment fsEnv = StreamExecutionEnvironment.getExecutionEnvironment();
+StreamTableEnvironment fsTableEnv = StreamTableEnvironment.create(fsEnv, fsSettings);
+// or TableEnvironment fsTableEnv = TableEnvironment.create(fsSettings);
+
+// ******************
+// FLINK BATCH QUERY
+// ******************
+import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.table.api.bridge.java.BatchTableEnvironment;
+
+ExecutionEnvironment fbEnv = ExecutionEnvironment.getExecutionEnvironment();
+BatchTableEnvironment fbTableEnv = BatchTableEnvironment.create(fbEnv);
+
+// **********************
+// BLINK STREAMING QUERY
+// **********************
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+
+StreamExecutionEnvironment bsEnv = StreamExecutionEnvironment.getExecutionEnvironment();
+EnvironmentSettings bsSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();
+StreamTableEnvironment bsTableEnv = StreamTableEnvironment.create(bsEnv, bsSettings);
+// or TableEnvironment bsTableEnv = TableEnvironment.create(bsSettings);
+
+// ******************
+// BLINK BATCH QUERY
+// ******************
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.TableEnvironment;
+
+EnvironmentSettings bbSettings = EnvironmentSettings.newInstance().useBlinkPlanner().inBatchMode().build();
+TableEnvironment bbTableEnv = TableEnvironment.create(bbSettings);
+</code></pre>
+<p>如果，在/lib目录下只有一个plananer jar 包，可以使用useAnyPlanner创建具体的EnvironmentSetting。</p>
+<p>#在catalog中创建Table</p>
+<h2 id="catalogs">Catalogs</h2>
+<p>提供了元数据，比如databases，tables，partitions，views和functions，以及需要去访问存储在数据库或外部系统数据的信息<br>
+数据处理的一个最重要的方面就是管理元数据。它可以是像临时表一样的临时元数据，也可以是注册在table environment上的UDFS，也可以是持久化元数据，比如Hive Metastore。Catalogs提供了统一的API用于管理元数据，使得其可以通过Table API或SQL查询访问。<br>
+Catalogs允许用户引用其数据系统的已有的元数据，并自动将其映射为Flink相应的元数据。比如，FLink可以自动地将JDBC表映射为Flink table，用户不用在Flink中手动重写DDLs。</p>
+<h3 id="catalogs-types">Catalogs Types</h3>
+<ul>
+<li>GenericInMemoryCatalog : 基于内存实现的catalog。所有的对象仅在会话声明周期可用</li>
+<li>JDBCCatalog ： 使得用户能通过JDBC协议连接Flink到关系型数据库。当前只实现了PostgresCatalog 。</li>
+<li>HiveCatalog：The HiveCatalog serves two purposes; as persistent storage for pure Flink metadata, and as an interface for reading and writing existing Hive metaUser-Defined Catalogdata</li>
+<li>User-Defined Catalog：通过实现Catalog接口，用户可以开发定制catalog。</li>
+</ul>
+<h2 id="table-indentifier">table indentifier</h2>
+<p>TableEnvironment维护一个表目录映射，这些表目录是用标识符构建的。每个标识符由三部分组成：catalog名称、database名称和对象名称（table名称）。如果没有指定catalog或database，将使用当前的默认值。===》也就是说Tables通常注册为包含三部分的标识符。用户可以指定一个catalog和一个database 为“current catalog”和“current database”，这样在指定标识符时，前两部分就为可选的。</p>
+<pre><code class="language-java">TableEnvironment tEnv = ...;
+tEnv.useCatalog(&quot;custom_catalog&quot;);
+tEnv.useDatabase(&quot;custom_database&quot;);
+Table table = ...;
+// register the view named 'exampleView' in the catalog named 'custom_catalog'
+// in the database named 'custom_database' 
+tableEnv.createTemporaryView(&quot;exampleView&quot;, table);
+// register the view named 'exampleView' in the catalog named 'custom_catalog'
+// in the database named 'other_database' 
+tableEnv.createTemporaryView(&quot;other_database.exampleView&quot;, table);
+// register the view named 'example.View' in the catalog named 'custom_catalog'
+// in the database named 'custom_database' 
+tableEnv.createTemporaryView(&quot;`example.View`&quot;, table);
+// register the view named 'exampleView' in the catalog named 'other_catalog'
+// in the database named 'other_database' 
+tableEnv.createTemporaryView(&quot;other_catalog.other_database.exampleView&quot;, table);
+</code></pre>
+<h2 id="table-types">table types</h2>
+<p>Table 可以是virtual（views） 也可以是正常的表（Tables）。views可以基于现有的Table创建，通常为一个Table API 或SQL查询的结果；Tables描述外部数据，比如一个文件，数据库表，或消息队列。</p>
+<ul>
+<li><strong>temporary table</strong> ： 与单个Flink 会话的生命周期关联。通常存储在内存中，仅在创建该Table的Flink会话期间存在。这些表对其他的Flink session是不可见的。它不与任何catalog或database绑定，但可以在其中的命名空间中创建。当对应的database被移除时，tempory table也不会被drop。</li>
+<li><strong>permanent table</strong>：跨多个Flink会话和集群可见的。需要一个catalog(类似Hive Metastore)去维护table的元数据。一旦创建了一张permanent table，它对连接到该catalog的任何一个Flink session都是可见的，直到该Table被显示地Drop掉。</li>
+</ul>
+<p>**shadowing **：</p>
+<h2 id="创建-table">创建 Table</h2>
+<ul>
+<li>virtual tables<br>
+在SQL术语中，一个Table API 对象对应一个VIEW（virtual table）。它封装了逻辑查询计划，可以在catalog中创建：</li>
+</ul>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// table is the result of a simple projection query 
+Table projTable = tableEnv.from(&quot;X&quot;).select(...);
+// register the Table projTable as table &quot;projectedTable&quot;
+tableEnv.createTemporaryView(&quot;projectedTable&quot;, projTable);
+</code></pre>
+<ul>
+<li>connector tables<br>
+还可以使用connector 申明创建Table。connector 描述了存储表数据的外部系统。这里可以申明，比如：kafka或正常的文件系统</li>
+</ul>
+<pre><code class="language-java">tableEnvironment
+  .connect(...)
+  .withFormat(...)
+  .withSchema(...)
+  .inAppendMode()
+  .createTemporaryTable(&quot;MyTable&quot;)
+</code></pre>
+<ul>
+<li>create a view from a DataStream or DataSet<br>
+一个DataStream或DataSet可以作为view注册到TableEnvironment中。结果视图的schema(模式)依赖于注册的DataStream或DataSet的数据类型。</li>
+</ul>
+<pre><code class="language-java">// get StreamTableEnvironment
+// registration of a DataSet in a BatchTableEnvironment is equivalent
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+DataStream&lt;Tuple2&lt;Long, String&gt;&gt; stream = ...
+// register the DataStream as View &quot;myTable&quot; with fields &quot;f0&quot;, &quot;f1&quot;
+tableEnv.createTemporaryView(&quot;myTable&quot;, stream);
+// register the DataStream as View &quot;myTable2&quot; with fields &quot;myLong&quot;, &quot;myString&quot;
+tableEnv.createTemporaryView(&quot;myTable2&quot;, stream, $(&quot;myLong&quot;), $(&quot;myString&quot;));
+</code></pre>
+<p>** Data Types到Table schema的映射**</p>
+<ol>
+<li><strong>position-based mapping （基于字段位置的映射）</strong><br>
+对于composite data types with a defined field order（such as tuples, rows, and case classes） 、atomic types可用；<br>
+POJO中的字段必须使用基于名字的映射;<br>
+字段可以被映射出来但是不能使用as 进行重命名;<br>
+当定义基于位置的映射时，指定的字段名不能在输入数据类型中存在，否则，API将假定为基于名字的映射。</li>
+</ol>
+<pre><code class="language-java">   // get a StreamTableEnvironment, works for BatchTableEnvironment equivalently
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section;
+DataStream&lt;Tuple2&lt;Long, Integer&gt;&gt; stream = ...
+// convert DataStream into Table with default field names &quot;f0&quot; and &quot;f1&quot;
+Table table = tableEnv.fromDataStream(stream);
+// convert DataStream into Table with field &quot;myLong&quot; only
+Table table = tableEnv.fromDataStream(stream, $(&quot;myLong&quot;));
+// convert DataStream into Table with field names &quot;myLong&quot; and &quot;myInt&quot;
+Table table = tableEnv.fromDataStream(stream, $(&quot;myLong&quot;), $(&quot;myInt&quot;));
+</code></pre>
+<ol start="2">
+<li><strong>Name-based mapping（基于字段名称的映射）</strong><br>
+可以用于所有包括POJO在内的数据类型。它是定义Table schema 映射的最灵活的方式。所有在映射中的字段都是通过名字引用，也可以使用 as 进行重命名。字段可以重排序投影。<br>
+在没有指定字段名称时，会使用组合类型的默认字段名和字段顺序。</li>
+</ol>
+<pre><code class="language-java">// get a StreamTableEnvironment, works for BatchTableEnvironment equivalently
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+DataStream&lt;Tuple2&lt;Long, Integer&gt;&gt; stream = ...
+// convert DataStream into Table with default field names &quot;f0&quot; and &quot;f1&quot;
+Table table = tableEnv.fromDataStream(stream);
+// convert DataStream into Table with field &quot;f1&quot; only
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;));
+// convert DataStream into Table with swapped fields
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;), $(&quot;f0&quot;));
+// convert DataStream into Table with swapped fields and field names &quot;myInt&quot; and &quot;myLong&quot;
+Table table = tableEnv.fromDataStream(stream, $(&quot;f1&quot;).as(&quot;myInt&quot;), $(&quot;f0&quot;).as(&quot;myLong&quot;));
+</code></pre>
+<h1 id="查询table">查询Table</h1>
+<h2 id="table-api">Table API</h2>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// register Orders table
+// scan registered Orders table
+Table orders = tableEnv.from(&quot;Orders&quot;);
+// compute revenue for all customers from France
+Table revenue = orders
+  .filter($(&quot;cCountry&quot;).isEqual(&quot;FRANCE&quot;))
+  .groupBy($(&quot;cID&quot;), $(&quot;cName&quot;)
+  .select($(&quot;cID&quot;), $(&quot;cName&quot;), $(&quot;revenue&quot;).sum().as(&quot;revSum&quot;));
+// emit or convert Table
+// execute query
+</code></pre>
+<h2 id="sql">SQL</h2>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// register Orders table
+// compute revenue for all customers from France
+Table revenue = tableEnv.sqlQuery(
+    &quot;SELECT cID, cName, SUM(revenue) AS revSum &quot; +
+    &quot;FROM Orders &quot; +
+    &quot;WHERE cCountry = 'FRANCE' &quot; +
+    &quot;GROUP BY cID, cName&quot;
+  );
+
+  // compute revenue for all customers from France and emit to &quot;RevenueFrance&quot;
+tableEnv.executeSql(
+    &quot;INSERT INTO RevenueFrance &quot; +
+    &quot;SELECT cID, cName, SUM(revenue) AS revSum &quot; +
+    &quot;FROM Orders &quot; +
+    &quot;WHERE cCountry = 'FRANCE' &quot; +
+    &quot;GROUP BY cID, cName&quot;
+  );
+// emit or convert Table
+// execute query
+</code></pre>
+<p><strong>Table API 和 SQL 查询能够很容易地混合，因为两者都返回Table 对象</strong>：</p>
+<ul>
+<li>Table API 查询可以在SQL查询返回的Table 对象上定义</li>
+<li>SQL查询也可以定义在Table API 查询结果上。通过在TableEnvironment上注册结果表，然后再SQL查询的from子句中引用</li>
+</ul>
+<h1 id="emit-a-table">Emit a table</h1>
+<p>a Table is emitted by writing it to a TableSink。 TableSink 是一个支持各种不同文件格式（CSV，Apache Parquet，Apache Avro），存储系统（JDBC，Apache Hbase，Cassandra，Elasticsearch），消息系统（kafka，rabbitMQ）的通用接口。<br>
+batch table 只能写到BatchTableSink；streaming table 可以写到AppendStreamTableSink、RetractStreamTableSink或UpsertStreamTableSink<br>
+Table.executeInsert(String tableName) 方法emit the table to a registered TableSink。</p>
+<pre><code class="language-java">// get a TableEnvironment
+TableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// create an output Table
+final Schema schema = new Schema()
+    .field(&quot;a&quot;, DataTypes.INT())
+    .field(&quot;b&quot;, DataTypes.STRING())
+    .field(&quot;c&quot;, DataTypes.BIGINT());
+tableEnv.connect(new FileSystem().path(&quot;/path/to/file&quot;))
+    .withFormat(new Csv().fieldDelimiter('|').deriveSchema())
+    .withSchema(schema)
+    .createTemporaryTable(&quot;CsvSinkTable&quot;);
+// compute a result Table using Table API operators and/or SQL queries
+Table result = ...
+// emit the result Table to the registered TableSink
+result.executeInsert(&quot;CsvSinkTable&quot;);
+</code></pre>
+<h1 id="convert-a-table-into-a-datastream-or-dataset">convert  a Table into a DataStream or DataSet</h1>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618299207727.png" alt="" loading="lazy"></figure>
+<h2 id="conver-a-table-into-a-datastream">conver a Table into a DataStream</h2>
+<p>对于流查询的结果表将会动态地更新。即，它会随着新记录达到查询输入流而变化。因此，将动态查询转换成的DataStream需要对表的更新进行编码。将Table转换为DataStream有两种模式：</p>
+<ol>
+<li>Append Mode : 这种模式仅仅用于动态Table仅被INSERT 修改的情况。也就是数据记录只有append，之前的数据不会被修改</li>
+<li>Retract Mode ： 这种模式经常被使用。它使用boolean 标识覆盖了INSERT和DELETE的变化</li>
+</ol>
+<pre><code class="language-java">// get StreamTableEnvironment. 
+StreamTableEnvironment tableEnv = ...; // see &quot;Create a TableEnvironment&quot; section
+// Table with two fields (String name, Integer age)
+Table table = ...
+// convert the Table into an append DataStream of Row by specifying the class
+DataStream&lt;Row&gt; dsRow = tableEnv.toAppendStream(table, Row.class);
+// convert the Table into an append DataStream of Tuple2&lt;String, Integer&gt; 
+//   via a TypeInformation
+TupleTypeInfo&lt;Tuple2&lt;String, Integer&gt;&gt; tupleType = new TupleTypeInfo&lt;&gt;(
+  Types.STRING(),
+  Types.INT());
+DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; dsTuple = 
+  tableEnv.toAppendStream(table, tupleType);
+// convert the Table into a retract DataStream of Row.
+//   A retract stream of type X is a DataStream&lt;Tuple2&lt;Boolean, X&gt;&gt;. 
+//   The boolean field indicates the type of the change. 
+//   True is INSERT, false is DELETE.
+DataStream&lt;Tuple2&lt;Boolean, Row&gt;&gt; retractStream = 
+  tableEnv.toRetractStream(table, Row.class);
+</code></pre>
+<p>一旦将Table转换为DataStream，需要使用StreamExecutionEnvironment.execute() 方法来执行DataStream程序。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[JStack]]></title>
+        <id>https://wangyemao-github.github.io/post/jstack/</id>
+        <link href="https://wangyemao-github.github.io/post/jstack/">
+        </link>
+        <updated>2021-04-12T03:20:05.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="jstack是什么">JStack是什么？</h1>
+<p>jstack 是java虚拟机自带的一种堆栈跟踪工具。**作用：**生成JVM当前时刻线程的快照（threaddump，当前进程中所有线程的信息）；**目的：**帮助定位程序问题出现的原因，如长时间停顿、CPU占用率过高等。<br>
+<strong>功能</strong>：<br>
+jstack用于生成java虚拟机当前时刻的线程快照。线程快照是当前java虚拟机内每一条线程正在执行的方法堆栈的集合，生成线程快照的主要目的是定位线程出现长时间停顿的原因【通过jstack来查看各个线程的调用堆栈，就可以知道线程到底在后台做什么事情，或者等待什么资源】，如线程间死锁、死循环、请求外部资源导致的长时间等待等。<br>
+---如果java程序崩溃生成core文件，jstack工具可以用来获得core文件的java stack和native stack的信息，从而可以轻松地知道java程序是如何崩溃和在程序何处发生问题<br>
+---对于java 程序hung住的状态，jstack非常有用。</p>
+<p>**总结：**jstack命令主要用来查看Java线程的调用堆栈的，可以用来分析线程问题（如死锁）</p>
+<h1 id="jstack-dump日志文件中指得关注的线程状态">jstack dump日志文件中，指得关注的线程状态</h1>
+<ol>
+<li><strong>死锁，Deadlock（重点关注）</strong></li>
+<li>执行中，Runnable</li>
+<li><strong>等待资源，Waiting on condition（重点关注）</strong></li>
+<li><strong>等待获取监视器，Waiting on monitor entry（重点关注）</strong></li>
+<li>暂停，Suspended</li>
+<li>对象等待中，Object.wait() 或 TIMED_WAITIN</li>
+<li><strong>阻塞，Blocked（重点关注）</strong></li>
+<li>停止，Parked</li>
+</ol>
+<h1 id="jstack-命令">jstack 命令</h1>
+<pre><code class="language-text">hollis@hos:~$ jstack -help
+Usage:
+    jstack [-l] &lt;pid&gt;
+        (to connect to running process)
+    jstack -F [-m] [-l] &lt;pid&gt;
+        (to connect to a hung process)
+    jstack [-m] [-l] &lt;executable&gt; &lt;core&gt;
+        (to connect to a core file)
+    jstack [-m] [-l] [server_id@]&lt;remote server IP or hostname&gt;
+        (to connect to a remote debug server)
+
+Options:
+    -F  to force a thread dump. Use when jstack &lt;pid&gt; does not respond (process is hung)
+    -m  to print both java and native frames (mixed mode)
+    -l  long listing. Prints additional information about locks
+    -h or -help to print this help message
+</code></pre>
+<p>#jstack dump 日志</p>
+<h2 id="如何查看jstack-dump-日志">如何查看JStack Dump 日志</h2>
+<p><img src="https://wangyemao-github.github.io/post-images/1618197743245.png" alt="" loading="lazy"><br>
+上图jstack dump日志解读：</p>
+<ul>
+<li>线程状态是 Blocked，阻塞状态。说明线程等待资源超时！</li>
+<li>“ waiting to lock &lt;0x00000000acf4d0c0&gt;”指，线程在等待给这个 0x00000000acf4d0c0 地址上锁（英文可描述为：trying to obtain 0x00000000acf4d0c0 lock）。</li>
+<li>在 dump 日志里查找字符串 0x00000000acf4d0c0，发现有大量线程都在等待给这个地址上锁。如果能在日志里找到谁获得了这个锁（如locked &lt; 0x00000000acf4d0c0 &gt;），就可以顺藤摸瓜了。</li>
+<li>“waiting for monitor entry”说明此线程通过 synchronized(obj) {……} 申请进入了临界区，从而进入了下图1中的“Entry Set”队列，但该 obj 对应的 monitor 被其他线程拥有，所以本线程在 Entry Set 队列中等待。</li>
+<li>第一行里，”RMI TCP Connection(267865)-172.16.5.25”是 Thread Name 。tid指Java Thread id。nid指native线程的id【OS层面的线程id，top命令显示的就是OS层面的线程id】。prio是线程优先级。[0x00007fd4f8684000]是线程栈起始地址。</li>
+</ul>
+<h2 id="线程状态说明">线程状态说明</h2>
+<p>线程的状态有：NEW、RUNNABLE、BLOCKED、WAITING、TIMED_WAITING、TERMINATED。其中，NEW为未启动的，不会出现在dump 日志文件中的状态。</p>
+<ul>
+<li>Deadlock：死锁线程，一般指多个线程调用间，进入相互资源占用，导致一直等待无法释放的情况</li>
+<li>Runnable：一般指该线程正在执行状态中，该线程占用了资源，正在处理某个请求，有可能正在传递SQL到数据库执行，有可能在对某个文件操作，有可能进行数据类型等转换</li>
+<li>Waiting on condition：等待资源，或等待某个条件的发生。具体原因需结合 stacktrace来分析
+<ol>
+<li>如果堆栈信息明确是应用代码，则证明该线程正在等待资源。一般是大量读取某资源，且该资源采用了资源锁的情况下，线程进入等待状态，等待资源的读取；又或者，正在等待其他线程的执行等。</li>
+<li>如果发现有大量的线程都在处在 Wait on condition，从线程 stack看，正等待网络读写，这可能是一个网络瓶颈的征兆</li>
+<li>另外一种出现 Wait on condition的常见情况是该线程在 sleep，等待 sleep的时间到了时候，将被唤醒</li>
+</ol>
+</li>
+<li>Blocked：线程阻塞，是指当前线程执行过程中，所需要的资源长时间等待却一直未能获取到，被容器的线程管理器标识为阻塞状态，可以理解为等待资源超时的线程</li>
+<li>Waiting for monitor entry 和 in Object.wait()：Monitor是 Java中用以实现线程之间的互斥与协作的主要手段，它可以看成是对象或者 Class的锁。每一个对象都有，也仅有一个 monitor。</li>
+</ul>
+<h2 id="关于objectclass-monitor">关于Object/Class Monitor</h2>
+<p>在多线程的JAVA程序中，<strong>Monitor是java中用以实现线程之间的互斥与协作的主要手段</strong>。它可以看成是对象或Class的锁，每一个对象都有且仅有一个monitor。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618198555803.png" alt="" loading="lazy"><br>
+每个 Monitor在某个时刻，只能被一个线程拥有，该线程就是 “Active Thread”，而其它线程都是 “Waiting Thread”，分别在两个队列 “ Entry Set”和 “Wait Set”里面等候。在 “Entry Set”中等待的线程状态是 “Waiting for monitor entry”，而在 “Wait Set”中等待的线程状态是 “in Object.wait()”。</p>
+<pre><code class="language-java">synchronized(obj){
+    ......
+}
+</code></pre>
+<h3 id="调用修饰">调用修饰</h3>
+<p>表示线程在方法调用时,额外的重要的操作。</p>
+<ul>
+<li>locked &lt;地址&gt; 目标: 使用synchronized申请对象锁成功,监视器的拥有者<br>
+<img src="https://wangyemao-github.github.io/post-images/1618209989027.png" alt="" loading="lazy"><br>
+通过synchronized关键字,成功获取到了对象的锁,成为监视器的拥有者,在临界区内操作。对象锁是可以线程重入的</li>
+<li>waiting to lock &lt;地址&gt; 目标：使用synchronized申请对象锁未成功,在进入区等待<br>
+<img src="https://wangyemao-github.github.io/post-images/1618212008930.png" alt="" loading="lazy"><br>
+通过synchronized关键字,没有获取到了对象的锁,线程在监视器的进入区等待。在调用栈顶出现,线程状态为Blocked</li>
+<li>waiting on &lt;地址&gt; 目标：使用synchronized申请对象锁成功后,释放锁并在等待区等待<br>
+<img src="https://wangyemao-github.github.io/post-images/1618210054705.png" alt="" loading="lazy"><br>
+通过synchronized关键字,成功获取到了对象的锁后,调用了wait方法,进入对象的等待区等待。在调用栈顶出现,线程状态为WAITING或TIMED_WATING</li>
+<li>parking to wait for &lt;地址&gt; 目标<br>
+park是基本的线程阻塞原语,不通过监视器在对象上阻塞。随concurrent包会出现的新的机制,与synchronized体系不同</li>
+</ul>
+<h2 id="实例">实例</h2>
+<h3 id="waiting-on-condition-and-timed_waiting">waiting on condition and TIMED_WAITING</h3>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618206244210.png" alt="" loading="lazy"></figure>
+<ul>
+<li>&quot;TIMED_WAITING(parking)&quot;中的timed_waiting 表示指定了时间的等待状态，当到达指定时间后自动退出等待状态；parking指线程处于挂起中。</li>
+<li>“waiting on condition”需要与堆栈中的“parking to wait for &lt;0x00000000acd84de8&gt; (a java.util.concurrent.SynchronousQueue$TransferStack)”结合来看。首先，本线程肯定是在等待某个条件的发生，来把自己唤醒。其次，SynchronousQueue 并不是一个队列，只是线程之间移交信息的机制，当我们把一个元素放入到 SynchronousQueue 中时必须有另一个线程正在等待接受移交的任务，因此这就是本线程在等待的条件</li>
+</ul>
+<h3 id="in-objectwait-and-timed_waiting">in Object.wait() and TIMED_WAITING</h3>
+<figure data-type="image" tabindex="2"><img src="https://wangyemao-github.github.io/post-images/1618206737075.png" alt="" loading="lazy"></figure>
+<ul>
+<li>“TIMED_WAITING (on object monitor)”，对于本例而言，是因为本线程调用了 java.lang.Object.wait(long timeout) 而进入等待状态</li>
+<li>“Wait Set”中等待的线程状态就是“ in Object.wait() ”。当线程获得了 Monitor，进入了临界区之后，如果发现线程继续运行的条件没有满足，它则调用对象（一般就是被 synchronized 的对象）的 wait() 方法，放弃了 Monitor，进入 “Wait Set”队列。只有当别的线程在该对象上调用了 notify() 或者 notifyAll() ，“ Wait Set”队列中线程才得到机会去竞争，但是只有一个线程获得对象的 Monitor，恢复到运行态</li>
+</ul>
+<h2 id="线程dump的分析">线程Dump的分析</h2>
+<p>一些入手点说明：</p>
+<h3 id="进入区等待">进入区等待</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210608128.png" alt="" loading="lazy"><br>
+线程状态BLOCKED,线程动作wait on monitor entry,调用修饰waiting to lock总是一起出现。表示在代码级别已经存在冲突的调用。必然有问题的代码,需要尽可能减少其发生。</p>
+<h3 id="同步块阻塞">同步块阻塞</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210749419.png" alt="" loading="lazy"><br>
+一个线程锁住某对象,大量其他线程在该对象上等待。</p>
+<h3 id="持续运行的io">持续运行的IO</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210836280.png" alt="" loading="lazy"><br>
+IO操作是可以以RUNNABLE状态达成阻塞。例如:数据库死锁、网络读写。 格外注意对IO线程的真实状态的分析。 一般来说,被捕捉到RUNNABLE的IO调用,都是有问题的。 以下堆栈显示： 线程状态为RUNNABLE。 调用栈在SocketInputStream或SocketImpl上,socketRead0等方法。 调用栈包含了jdbc相关的包。很可能发生了数据库死锁</p>
+<h3 id="总结">总结：</h3>
+<ul>
+<li>wait on monitor entry ： 被阻塞的肯定有问题</li>
+<li>runnable：注意IO线程</li>
+<li>in object.wait() : 注意非线程池等待</li>
+</ul>
+<h1 id="jstack-dump-日志中一些常见线程整理">jstack dump 日志中一些常见线程整理</h1>
+<p>下表中整理的线程都是归属JVM的线程，通常在对每个应用进行进行jstack dump时，日志文件中都会出现如下一些线程：<br>
+|线程|所属|说明|<br>
+|&quot;Attach Listener&quot;|JVM|Attach Listener线程是负责接收到外部的命令，而对该命令进行执行的并且吧结果返回给发送者。通常我们会用一些命令去要求jvm给我们一些反馈信息，如：java -version、jmap、jstack等等。如果该线程在jvm启动的时候没有初始化，那么，则会在用户第一次执行jvm命令时，得到启动|<br>
+|&quot;Service Thread&quot; |JVM|前面我们提到第一个Attach Listener线程的职责是接收外部jvm命令，当命令接收成功后，会交给signal dispather线程去进行分发到各个不同的模块处理命令，并且返回处理结果。signal dispather线程也是在第一次接收外部jvm命令时，进行初始化工作|<br>
+|&quot;CompilerThreadX&quot;|JVM|用来调用JITing，实时编译装卸class。通常，jvm会启动多个线程来处理这部分工作，线程名称后面的数字也会累加，例如：CompilerThread1|<br>
+|&quot;Reference Handler&quot;|JVM|JVM在创建main线程后就创建Reference Handler线程，其优先级最高，为10，它主要用于处理引用对象本身（软引用、弱引用、虚引用）的垃圾回收问题|<br>
+|&quot;Finalizer&quot;|JVM|这个线程也是在main线程之后创建的，其优先级为10，主要用于在垃圾收集前，调用对象的finalize()方法；关于Finalizer线程的几点：1)只有当开始一轮垃圾收集时，才会开始调用finalize()方法；因此并不是所有对象的finalize()方法都会被执行；2)该线程也是daemon线程，因此如果虚拟机中没有其他非daemon线程，不管该线程有没有执行完finalize()方法，JVM也会退出；3) JVM在垃圾收集时会将失去引用的对象包装成Finalizer对象（Reference的实现），并放入ReferenceQueue，由Finalizer线程来处理；最后将该Finalizer对象的引用置为null，由垃圾收集器来回收；4) JVM为什么要单独用一个线程来执行finalize()方法呢？如果JVM的垃圾收集线程自己来做，很有可能由于在finalize()方法中误操作导致GC线程停止或不可控，这对GC线程来说是一种灾难；|<br>
+|&quot;DestroyJavaVM&quot; |JVM|执行main()的线程在main执行完后调用JNI中的jni_DestroyJavaVM()方法唤起DestroyJavaVM线程.线程退出时，都会判断自己当前是否是整个JVM中最后一个非deamon线程，如果是，则通知DestroyJavaVM线程卸载JVM。ps：扩展一下：1.如果线程退出时判断自己不为最后一个非deamon线程，那么调用thread-&gt;exit(false)，并在其中抛出thread_end事件，jvm不退出。2.如果线程退出时判断自己为最后一个非deamon线程，那么调用before_exit()方法，抛出两个事件： 事件1：thread_end线程结束事件、事件2：VM的death事件。然后调用thread-&gt;exit(true)方法，接下来把线程从active list卸下，删除线程等等一系列工作执行完成后，则通知正在等待的DestroyJavaVM线程执行卸载JVM操作|<br>
+实时上，我们更多地是需要关注应用相关的线程。</p>
+<h2 id="jstack排查java的cpu性能问题">jstack排查java的CPU性能问题</h2>
+<figure data-type="image" tabindex="3"><img src="https://wangyemao-github.github.io/post-images/1618212296706.png" alt="" loading="lazy"></figure>
+<p>针对这个排查流程，github上开源的快速定位脚本：https://github.com/oldratlee/useful-scripts/blob/dev-2.x/docs/java.md#-show-busy-java-threads</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Flink Docker 安装部署]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-docker-an-zhuang-bu-shu/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-docker-an-zhuang-bu-shu/">
+        </link>
+        <updated>2021-04-01T11:38:32.000Z</updated>
+        <content type="html"><![CDATA[<p>本文为基于docker 安装部署flink集群中得一些笔记。</p>
+<h1 id="关于flink-docker-概述">关于Flink Docker 概述</h1>
+<p>基于Docker 的Flink 集群部署，支持Session 和Application cluster 部署模式。具体可参见官网：https://ci.apache.org/projects/flink/flink-docs-release-1.12/deployment/resource-providers/standalone/docker.html。并且提供了官方的Flink Docker 镜像 https://hub.docker.com/_/flink/。<br>
+直接使用提供的镜像进行Flink 集群部署存在如下一些问题：</p>
+<ul>
+<li>flink conf目录下的配置文件都在容器内，不便于动态修改、调整</li>
+<li>flink运行过程中执行的快照结果，可能因为容器的崩溃而丢失</li>
+</ul>
+<h1 id="具体实践参考">具体实践参考</h1>
+<p>解决上述问题的一个可行方案就是使用docker volume。 volume的官方定义为：A data volume is a specially-designated directory within one or more containers that bypasses the Union File System。它的主要用途就在于：在运行容器间实现数据持久化和共享。</p>
+<h1 id="使用volume可能回引发的问题">使用volume可能回引发的问题</h1>
+<p>volume使得容器与容器之间，或者容器与宿主机之间能够共享目录。但是容器运行的用户和宿主机上运行的用户通常不会是相同的用户，这就可能导致：</p>
+<ul>
+<li>容器运行时写入目录的文件，宿主机上的用户不能访问；</li>
+<li>容器运行时用户没有权限写入文件</li>
+</ul>
+<p>总结来说，因为宿主机和容器运行时用户不是相同的用户，导致了使用volume时带来的用户权限问题。换句话来说，如果宿主机上的当前用户与容器运行时的用户是同一个用户，那容器运行时写入的文件，宿主机上用户也有权限访问；宿主机上创建的文件，容器内也有权限进行操作（读写）。</p>
+<h1 id="基于docker-的flink-session安装">基于Docker 的Flink Session安装</h1>
+<p>参考：https://denibertovic.com/posts/handling-permissions-with-docker-volumes/ 中提到的解决方法，对官方提供的Dockerfile 和 docker-entrypoint.sh文件进行调整。<br>
+调整后的Dockerfile为：</p>
+<pre><code class="language-text">FROM openjdk:8-jre
+
+# Install dependencies
+RUN set -ex; \
+  apt-get update; \
+  apt-get -y install libsnappy1v5 gettext-base libjemalloc-dev; \
+  rm -rf /var/lib/apt/lists/*
+
+# Grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.11
+RUN set -ex; \
+  wget -nv -O /usr/local/bin/gosu &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)&quot;; \
+  wget -nv -O /usr/local/bin/gosu.asc &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc&quot;; \
+  export GNUPGHOME=&quot;$(mktemp -d)&quot;; \
+  for server in ha.pool.sks-keyservers.net $(shuf -e \
+                          hkp://p80.pool.sks-keyservers.net:80 \
+                          keyserver.ubuntu.com \
+                          hkp://keyserver.ubuntu.com:80 \
+                          pgp.mit.edu) ; do \
+      gpg --batch --keyserver &quot;$server&quot; --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 &amp;&amp; break || : ; \
+  done &amp;&amp; \
+  gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+  gpgconf --kill all; \
+  rm -rf &quot;$GNUPGHOME&quot; /usr/local/bin/gosu.asc; \
+  chmod +x /usr/local/bin/gosu; \
+  gosu nobody true
+
+# Configure Flink version
+ENV FLINK_TGZ_URL=https://www.apache.org/dyn/closer.cgi?action=download&amp;filename=flink/flink-1.12.2/flink-1.12.2-bin-scala_2.11.tgz \
+    FLINK_ASC_URL=https://www.apache.org/dist/flink/flink-1.12.2/flink-1.12.2-bin-scala_2.11.tgz.asc \
+    GPG_KEY=0D545F264D2DFDEBFD4E038F97B4625E2FCF517C \
+    CHECK_GPG=true
+
+# Prepare environment
+ENV FLINK_HOME=/opt/flink
+ENV PATH=$FLINK_HOME/bin:$PATH
+#RUN groupadd --system --gid=9999 flink &amp;&amp; \
+#    useradd --system --home-dir $FLINK_HOME --uid=9999 --gid=flink flink
+WORKDIR $FLINK_HOME
+
+# Install Flink
+RUN set -ex; \
+  wget -nv -O flink.tgz &quot;$FLINK_TGZ_URL&quot;; \
+  \
+  if [ &quot;$CHECK_GPG&quot; = &quot;true&quot; ]; then \
+    wget -nv -O flink.tgz.asc &quot;$FLINK_ASC_URL&quot;; \
+    export GNUPGHOME=&quot;$(mktemp -d)&quot;; \
+    for server in ha.pool.sks-keyservers.net $(shuf -e \
+                            hkp://p80.pool.sks-keyservers.net:80 \
+                            keyserver.ubuntu.com \
+                            hkp://keyserver.ubuntu.com:80 \
+                            pgp.mit.edu) ; do \
+        gpg --batch --keyserver &quot;$server&quot; --recv-keys &quot;$GPG_KEY&quot; &amp;&amp; break || : ; \
+    done &amp;&amp; \
+    gpg --batch --verify flink.tgz.asc flink.tgz; \
+    gpgconf --kill all; \
+    rm -rf &quot;$GNUPGHOME&quot; flink.tgz.asc; \
+  fi; \
+  \
+  tar -xf flink.tgz --strip-components=1; \
+  rm flink.tgz; 
+#  \
+#  \
+#  chown -R flink:flink .;
+
+# Configure container
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT [&quot;/docker-entrypoint.sh&quot;]
+EXPOSE 6123 8081
+CMD [&quot;help&quot;]
+</code></pre>
+<p>调整后的docker-entryoint.sh 为：</p>
+<pre><code class="language-text">#!/usr/bin/env bash
+COMMAND_STANDALONE=&quot;standalone-job&quot;
+# Deprecated, should be remove in Flink release 1.13
+COMMAND_NATIVE_KUBERNETES=&quot;native-k8s&quot;
+COMMAND_HISTORY_SERVER=&quot;history-server&quot;
+
+# If unspecified, the hostname of the container is taken as the JobManager address
+JOB_MANAGER_RPC_ADDRESS=${JOB_MANAGER_RPC_ADDRESS:-$(hostname -f)}
+CONF_FILE=&quot;${FLINK_HOME}/conf/flink-conf.yaml&quot;
+USER_ID=${LOCAL_USER_ID:-9001}
+
+drop_privs_cmd() {
+	echo &quot;Starting with UID : $USER_ID&quot;
+	useradd --shell /bin/bash -u $USER_ID -o -c &quot;&quot; -m flink
+	chown -R flink:flink /opt/flink
+    if [ $(id -u) != 0 ]; then
+        # Don't need to drop privs if EUID != 0
+        return
+    elif [ -x /sbin/su-exec ]; then
+        # Alpine
+        echo su-exec flink
+    else
+        # Others
+        echo gosu flink
+    fi
+}
+
+copy_plugins_if_required() {
+  if [ -z &quot;$ENABLE_BUILT_IN_PLUGINS&quot; ]; then
+    return 0
+  fi
+
+  echo &quot;Enabling required built-in plugins&quot;
+  for target_plugin in $(echo &quot;$ENABLE_BUILT_IN_PLUGINS&quot; | tr ';' ' '); do
+    echo &quot;Linking ${target_plugin} to plugin directory&quot;
+    plugin_name=${target_plugin%.jar}
+
+    mkdir -p &quot;${FLINK_HOME}/plugins/${plugin_name}&quot;
+    if [ ! -e &quot;${FLINK_HOME}/opt/${target_plugin}&quot; ]; then
+      echo &quot;Plugin ${target_plugin} does not exist. Exiting.&quot;
+      exit 1
+    else
+      ln -fs &quot;${FLINK_HOME}/opt/${target_plugin}&quot; &quot;${FLINK_HOME}/plugins/${plugin_name}&quot;
+      echo &quot;Successfully enabled ${target_plugin}&quot;
+    fi
+  done
+}
+
+set_config_option() {
+  local option=$1
+  local value=$2
+
+  # escape periods for usage in regular expressions
+  local escaped_option=$(echo ${option} | sed -e &quot;s/\./\\\./g&quot;)
+
+  # either override an existing entry, or append a new one
+  if grep -E &quot;^${escaped_option}:.*&quot; &quot;${CONF_FILE}&quot; &gt; /dev/null; then
+        sed -i -e &quot;s/${escaped_option}:.*/$option: $value/g&quot; &quot;${CONF_FILE}&quot;
+  else
+        echo &quot;${option}: ${value}&quot; &gt;&gt; &quot;${CONF_FILE}&quot;
+  fi
+}
+
+prepare_configuration() {
+    set_config_option jobmanager.rpc.address ${JOB_MANAGER_RPC_ADDRESS}
+    set_config_option blob.server.port 6124
+    set_config_option query.server.port 6125
+
+    TASK_MANAGER_NUMBER_OF_TASK_SLOTS=${TASK_MANAGER_NUMBER_OF_TASK_SLOTS:-1}
+    set_config_option taskmanager.numberOfTaskSlots ${TASK_MANAGER_NUMBER_OF_TASK_SLOTS}
+
+    if [ -n &quot;${FLINK_PROPERTIES}&quot; ]; then
+        echo &quot;${FLINK_PROPERTIES}&quot; &gt;&gt; &quot;${CONF_FILE}&quot;
+    fi
+    envsubst &lt; &quot;${CONF_FILE}&quot; &gt; &quot;${CONF_FILE}.tmp&quot; &amp;&amp; mv &quot;${CONF_FILE}.tmp&quot; &quot;${CONF_FILE}&quot;
+}
+
+maybe_enable_jemalloc() {
+    if [ &quot;${DISABLE_JEMALLOC:-false}&quot; == &quot;false&quot; ]; then
+        export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libjemalloc.so
+    fi
+}
+
+maybe_enable_jemalloc
+
+copy_plugins_if_required
+
+prepare_configuration
+
+args=(&quot;$@&quot;)
+if [ &quot;$1&quot; = &quot;help&quot; ]; then
+    printf &quot;Usage: $(basename &quot;$0&quot;) (jobmanager|${COMMAND_STANDALONE}|taskmanager|${COMMAND_HISTORY_SERVER})\n&quot;
+    printf &quot;    Or $(basename &quot;$0&quot;) help\n\n&quot;
+    printf &quot;By default, Flink image adopts jemalloc as default memory allocator. This behavior can be disabled by setting the 'DISABLE_JEMALLOC' environment variable to 'true'.\n&quot;
+    exit 0
+elif [ &quot;$1&quot; = &quot;jobmanager&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Job Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/jobmanager.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = ${COMMAND_STANDALONE} ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Job Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/standalone-job.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = ${COMMAND_HISTORY_SERVER} ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting History Server&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/historyserver.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = &quot;taskmanager&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Task Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/taskmanager.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = &quot;$COMMAND_NATIVE_KUBERNETES&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    export _FLINK_HOME_DETERMINED=true
+    . $FLINK_HOME/bin/config.sh
+    export FLINK_CLASSPATH=&quot;`constructFlinkClassPath`:$INTERNAL_HADOOP_CLASSPATHS&quot;
+    # Start commands for jobmanager and taskmanager are generated by Flink internally.
+    echo &quot;Start command: ${args[@]}&quot;
+    exec $(drop_privs_cmd) bash -c &quot;${args[@]}&quot;
+fi
+
+args=(&quot;${args[@]}&quot;)
+
+# Set the Flink related environments
+export _FLINK_HOME_DETERMINED=true
+. $FLINK_HOME/bin/config.sh
+export FLINK_CLASSPATH=&quot;`constructFlinkClassPath`:$INTERNAL_HADOOP_CLASSPATHS&quot;
+
+# Running command in pass-through mode
+exec $(drop_privs_cmd) &quot;${args[@]}&quot;
+</code></pre>
+<h2 id="安装部署步骤">安装部署步骤</h2>
+<ol>
+<li>构建镜像<br>
+将调整后的Dockerfile文件和docker-entrypoint.sh 文件copy到同一个目录下。执行如下命令构建镜像<br>
+docker build -t wmz/flink:1.12.2_2.11 .</li>
+<li>创建网络<br>
+docker network create flink-network ：容器间使用同一个的网络，使得相互间可以通过容器名进行访问。</li>
+<li>启动jobmanager</li>
+</ol>
+<pre><code class="language-text">docker run -itd --name=myjobmanager -h myjobmanager --network flink-network --publish 8081:8081 --env LOCAL_USER_ID=`id -u $USER` -v /root/wym/conf:/opt/flink/conf -v /root/wym/data/save_point:/opt/flink/save_point -v /root/wym/data/check_point:/opt/flink/check_point -v /root/wym/data/blob_store:/opt/flink/blob_store -v /root/wym/data/upload_dir:/opt/flink/upload_dir -v /root/wym/data/log:/opt/flink/log flink1:latest jobmanager 
+</code></pre>
+<p>说明：<br>
+(1)--env LOCAL_USER_ID=<code>id -u $USER</code>  将当前宿主机上的用户的uid作为环境变量传到容器内；容器内会基于改用户uid创建容器用户，并运行容器。这就保证了宿主机上的用户与容器内运行时的用户时相同的用户<br>
+4. 启动taskmanager</p>
+<pre><code class="language-text">docker run -itd --name=mytaskmanager1 -h mytaskmanager1 --network flink-network  \
+ -v /root/wym/conf:/opt/flink/conf -v /root/wym/data/save_point:/opt/flink/save_point -v /root/wym/data/check_point:/opt/flink/check_point -v /root/wym/data/blob_store:/opt/flink/blob_store -v /root/wym/data/upload_dir:/opt/flink/upload_dir -v /root/wym/data/log:/opt/flink/log --env FLINK_PROPERTIES=&quot;jobmanager.rpc.address: myjobmanager&quot; --env LOCAL_USER_ID=`id -u $USER` flink1:latest taskmanager
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Handleing  Permissions with Docker Volume]]></title>
+        <id>https://wangyemao-github.github.io/post/handleing-permissions-with-docker-volume/</id>
+        <link href="https://wangyemao-github.github.io/post/handleing-permissions-with-docker-volume/">
+        </link>
+        <updated>2021-04-01T09:37:17.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="docker-volume">Docker Volume</h1>
+<p>A data volume is a specially-designated directory within one or more containers that bypasses the Union File System.</p>
+<h2 id="the-main-use-case-for-volumes">The main use-case for Volumes</h2>
+<p>is for persisting data between container runs。</p>
+<ul>
+<li>在容器中运行数据库（比如Postgresql）时，对于数据目录很有用；</li>
+<li>在开发环境运行时，有助于共享主机系统的代码目录给容器</li>
+</ul>
+<h2 id="使用volume面临的两个问题">使用volume面临的两个问题</h2>
+<ul>
+<li>对于指定的Volume，你不能访问容器写入的文件。因为容器中的进程通常以root用户运行</li>
+<li>即便容器中以一个普通用户运行，它仍旧不能与宿主机上的用户相匹配。</li>
+</ul>
+<p>因为通常</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[DockerFile]]></title>
+        <id>https://wangyemao-github.github.io/post/dockerfile/</id>
+        <link href="https://wangyemao-github.github.io/post/dockerfile/">
+        </link>
+        <updated>2021-03-29T14:21:07.000Z</updated>
+        <content type="html"><![CDATA[<p>DockerFile是一个<strong>文本格式的配置文件</strong>，用户可以<strong>使用Dockerfile来快速创建自定义的镜像</strong>。</p>
+<h1 id="基本结构">基本结构</h1>
+<p>一般而言Dockerfile主体内容分为四部分：基础镜像信息、维护者信息、镜像操作指令和容器启动时执行指令。</p>
+<h2 id="基础镜像信息">基础镜像信息</h2>
+<p><strong>FROM 指令</strong>：指明基础镜像。<strong>Dockerfile中的第一条指令必须为FROM指令</strong>。在同一个Dockerfile中创建多个镜像时，可以使用多个FROM指令（每个镜像一个）<br>
+为了保证镜像精简，可以选用体积较小的镜像作为基础镜像。<br>
+格式：FROM <image> [AS name]  或 FROM <image>:<tag> [AS name] 或 FROM <image>@<digest> [AS name]</p>
+<h2 id="镜像操作">镜像操作</h2>
+<h3 id="镜像配置指令">镜像配置指令</h3>
+<ul>
+<li>
+<p>EXPOSE指令：<strong>声明镜像内服务监听的端口</strong>。该指令只起到声明作用，并不会自动完成端口映射。如果需要映射端口出来，在启动容器时可以使用-P参数（Docker主机会自动分配一个宿主机的临时端口）或-p HOST_PORT：CONTAINER_PORT参数（具体制定所映射的本地端口）<br>
+格式：EXPOSE <port> [<port>/<protocl>....]</p>
+</li>
+<li>
+<p>ENTRYPOINT指令：指定镜像的默认入口命令，<strong>该入口命令会在启动容器时作为根命令执行，所有传入值作为该命令的参数</strong>。在指定了 ENTRYPOINT指令的情况下，CMD指令指定值将作为根命令的参数。每个Dockerfile中只能有一个ENTRYPOINT，当指定多个时，只有最后一个起效。在运行时，可以被--entrypoint参数覆盖掉<br>
+格式：ENTRYPOINT [&quot;executable&quot;,&quot;param1&quot;,&quot;param2&quot;]  exec调用执行<br>
+ENTRYPOINT command param1 param2 ：shell中执行</p>
+</li>
+<li>
+<p>ARG指令：<strong>定义创建镜像过程中使用的变量</strong>。在执行docker build时，可以通过-build-arg[=]来为变量赋值。当镜像编译成功后，ARG指定的变量将不再存在【<strong>ENV指定的变量将在镜像中保留</strong>】<br>
+格式：ARG <name> [=<default value>]</p>
+</li>
+<li>
+<p>ENV 指令：<strong>指定环境变量</strong>，在镜像生成过程中会被后续RUN指令使用，在镜像启动的容器中也会存在。指定的环境变量在运行时可以被覆盖掉，如：docker run --env <key>=<value></p>
+</li>
+<li>
+<p>VOLUME指令：创建一个数据卷挂载点。运行容器时可以从本地主机或其他容器挂载数据卷，一般用来存放数据库和需要保持的数据等。<br>
+格式：VOLUME [&quot;/data&quot;]</p>
+</li>
+<li>
+<p>WORKDIR指令：为后续的RUN、CMD、ENTRYPOINT指令配置工作目录。可以使用多个WORKDIR指令，后续命令如果参数是相对路径，则会基于之前命令指定的路径。<br>
+格式：WORKDIR /path/to/wordir<br>
+WORKDIR /a<br>
+WORKDIR b<br>
+WORKDIR c<br>
+RUN pwd   最终路径为/a/b/c</p>
+</li>
+</ul>
+<h3 id="镜像操作指令">镜像操作指令</h3>
+<ul>
+<li>
+<p>RUN指令：运行指定命令。每条RUN指令将在当前镜像基础上执行指定命令，并提交为新的镜像层。</p>
+<ul>
+<li>RUN <command>    : 默认将在shell终端中运行命令，即/bin/bash -c ;</li>
+<li>RUN [&quot;executable&quot;,&quot;param1&quot;,&quot;param2&quot;]  :使用exec执行，不会启动shell环境。指令会被解析为JSON，因此必须使用双引号。<br>
+指定使用其他终端类型可以通过第二种方式实现：RUN [&quot;/bin/bash&quot;,&quot;-c&quot;,&quot;echo hello&quot;]</li>
+</ul>
+</li>
+<li>
+<p>CMD 指令：用来指定启动容器时默认执行的命令。每个Dockerfile只能有一条CMD命令。如果指定了多条，只有最后一条会被执行。如果用户启动容器时手动指定了运行的命令（作为run命令的参数），则会覆盖掉CMD指定的命令。</p>
+<ul>
+<li>CMD [&quot;executable&quot;,&quot;param1&quot;,&quot;param2&quot;] : 相当于 executable param1 param2 ,推荐方式</li>
+<li>CMD command param1 param2 ：默认在shell中执行，提供给需要交互的应用</li>
+<li>CMD [&quot;param1&quot;,&quot;param2&quot;] ： 提供给ENTRYPOINT的默认参数</li>
+</ul>
+</li>
+<li>
+<p>ADD指令：添加内容到镜像。将复制指定的<src>路径下的内容到容器的<dest>路径下。其中<src>可以是Dockerfile所在目录的一个相对路径（文件或目录）；也可以是一个URL；还可以是一个tar文件（自动解压为目录）；<dest>可以是镜像内的绝对路径，或相对于工作目录（WORKDIR）的相对路径。路径支持正则格式。</p>
+<ul>
+<li>ADD <src> <dest></li>
+</ul>
+</li>
+<li>
+<p>COPY指令：复制内容到镜像。复制从主机的src（为Dockerfile所在目录的相对路径）下内容到镜像中的dest。目标路径不存在时，会自动创建。</p>
+<ul>
+<li>COPY <src> <dest></li>
+</ul>
+</li>
+</ul>
+<h1 id="docker-flink-安装-部署">docker flink 安装、部署</h1>
+<ul>
+<li></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Flink 内存设置——个人理解]]></title>
+        <id>https://wangyemao-github.github.io/post/flink-nei-cun-she-zhi-ge-ren-li-jie/</id>
+        <link href="https://wangyemao-github.github.io/post/flink-nei-cun-she-zhi-ge-ren-li-jie/">
+        </link>
+        <updated>2021-02-02T11:27:47.000Z</updated>
+        <content type="html"><![CDATA[<p>本文主要讲解关于TaskManager 1.10版本和JobManager 1.11版本之后，Flink内存相关设置。</p>
+<h1 id="flink-memory-组成">Flink memory 组成</h1>
+<p>Flink JVM进程的总内存包括<em>Flink应用程序内存（total Flink memory）<em>和</em>JVM运行该进程所消耗的内存</em>组成。total Flink memory 又包括<em>JVM Heap memory</em> 和<em>Off-Heap(direct and native)memory</em>。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612265850568.png" alt="" loading="lazy"></p>
+<p>JobManager的内存模型同上，TaskManager 的内存模型为：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612266194318.png" alt="" loading="lazy"><br>
+可见，TaskManager 进程中，total Flink memory 包括JVM Heap memory，Managed memory(由Flink管理的) 和其他Direct(或者native) memory组成。</p>
+<h1 id="configure-total-memory">Configure Total Memory</h1>
+<ol>
+<li>
+<p>在Flink中设置内存最简单的方式就是配置如下两个组合选项之一：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612266389363.png" alt="" loading="lazy"><br>
+<strong>注意</strong>：不推荐同时配置<em>total process memory * 和</em>total Flink memory*，可能因为潜在的配置冲突，造成部署失败。</p>
+</li>
+<li>
+<p>设置内存的另一种方式就是配置<em>total flink memory 的必须组成部分的内存</em><br>
+<img src="https://wangyemao-github.github.io/post-images/1612267283859.png" alt="" loading="lazy"></p>
+</li>
+</ol>
+<ul>
+<li>对于TaskManager，指定<em>task heap</em>和<em>managed memory</em>，它可以更好地控制Flink任务的可用JVM堆内存以及Managed memory。其余的内存组成部分将根据默认值或其他配置项进行自动调整。<br>
+** Task Heap Memory** ： 如果你想要确保特定大小的JVM Heap 内存用于用户代码任务执行，你可以显示指定 <em>task heap memory</em></li>
+</ul>
+<pre><code class="language-text">taskmanager.memory.task.heap.size 
+</code></pre>
+<p><strong>Managed Memory</strong> : 由Flink管理的，被分类为off-heap memory。Managed memory主要用于：(1) 流作业用于RocksDB state backend；（2）批作业用于排序，hash table，缓存中间结果等；（3）在流/批作业中用于user defined function in python processes。设置方式为：</p>
+<pre><code class="language-text">taskmanager.memory.managed.size    
+or
+taskmanager.memory.managed.fraction
+</code></pre>
+<p><strong>注意</strong>：  taskmanager.memory.managed.fraction 设置的占比是基于<em>total Flink Memory</em> 的占比。Size和fraction都配置的情况下，Size将覆盖fraction；如果都没设置，将使用默认的fraction计算。</p>
+<ul>
+<li>对于JobManager，指定*JVM Heap *大小，它提供了对可用JVM堆的更多控制。<br>
+JVM Heap内存用于：（1）Flink framework；（2）job提交期间执行的用户代码(比如，特定的批数据源)或者checkpoint完成时的回调。所需的JVM堆大小主要由正在运行的作业的数量、它们的结构和对上述用户代码的需求驱动。</li>
+</ul>
+<ol start="3">
+<li>推荐：已经在按照<strong>2</strong>进行配置的情况下，建议不要做<strong>1</strong>相关的配置。<br>
+具体来说，对TaskManager，如果已经配置了task heap memory 和managed memory的情况下，推荐不要在设置total process memory 和 total Flink memory。否则，很可能导致内存配置冲突问题。对JobManager，如果配置了JVM heap，也推荐不要在设置total process memory 和total Flink memory，否则也会导致同样的问题。</li>
+<li>Configure off-heap memory  ： off-heap memory 的相关配置，具体可参见官网。</li>
+</ol>
+<h1 id="local-execution">Local Execution</h1>
+<p>如果您在本地（例如从IDE中）运行Flink而没有创建集群，针对不同的进程有效的内存设置分别为：</p>
+<ul>
+<li>TaskManager ：除了下表中的设置项，其他的内存设置都会忽略<br>
+<img src="https://wangyemao-github.github.io/post-images/1612315668235.png" alt="" loading="lazy"><br>
+对于本地执行，当前Task Heap size 与 实际Heap size 没有任何关系。在下一个版本，它是未来优化的重要内容。实际的JVM Heap Size不是由Flink控制，而是依赖于如何启动Flink 进程。如果你想要控制JVM Heap 大小，你需要显示传递相应的JVM参数：比如，-Xmx，-Xms 。</li>
+<li>JobManager ： JobManager的内存配置项都会被忽略</li>
+</ul>
+<h1 id="memory-tuning">Memory tuning</h1>
+<p>本节主要说明：针对不同的使用场景如何设置内存，以及在每种场景下的重要设置项。</p>
+<h2 id="configure-memory-for-standalone-deployment">Configure memory for standalone deployment</h2>
+<p>对于standalone 部署模式，推荐配置*total Flink memory （taskmanager.memory.flink.size 或jobmanager.memory.flink.size）*或者其组成部分。另外，如果JVM MetaSpace存在问题，则可以对其进行调整。<br>
+*the total Process memory *是无关紧要的，因为JVM 开销并不由Flink或者部署环境控制，在这种情况下，只有执行机器的物理资源是重要的。</p>
+<h2 id="configure-memory-for-state-backends">Configure memory for state backends</h2>
+<p>该配置只与TaskManager有关。部署Flink 流应用程序时，使用的状态后端（state backend）类型将决定集群的最佳内存配置。</p>
+<h3 id="heap-state-backend">Heap state backend</h3>
+<p><em>当运行无状态作业或者使用heap state backend(MemoryStateBackend 或者 FsStateBackend)时，将Managed Memory设置为0</em>. 这可以确保为JVM上的用户代码分配最大数量的堆内存</p>
+<h3 id="rocksdb-state-backend">RocksDB state backend</h3>
+<p>RocksDBStateBackend 使用native memory。默认地，RocksDB设置将native memory限制为 managed memory的大小。因此，预留足够的managed memory给你的状态（state）是很重要的。如果禁用了RocksDB的内存控制，对于容器部署模式，当RocksDB分配的内存超过了请求的容器内存大小（the total process memory）时，TaskManager会被kill掉。</p>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[Set up Flink Memory——翻译]]></title>
         <id>https://wangyemao-github.github.io/post/set-up-flink-de-process-memory/</id>
@@ -314,7 +1469,8 @@ JobManager主机名和端口仅与非高可用的独立模式设置有关。 在
 </tbody>
 </table>
 <h2 id="fault-tolerance">Fault Tolerance</h2>
-<p>这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
+<p>**Restart strategies **decide whether and when the failed/affected tasks can be restarted。<br>
+这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
 仅当没有通过ExecutionConfig配置任何特定于作业的重启策略时，默认重启策略才会生效。</p>
 <table>
 <thead>
@@ -396,6 +1552,32 @@ JobManager主机名和端口仅与非高可用的独立模式设置有关。 在
 </tr>
 </tbody>
 </table>
+<h3 id="指定特定job的restart-strategy">指定特定job的Restart Strategy</h3>
+<p>处理基于fink-conf.yaml 定义默认重启策略，还可以定义每一个flink job的具体重启策略。</p>
+<pre><code class="language-java">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+env.setRestartStrategy(RestartStrategies.fixedDelayRestart(
+  3, // number of restart attempts
+  Time.of(10, TimeUnit.SECONDS) // delay
+)); 
+</code></pre>
+<h3 id="failover-strategies">Failover Strategies</h3>
+<p><strong>Failover strategies</strong> decide which tasks should be restarted to recover the job。Flink支持不同失败策略，可以通过在Flink的配置文件flink-conf.yaml中配置参数：jobmanager.execution.failover-strategy 进行配置：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612334885673.png" alt="" loading="lazy"></p>
+<ul>
+<li>Restart All ： 当某个task失败时，重启job的所有Tasks</li>
+<li>Restart Pipelined Region ： 此策略将任务分为不相交的区域。 当检测到任务故障时，此策略将计算必须重新启动以从故障中恢复的最小区域集。 与“重新启动所有故障转移策略”相比，对于某些作业，这可能导致要重新启动的任务更少。<br>
+一个区域就是通过pipeline data exchange的任务集。换句话说，batch data exchange标识了region的边界。
+<ul>
+<li>DataStrem job or Streaming Table/SQL job 都是 pipelined data exchange</li>
+<li>默认，Batch Table/SQL job 都是batched data exchange</li>
+<li>DataSet job中的data exchange 类型是由ExecutionMode决定的，ExecutionMode可以由ExecutionConfig设置<br>
+重启的region根据如下规则确定：</li>
+<li>包含了失败任务的region会重启</li>
+<li>如果要重新启动的区域需要结果分区时该分区不可用，则生成结果分区的区域也将重新启动</li>
+<li>如果要重新启动区域，则其所有使用方区域也将重新启动。 这是为了保证数据的一致性，因为不确定的处理或分区会导致不同的分区。</li>
+</ul>
+</li>
+</ul>
 <h2 id="checkpoints-and-state-backends">Checkpoints and State Backends</h2>
 <p>这些选项控制状态后端和检查点行为的基本设置<br>
 这些选项仅与以连续流方式执行的作业/应用程序相关。 以批处理方式执行的作业/应用程序不使用状态后端和检查点，而是使用针对批处理而优化的不同内部数据结构。</p>
@@ -455,1445 +1637,6 @@ JobManager主机名和端口仅与非高可用的独立模式设置有关。 在
 </table>
 <h2 id="memory-configuration">Memory Configuration</h2>
 <p>,</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Flink Uid剖析]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-uid-pou-xi/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-uid-pou-xi/">
-        </link>
-        <updated>2021-01-29T07:16:44.000Z</updated>
-        <summary type="html"><![CDATA[<p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
-<!-- more -->
-<h1 id="flink-uid-简介">Flink UID 简介</h1>
-<p>下面对uid的解释摘自Flink源码中的相关注释：</p>
-<h2 id="uid-notition">uid notition</h2>
-<pre><code class="language-text">uid: The unique user-specified ID of this transformation. The specified ID is used to assign the same operator ID across job submissions. this ID needs to be unique per transformation and job. Otherwise, job submission will fail.
-</code></pre>
-<p>大意就是说：uid 就是用户为transformation指定的，唯一的ID。当我们提交Flink作业时，指定的ID会分配给对应的operator，因此uid实际上就是operator id。并且需要注意用户为每一个转换指定的id应该在job和job内的转换中是惟一的，否则作业提交会失败。</p>
-<h2 id="uid设置及使用推荐">uid设置及使用推荐</h2>
-<p>Flink提供了为operator设置uid的方法：SingleOutputStreamOperator#uid()。 下面为一个简单的应用代码片段：</p>
-<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
-  // Stateful source (e.g. Kafka) with ID
-  .addSource(new StatefulSource())
-  .uid(&quot;source-id&quot;) // ID for the source operator
-  .shuffle()
-  // Stateful mapper with ID
-  .map(new StatefulMapper())
-  .uid(&quot;mapper-id&quot;) // ID for the mapper
-  // Stateless printing sink
-  .print(); // Auto-generated ID
-</code></pre>
-<p><strong>Flink官网推荐用户为作业中的每一个operator设置uid</strong>。主要原因在于方便后续Flink应用程序的升级和Flink版本的升级。<br>
-在流式作业运行过程中，通常会涉及到：Flink版本更新，作业拓扑图变更，作业并行度调整，红蓝部署派生新作业等操作。Flink savepoint为这些有计划地变更提供了手动的备份和作业恢复机制。它的实现原理为：savepoint中保存了operator ID 与有状态的operator state的映射的关系。<br>
-<strong>注意</strong>：savepoint中保存的只是有状态operator的id和对应的state数据。无状态operator不会保存在savepoint中。</p>
-<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1611907382714.png" alt="" loading="lazy"></figure>
-<p>当基于savepoint恢复作业时，Flink会读取保存在savepoint中的映射数据，并与提交作业的operator相匹配，匹配基于operator ID。如果都能匹配上，则基于保存的状态初始化operator；否则，作业会失败。当然，如果设置了“--allowNonRestoredState”选项，对于未匹配上的操作，使用默认状态进行初始化，而不是抛出异常。<br>
-因此，对于升级前后相同的operator，主要是有状态的operator，保证它的uid的稳定、一致性是很重要的。因此，强烈推荐用户为作业中每一个operator指定uid。当然，如果用户没有手动指定，那Flink内部也会为operator自动生成id。</p>
-<h1 id="flink-operator-id-生成">Flink operator id 生成</h1>
-<p>本节主要基于Flink原来，剖析operator id生成、实现原理：<br>
-在提交Flink作业之后，首先会生成SteamGraph；然后基于StreamGraph会构建JobGraph。也就是在将StreamGraph转换为JobGraph的过程中会为每个operator 生成一个唯一的hash值，也就是operator id。入口方法为：StreamGraphHasherV2#traverseStreamGraphAndGenerateHashes：</p>
-<pre><code class="language-java">	public Map&lt;Integer, byte[]&gt; traverseStreamGraphAndGenerateHashes(StreamGraph streamGraph) {
-		// The hash function used to generate the hash
-		final HashFunction hashFunction = Hashing.murmur3_128(0);
-		final Map&lt;Integer, byte[]&gt; hashes = new HashMap&lt;&gt;();
-
-		Set&lt;Integer&gt; visited = new HashSet&lt;&gt;();
-		Queue&lt;StreamNode&gt; remaining = new ArrayDeque&lt;&gt;();
-
-		// We need to make the source order deterministic. The source IDs are
-		// not returned in the same order, which means that submitting the same
-		// program twice might result in different traversal, which breaks the
-		// deterministic hash assignment.
-		List&lt;Integer&gt; sources = new ArrayList&lt;&gt;();
-		for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
-			sources.add(sourceNodeId);
-		}
-		Collections.sort(sources);
-
-		//
-		// Traverse the graph in a breadth-first manner. Keep in mind that
-		// the graph is not a tree and multiple paths to nodes can exist.
-		//
-
-		// Start with source nodes
-		for (Integer sourceNodeId : sources) {
-			remaining.add(streamGraph.getStreamNode(sourceNodeId));
-			visited.add(sourceNodeId);
-		}
-
-		StreamNode currentNode;
-		while ((currentNode = remaining.poll()) != null) {
-			// Generate the hash code. Because multiple path exist to each
-			// node, we might not have all required inputs available to
-			// generate the hash code.
-			if (generateNodeHash(currentNode, hashFunction, hashes, streamGraph.isChainingEnabled(), streamGraph)) {
-				// Add the child nodes
-				for (StreamEdge outEdge : currentNode.getOutEdges()) {
-					StreamNode child = streamGraph.getTargetVertex(outEdge);
-
-					if (!visited.contains(child.getId())) {
-						remaining.add(child);
-						visited.add(child.getId());
-					}
-				}
-			} else {
-				// We will revisit this later.
-				visited.remove(currentNode.getId());
-			}
-		}
-
-		return hashes;
-	}
-</code></pre>
-<p>从StreamGraph的sourceNode开始，<strong>对于有多个SourceNode的作业，按sourceId进行排序</strong>，按照广度优先遍历的方式，计算StreamGraph中每一个Node的Hash值。这个hash值就是对应node的operator id。每一个node的hash值具体生成看generateNodeHash()方法：</p>
-<pre><code class="language-java">	private boolean generateNodeHash(
-			StreamNode node,
-			HashFunction hashFunction,
-			Map&lt;Integer, byte[]&gt; hashes,
-			boolean isChainingEnabled,
-			StreamGraph streamGraph) {
-
-		// Check for user-specified ID
-		String userSpecifiedHash = node.getTransformationUID();
-
-		if (userSpecifiedHash == null) {
-			// Check that all input nodes have their hashes computed
-			for (StreamEdge inEdge : node.getInEdges()) {
-				// If the input node has not been visited yet, the current
-				// node will be visited again at a later point when all input
-				// nodes have been visited and their hashes set.
-				if (!hashes.containsKey(inEdge.getSourceId())) {
-					return false;
-				}
-			}
-
-			Hasher hasher = hashFunction.newHasher();
-			byte[] hash = generateDeterministicHash(node, hasher, hashes, isChainingEnabled, streamGraph);
-
-			if (hashes.put(node.getId(), hash) != null) {
-				// Sanity check
-				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
-						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
-			}
-
-			return true;
-		} else {
-			Hasher hasher = hashFunction.newHasher();
-			byte[] hash = generateUserSpecifiedHash(node, hasher);
-
-			for (byte[] previousHash : hashes.values()) {
-				if (Arrays.equals(previousHash, hash)) {
-					throw new IllegalArgumentException(&quot;Hash collision on user-specified ID &quot; +
-							&quot;\&quot;&quot; + userSpecifiedHash + &quot;\&quot;. &quot; +
-							&quot;Most likely cause is a non-unique ID. Please check that all IDs &quot; +
-							&quot;specified via `uid(String)` are unique.&quot;);
-				}
-			}
-
-			if (hashes.put(node.getId(), hash) != null) {
-				// Sanity check
-				throw new IllegalStateException(&quot;Unexpected state. Tried to add node hash &quot; +
-						&quot;twice. This is probably a bug in the JobGraph generator.&quot;);
-			}
-
-			return true;
-		}
-	}
-</code></pre>
-<p>该方法首先会获取对应node的transformationUID，它实际上就是用户调用uid()方法指定的uid值。接着处理逻辑分为两部分：<br>
-（1）transformationUID不为null，也就是用户指定了uid的情况下，基于用户指定的uid，计算hash值；</p>
-<pre><code class="language-java">Hasher hasher = hashFunction.newHasher();
-byte[] hash = generateUserSpecifiedHash(node, hasher);
-
-	/**
-	 * Generates a hash from a user-specified ID.
-	 */
-	private byte[] generateUserSpecifiedHash(StreamNode node, Hasher hasher) {
-		hasher.putString(node.getTransformationUID(), Charset.forName(&quot;UTF-8&quot;));
-		return hasher.hash().asBytes();
-	}
-</code></pre>
-<p>（2）transformationUID为null的情况下，自动生成确定性的hash值。对于这种情况，首先要检查该node的所有入节点的hash值都已经计算。在满足条件的情况下，调用generateDeterministicHash()方法：</p>
-<pre><code class="language-java">	/**
-	 * Generates a deterministic hash from node-local properties and input and
-	 * output edges.
-	 */
-	private byte[] generateDeterministicHash(
-			StreamNode node,
-			Hasher hasher,
-			Map&lt;Integer, byte[]&gt; hashes,
-			boolean isChainingEnabled,
-			StreamGraph streamGraph) {
-
-		// Include stream node to hash. We use the current size of the computed
-		// hashes as the ID. We cannot use the node's ID, because it is
-		// assigned from a static counter. This will result in two identical
-		// programs having different hashes.
-		generateNodeLocalHash(hasher, hashes.size());
-		// Include chained nodes to hash
-		for (StreamEdge outEdge : node.getOutEdges()) {
-			if (isChainable(outEdge, isChainingEnabled, streamGraph)) {
-
-				// Use the hash size again, because the nodes are chained to
-				// this node. This does not add a hash for the chained nodes.
-				generateNodeLocalHash(hasher, hashes.size());
-			}
-		}
-
-		byte[] hash = hasher.hash().asBytes();
-		// Make sure that all input nodes have their hash set before entering
-		// this loop (calling this method).
-		for (StreamEdge inEdge : node.getInEdges()) {
-			byte[] otherHash = hashes.get(inEdge.getSourceId());
-
-			// Sanity check
-			if (otherHash == null) {
-				throw new IllegalStateException(&quot;Missing hash for input node &quot;
-						+ streamGraph.getSourceVertex(inEdge) + &quot;. Cannot generate hash for &quot;
-						+ node + &quot;.&quot;);
-			}
-
-			for (int j = 0; j &lt; hash.length; j++) {
-				hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
-			}
-		}
-
-		if (LOG.isDebugEnabled()) {
-			String udfClassName = &quot;&quot;;
-			if (node.getOperator() instanceof AbstractUdfStreamOperator) {
-				udfClassName = ((AbstractUdfStreamOperator&lt;?, ?&gt;) node.getOperator())
-						.getUserFunction().getClass().getName();
-			}
-
-			LOG.debug(&quot;Generated hash '&quot; + byteToHexString(hash) + &quot;' for node &quot; +
-					&quot;'&quot; + node.toString() + &quot;' {id: &quot; + node.getId() + &quot;, &quot; +
-					&quot;parallelism: &quot; + node.getParallelism() + &quot;, &quot; +
-					&quot;user function: &quot; + udfClassName + &quot;}&quot;);
-		}
-
-		return hash;
-	}
-</code></pre>
-<p>该方法为节点自动生成对应hash值的具体实现，从实现代码可看到：<br>
-(1) 首先会基于hashs这个Map中已经保存的hash值个数计算该node的hash值，Map中已经保存的hash值的个数跟当前节点对应的操作在作业中的顺序是息息相关的。<br>
-(2) 遍历当前节点的所有出边，如果判断是可以与当前节点链接在一起的，会再次执行(1)处hash计算<br>
-(3) 遍历当前节点的所有入节点，当前节点的hash值会与每一个入节点的hash值做如下计算得到最终的hash值：</p>
-<pre><code class="language-java">for (StreamEdge inEdge : node.getInEdges()){
-    byte[] otherHash = hashes.get(inEdge.getSourceId());
-    for (int j = 0; j &lt; hash.length; j++){
-        hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
-    }
-}
-</code></pre>
-<p>根据上述处理逻辑，可以发现：</p>
-<ul>
-<li>对于用户指定uid情况，计算出来的operator hash值也是确定、一致的；</li>
-<li>对于未指定uid的情况，具体operator 的hash值会受到如下一些因素的影响：
-<ol>
-<li>operator 在作业图中的顺序；</li>
-<li>当前operator与出边的isChainable判断，包括：作业并行度，slotSharingGroup，chainingStrategy，StreamPartitioner等</li>
-<li>当前operator的入节点的hash值、顺序等</li>
-</ol>
-</li>
-</ul>
-<h1 id="写在最后">写在最后</h1>
-<p>那如果应用代码中没有指定uid；而又想要能保证升级之后的作业中有状态operator的uid与升级前是一致的，能否做到呢？<br>
-实际上，Flink 还提供了另外一个方法：SingleOutputStreamOperator#setUidHash()。该方法会直接为operator设置用户指定的hash值。当Flink版本升级时，或者是用户代码的调整导致自动生成的hash值变更时，通过这种方法直接设置升级前作业的hash值（该hash值可以从web ui 界面或者用户日志中获取），从而可以帮助重建建立保存状态到目标operator的映射。</p>
-<p><strong>需要注意的是</strong>：<br>
-该方法的使用是有门槛的，不想设置uid一样，我可以不区分是否为有状态操作，对所有operator都指定uid；对于uidHash的指定，一个重要的关注点就是：对于操作链中的operator，只需要为Head operator指定hash，为中间operator指定hash会导致作业提交失败。</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Savepoint]]></title>
-        <id>https://wangyemao-github.github.io/post/savepoint/</id>
-        <link href="https://wangyemao-github.github.io/post/savepoint/">
-        </link>
-        <updated>2021-01-21T01:04:58.000Z</updated>
-        <content type="html"><![CDATA[<h1 id="什么是savepoint-savepoint-与checkpoint的差异">什么是savepoint ？ savepoint 与checkpoint的差异？</h1>
-<p>savepoint(保存点)是流作业执行状态的一致性镜像，通过flink的<strong>checkpoint机制</strong>创建的。你可以使用savepoint来停止和恢复，fork，或更新Flink作业。<strong>savepoint由两部分组成：一个基于稳定存储（比如，HDFS, S3）的包含二进制文件的目录（通常比较大）；一个元数据文件(相对较小)</strong>。稳定存储上的文件为作业指定状态镜像的网络数据。savepoint的元数据文件以绝对路径的形式(主要地)包含了指向保存点稳定存储的所有文件的指针。</p>
-<blockquote>
-<p><strong>注意</strong>：为了允许程序和Flink版本的升级，检查是否为操作分配了ID是非常重要的</p>
-</blockquote>
-<p>从概念上讲，Flink的savepoint与checkpoint的区别同传统数据库系统中的备份与恢复日志的区别很相似。checkpoint的主要目的是在作业意外失败时提供恢复机制。checkpoint的生命周期是由Flink管理的。也就是说，checkpoint是由Flink创建、持有和释放的，不需要与用户交互。作为一种恢复和周期性的触发方法，checkpoint实现的两个主要设计目标是：（1）轻量级的创建；（2）尽可能快递恢复。针对这些目标的优化可以利用某些属性，例如，作业代码在两次执行尝试之间不会改变。<strong>checkpoint通常在用户终止作业之后被删除(除非显式地配置为保checkpoint)</strong>。</p>
-<p>相反地，savepoint是由用户创建、持有和删除的。它们的用途就是计划性地手动备份和恢复。比如，Flink的版本更新，变更job图，变更并行度，像红/蓝部署那样派生另一个job，等等。当然，<strong>savepoint必须在作业停止之后继续存在</strong>。<strong>从概念上将，savepoint的生成和恢复成本可能会更高，并且它更对地关注与可以执行以及对前面提到的作业变更的支持</strong>。</p>
-<p>撇开这些概念上的差异，<strong>当前checkpoint和savepoint的实现基本上使用相同的代码并生成相同的格式。但是，目前存在一个例外</strong>，在未来可能会引入更多的差异。<strong>例外的情况是基于RocksDB 后备状态的增量checkpoint。这种情况使用的是RocksDB的内部格式，而不是flink的原生savepoint格式</strong>。这就是checkpoint比savepoint更轻量级的第一个具体事例。</p>
-<h1 id="分配操作idsoperator-ids">分配操作IDs(Operator IDs)</h1>
-<p>强烈建议您按照本节的描述调整您的程序，以便将来能够升级您的程序.<strong>主要需要的更改是通过uid(String)方法手动指定操作符id</strong>。这些id用于确定每个操作符的状态</p>
-<pre><code class="language-java">DataStream&lt;String&gt; stream = env.
-  // Stateful source (e.g. Kafka) with ID
-  .addSource(new StatefulSource())
-  .uid(&quot;source-id&quot;) // ID for the source operator
-  .shuffle()
-  // Stateful mapper with ID
-  .map(new StatefulMapper())
-  .uid(&quot;mapper-id&quot;) // ID for the mapper
-  // Stateless printing sink
-  .print(); // Auto-generated ID
-</code></pre>
-<p>如果您不手动指定id，它们将自动生成。只要这些id不更改，就可以从保存点自动恢复。<strong>生成的id取决于程序的结构，并且对程序更改很敏感。因此，强烈建议手动分配这些id</strong></p>
-<h2 id="savepoint-state">Savepoint State</h2>
-<p>你可以将savepoint看成是Operator ID 与每个有状态操作的State之间的映射<br>
-<img src="https://wangyemao-github.github.io/post-images/1611209765479.png" alt="" loading="lazy"></p>
-<p>在上面的例子中，print sink是无状态的，因此它不是保存点状态的一部分。默认情况下，我们尝试将保存点的每个条目映射回新程序</p>
-<h1 id="operations操作">Operations（操作）</h1>
-<p>您可以使用命令行客户端来触发savepoints、完成savepoints并取消作业、从savepoint恢复以及删除savepoint<br>
-<strong>在Flink1.2.0版本之后，也可以使用webui，从savepoint恢复作业</strong></p>
-<h2 id="触发savepoints">触发savepoints</h2>
-<p>当触发一个savepoints时，将创建一个新的savepoints目录，其中存储数据和元数据。可以通过<strong>配置默认目标目录</strong>或使用触发器命令指定自定义目标目录来控制此目录的位置。<br>
-<strong>注意</strong>：目标目录必须是JobManager和TaskManager都可以访问的位置。比如，分布式文件系统上的某个目录<br>
-例如使用FsStateBackend或RocksDBStateBackend的savepoint目录结构：<br>
-<img src="https://wangyemao-github.github.io/post-images/1611210701803.png" alt="" loading="lazy"></p>
-<p><strong>注意</strong>：尽管看起来savepoint可以被移动，但由于元数据文件中保存的是状态文件的绝对路径，目前这是不可能的。请跟踪 FLINK-5778 查看为解除这一限制的处理进展</p>
-<p><strong>注意</strong>：如果你使用 MemoryStateBackend，元数据和savepoint状态数据都将存储在**_metadata** 文件中。由于它是自包含的，你可以移动文件并从任何位置恢复。</p>
-<p><strong>注意</strong>：不建议移动或删除正在运行的作业的最后一个保存点，因为这可能会妨碍故障恢复。保存点对“exactly-once”的sink是有副作用的，因此为了确保“exactly-once&quot; 语义，如果在最后一个savepoint之后没有新的检查点，那么savepoint将用于恢复。</p>
-<h2 id="trigger-a-savepoint">Trigger a Savepoint</h2>
-<blockquote>
-<p>bin/flink savepoint :jobId [:targetDirectory]<br>
-这将为ID:jobId的作业触发一个保存点，并返回创建的保存点的路径。您需要此路径来恢复和删除保存点</p>
-</blockquote>
-<h2 id="cancel-job-with-savepoint">Cancel Job with Savepoint</h2>
-<blockquote>
-<p>$ bin/flink cancel -s [:targetDirectory] :jobId<br>
-这将自动触发ID:jobid作业的保存点并取消作业。此外，还可以指定存放保存点的目标文件系统目录。该目录需要被JobManager(s)和TaskManager(s)访问。</p>
-</blockquote>
-<h2 id="resuming-from-savepoints">Resuming from Savepoints</h2>
-<blockquote>
-<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
-这将提交作业并指定要从中恢复的保存点。您可以指定保存点目录或元数据文件的路径</p>
-</blockquote>
-<h2 id="allowing-non-restored-state">Allowing Non-Restored State</h2>
-<p>默认情况下，恢复操作将尝试将保存点的所有状态映射回您正在使用的程序。如果存在删除某些操作，可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态</p>
-<blockquote>
-<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
-</blockquote>
-<h2 id="disposing-savepoints">Disposing Savepoints</h2>
-<blockquote>
-<p>$ bin/flink savepoint -d :savepointPath<br>
-该命令会处理保存在:savepointPath路径的保存点<br>
-<strong>注意</strong> ：也可以通过常规文件系统操作手动删除保存点，而不会影响其他保存点或检查点(记住，每个保存点都是自包含的)</p>
-</blockquote>
-<p><strong>configuration：</strong></p>
-<blockquote>
-<p>可以通过键<strong>state.savepoints.dir</strong>配置一个默认的savepoint目标目录。当触发savepoint时，该目录将用于存储savepoint。你也可以通过触发命令指定自定义的目标目录以覆盖默认值。</p>
-<h1 id="default-savepoint-target-directory">Default savepoint target directory</h1>
-<p>state.savepoints.dir: hdfs:///flink/savepoints</p>
-</blockquote>
-<h1 id="q-a">Q &amp; A</h1>
-<ol>
-<li>是否应该为job中的所有操作(operator)分配IDs<br>
-<strong>根据经验来说，是的</strong><br>
-严格来说，只需要通过uid()方法将IDs分配给job中有状态的操作就足够了。savepoint只保存有状态操作的状态，无状态的操作不是savepoint的一部分<br>
-实践中，建议为所有的操作都指定IDs。因为一些Flink内置的操作比如window操作也是有状态的，并且内置的操作实际上是否是有状态的也并不是很清楚。如果你确定某个操作时状态的，那么你可以直接跳过指定IDs。</li>
-<li>如果向job中添加了一个需要状态的新操作，会发生什么<br>
-当您向作业添加一个新的操作时，它将在没有任何状态的情况下被初始化。Savepoints包含了所有有状态操作的状态。无状态的操作并不是savepoint的一部分。新增有状态操作就类似于无状态操作的处理</li>
-<li>如果我从我的job中删除一个有状态的操作符会发生什么<br>
-默认情况下，savepoint恢复将尝试将所有保存状态与还原的作业匹配。因此，如果从包含已删除操作状态的保存点进行恢复，则将失败<br>
-可以通过**--allowNonRestoredState（short: -n）选项**，跳过不能映射到新程序的状态恢复：
-<blockquote>
-<p>$ bin/flink run -s :savepointPath -n [:runArgs]</p>
-</blockquote>
-</li>
-<li>如果job中重新排序有状态操作会发生什么<br>
-如果您给这些操作分配了id，它们将像正常一样被恢复<br>
-如果您没有分配id，那么自动生成的有状态操作符的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
-<li>如果在job中添加、删除或重新排序没有状态的操作会发生什么情况<br>
-如果将id分配给有状态操作，则无状态操作符将不会影响保存点恢复。<br>
-如果没有分配id，则有状态操作符的自动生成的id很可能在重新排序后发生变化。这将导致您无法从以前的保存点恢复。</li>
-<li>当我在恢复时改变程序的并行性时会发生什么<br>
-如果保存点是通过Flink &gt;= 1.2.0触发的，并且没有使用像checkpoint等过时的状态API，那么您可以简单地从保存点恢复程序并指定一个新的并行度。<br>
-如果你要从一个由Flink &lt; 1.2.0触发的保存点恢复，或者使用现在已经不支持的api，你必须首先将你的作业和保存点迁移到Flink &gt;= 1.2.0，然后才能改变并行度。<strong>请参阅升级作业和Flink版本指南</strong>。</li>
-<li>可以移动保存点文件在稳定存储<br>
-这个问题的快速答案是目前没有，因为元数据文件引用稳定存储文件作为绝对路径的技术原因。较长的答案是:如果由于某种原因必须移动文件，有两种可能的解决方法。首先，更简单但潜在更危险的是，您可以使用编辑器在元数据文件中找到旧路径，并用新路径替换它们。其次，可以使用SavepointV2Serializer类作为起点，以编程方式读取、操作和使用新路径重写元数据文件。</li>
-</ol>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[upgrading applications and flink version —翻译from官网]]></title>
-        <id>https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/</id>
-        <link href="https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/">
-        </link>
-        <updated>2021-01-20T14:36:40.000Z</updated>
-        <content type="html"><![CDATA[<p>Flink 流程序(DataStream Programs)通常设计为长时间运行，比如几周、几个月甚至几年。同所有长时间运行的服务一样，Flink流程序需要不断进行维护，包括：<strong>bug修复</strong>，<strong>实现改进</strong>，或<strong>将应用程序迁移到更高版本的Flink集群</strong><br>
-<strong>本文主要描述：如何更新Flink流程序，以及如何将正在运行的流程序迁移到不同的Flink集群</strong></p>
-<h1 id="重启流程序">重启流程序</h1>
-<p>升级Flink流应用程序以及将应用程序迁移到不同的集群操作路线都是基于Flink的<strong>Savepoint特性</strong>。一个savepoint就是应用在某个特定时间点的一致性快照。<br>
-有两种方式可以从正在运行的流应用程序中获取savepoint：</p>
-<ol>
-<li>应用程序继续运行的同时执行savepoint：
-<blockquote>
-<p>./bin/flink savepoint <jobID> [pathToSavepoint]<br>
-推荐定期获取savepoint，以便能从之前的时间点重新重启应用程序。</p>
-</blockquote>
-</li>
-<li>停止应用程序的同时，执行savepoint：
-<blockquote>
-<p>./bin/flink cancel -s [pathToSavepoint] <jobID><br>
-这意味着应用程序在完成savepoint之后会立即被取消。也就是说，在此次savepoint发生之后不会再有其他的checkpoint发生</p>
-</blockquote>
-</li>
-</ol>
-<p>给定从某个应用程序获取的savepoint，可以从savepoint（保存点）启动相同或者兼容的应用（具体参见应用状态兼容章节）。从savepoint的位置启动意味着：应用程序的操作状态是使用持久化到savepoint中的操作状态来做初始化的。这是通过使用保存点启动应用程序来完成的。</p>
-<blockquote>
-<p>./bin/flink run -d -s [pathToSavepoint] ~/application.jar</p>
-</blockquote>
-<p>启动的应用程序的操作使用执行savepoint(保存点)时，原始应用程序(即，执行savepoint(保存点)的应用程序)的操作状态进行初始化。启动的应用程序将准确地从此状态点开始继续处理。</p>
-<p><strong>注意</strong>：即便Flink始终会恢复应用的状态，它仍然不能恢复(回退)对外部系统的写操作。如果你的应用程序是基于应用程序未停止时获取的savepoint(保存点) 恢复的，这可能是一个问题。在这种情况下，应用程序在执行savepoint之后，可能又发出了很多数据，重启的应用程序（取决于你是否更改了应用程序的逻辑）可能会再次发出相同的数据。这种行为的确切影响可能会因为SinkFunction和存储系统的不同而有很大的不同。对于像幂等写入到Cassandra这样的键值存储系统来说，发送两次数据可能不会有什么问题；但是在追加数据到kafka这样的持久日志的情况下，就会存在问题。在任何情况下，你都应该仔细检查和测试重新启动的应用程序的行为。</p>
-<h1 id="应用程序状态兼容性">应用程序状态兼容性</h1>
-<p>为了修复bug或者改进应用程序而升级应用程序时，通常的目标都是在保留其状态的同时替换应用程序逻辑。我们通过从原始应用程序的保存点（savepoint）启动升级后的应用程序来实现。但是，这只有在两个应用程序的状态是兼容时，才是有效的。也就是说，升级后的应用程序的操作能够从原始应用程序的操作状态初始化它们的状态。<br>
-本节，主要讨论如何修改应用程序以保持状态的兼容。</p>
-<h2 id="匹配操作状态">匹配操作状态</h2>
-<p>当应用程序基于某个savepoint重启时，Flink将存储在savepoint中的操作状态与启动应用的有状态操作进行匹配。匹配是基于操作ID，操作ID也会存储在savepoint中。根据操作在应用程序操作拓扑的位置，每个操作都有一个默认的操作ID。因此，一个未修改的应用总是可以从它自己的savepoints重启。但是，如果应用程序修改了，操作的默认ID很可能会被修改。因此，修改的应用程序只有在它的操作ID都已经显示指定的情况下，才能从savepoint中重启。给操作分配ID非常简单，使用uid(String)方法完成，如下：</p>
-<pre><code class="language-scala">val mappedEvents: DataStream[(Int, Long)] = events
-  .map(new MyStatefulMapFunc()).uid(&quot;mapper-1&quot;)
-</code></pre>
-<p><strong>注意</strong>：因为存储在savepoint中的IDs和重启的应用程序的操作IDs必须相同，因此，强烈推荐，强烈建议为将来可能升级的应用程序的所有操作符分配唯一id。此建议适用于所有的操作，即，所有显示申明或没有申明操作状态的操作，因为有的操作它的内部状态对用户而言是不可见的（比如Window操作）。升级没有分配操作ID的应用程序要困难的多，可能只能通过使用setUidHash()方法的低级解决方法实现。<br>
-<strong>重要的</strong>：自1.3.X版本开始，上述也使用与操作链中的操作<br>
-默认地，所有存储在savepoint中的状态都必须与重启应用的操作匹配。然而，在从某个savepoint启动应用程序时，用户可能会显示地同意跳过（丢弃）那些不能匹配上操作的状态。<strong>对于在savepoint中未查找到状态的有状态操作，它会使用默认的状态进行初始化</strong>。用户可以通过调用ExecutionConfig#disableAutoGeneratedUIDs来强制执行最佳实践，如果任何操作符不包含自定义唯一ID，那么该操作将导致作业提交失败</p>
-<h2 id="有状态的操作与用户函数">有状态的操作与用户函数</h2>
-<p>在升级应用时，用户函数和操作都可以自由修改，除了一条限制。<strong>也就是操作状态的数据类型不能修改</strong>。这是很重要的，因为从某个savepoint中获取的状态在加载到某个操作之前，(当前)不能转换为不同的数据类型。因此，因此，在升级应用程序时更改操作符状态的数据类型会破坏应用程序状态的一致性，并阻止从保存点重新启动升级的应用程序。<br>
-操作状态可以是用户自定义状态也可以是内部状态</p>
-<ul>
-<li>用户定义操作状态：在包含了用户定义操作状态的函数中，状态的类型是由用户显示定义的。虽然不能更改操作符状态的数据类型，但克服这一限制的解决方案是使用不同的数据类型定义第二个状态，并实现将状态从原始状态迁移到新状态的逻辑。这种方法需要良好的迁移策略和对<strong>键分区状态行为</strong>的充分理解。</li>
-<li>内部操作状态：诸如window或join操作，都维持了用户不可见的内部的操作状态。对于这些操作，内部状态的数据类型依赖于操作的输入和输出类型。因此，变更各自的输入或输出类型会破坏应用程序的一致性，并阻止升级。下表列出了具有内部状态的操作，并显示了状态数据类型如何与它的输入和输出类型相关联。对于应用于keyed Stream的操作，key的类型也时状态数据类型的一部分<br>
-<img src="https://wangyemao-github.github.io/post-images/1611160060748.png" alt="" loading="lazy"></li>
-</ul>
-<h2 id="应用程序拓扑">应用程序拓扑</h2>
-<p>除了变更一个或多个现有操作外，还可以通过变更程序拓扑来升级应用程序。即，通过增加或移除操作，变更操作的并行度，或者修改操作的链行为。<br>
-通过改变程序拓扑升级应用程序时，为了保持应用状态的一致性，需要考虑如下几点：</p>
-<ul>
-<li><strong>增加或移除无状态的操作</strong>：这个没有问题除非下述情况之一</li>
-<li><strong>增加一个有状态操作</strong>：操作的状态将被初始化为默认状态，除非它接管另一个操作的状态</li>
-<li><strong>移除一个有状态的操作</strong>：被移除的操作的状态将丢失，除非被另一个操作接管。当启动升级应用程序时，您必须明确同意放弃该状态</li>
-<li><strong>变更操作的输入或输出类型</strong>：当在具有内部状态的操作之前或之后添加新操作时，您必须确保有状态操作的输入或输出类型不会被修改以保持内部操作状态的数据类型不变</li>
-<li><strong>变更操作链</strong>：多操作操作可以连接在一起以提高性能。自Flink1.3.X版本之后，当从savepoint恢复时，保持状态的一致性的同时修改操作链是有可能。可以中断链，将有状态操作移出链。还可以将新的或现有的有状态操作追加或注入到链中，或者修改链中的操作顺序。但是，当将基于保存点升级到1.3.x版本时，最重要的是要保证在链接方面拓扑结构没有改变。如上面的匹配操作符状态部分所述，应该为链中的所有操作符分配一个ID。</li>
-</ul>
-<h1 id="升级flink框架版本">升级Flink框架版本</h1>
-<p>本节描述在不同版本之间升级Flink和在不同版本之间迁移作业的一般方法。<br>
-简而言之，这个过程包括两个基本步骤：</p>
-<ol>
-<li>在前面的旧Flink版本中获取要迁移的作业的保存点</li>
-<li>在新的Flink版本下从以前版本获取的保存点恢复您的job<br>
-除了这两个基本步骤之外，还需要一些额外的步骤，这取决于您想要更改Flink版本的方式。在本指南中，我们区分了跨Flink版本升级的两种方法:就地升级和阴影复制升级。<br>
-对于就地升级，在获取保存点之后，您需要：</li>
-<li>停止/取消所有运行的作业</li>
-<li>停掉旧版本的flink集群</li>
-<li>升级flink到新版本集群</li>
-<li>重启新版本集群<br>
-对于影子拷贝，你需要：</li>
-<li>在从保存点恢复之前，除了旧版本的Flink安装外，还要安装新版本的Flink</li>
-<li>使用新版本的Flink从保存点恢复</li>
-<li>如果一切正常，请停止并关闭旧版本的Flink群集<br>
-下面，我们将首先介绍成功的工作迁移的先决条件，然后详细介绍我们前面概述的步骤。</li>
-</ol>
-<h2 id="前提条件">前提条件</h2>
-<p>在开始迁移之前，请检查要迁移的作业是否遵循保存点的最佳实践。另外，请查看API迁移指南，看看是否有任何与将保存点迁移到新版本相关的API更改。<br>
-特别地，我们建议您检查作业是否为操作设置了显式的uid。<br>
-这是一个软先决条件，如果您忘记分配uid，那么恢复应该仍然有效。如果遇到行不通的情况，你可以使用setUidHash(String hash)调用，手动将以前Flink版本中生成的legacy vertex ids添加到作业中。对于每个操作(在操作链中：只有head 操作)你必须分配32位的十六进制字符串，你可以在web ui或者日志中查看，它代表了对应操作的hash值。<br>
-除了操作符uid之外，目前还有两个会导致迁移失败的作业迁移的先决条件：</p>
-<ol>
-<li>不支持RocksDB半异步模式下的状态迁移。如果旧的作业使用这种模式，您仍然可以在savepoint之前将作业更改为使用完全异步模式。</li>
-<li>另一个重要的前提条件是，所有的保存点数据必须对于从新安装Flink版本在相同的(绝对的)路径下都是可访问的。这还包括访问从保存点文件(状态后端快照的输出)中引用的任何其他文件，包括但不限于通过状态处理器API修改而引用的其他保存点。任何保存点数据目前都是由元数据文件中的绝对路径引用的，因此保存点不能通过典型的文件系统操作进行重定位</li>
-</ol>
-<h2 id="step1-对现有job做savepoint并停job">STEP1: 对现有job做savepoint并停job</h2>
-<p>版本迁移的第一个主要步骤是获取一个保存点，并停止在旧的Flink版本上运行的作业<br>
-您可以使用这个命令来做到这一点：</p>
-<blockquote>
-<p>$ bin/flink stop [--savepointPath :savepointPath] :jobId<br>
-更多信息，参看 savepoint documentation.</p>
-</blockquote>
-<h2 id="step2-升级集群到新flinl版本">STEP2: 升级集群到新Flinl版本</h2>
-<p>在这一步中，我们更新集群的框架版本。这基本上意味着用新版本替换Flink安装的内容。这个步骤取决于你在你的集群中运行Flink的方式(例如单机，Mesos)<br>
-如果您不熟悉在集群中安装Flink，请阅读部署和集群设置文档</p>
-<h2 id="step3基于savepoint在新的flink版本下恢复作业">STEP3：基于savepoint在新的Flink版本下恢复作业</h2>
-<p>作为作业迁移的最后一步，从上面更新的集群上的保存点恢复。您可以使用这个命令来做到这一点：</p>
-<blockquote>
-<p>$ bin/flink run -s :savepointPath [:runArgs]<br>
-同样，要了解更多细节，请查看savepoint文档。</p>
-</blockquote>
-<h2 id="compatibility-table">Compatibility Table</h2>
-<p>保存点在Flink版本之间是兼容的，如下表所示:</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Upgrade Flink to 1.12 —Release Notes(翻译官网)]]></title>
-        <id>https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/</id>
-        <link href="https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/">
-        </link>
-        <updated>2021-01-18T01:50:01.000Z</updated>
-        <summary type="html"><![CDATA[<p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
-<!-- more -->
-<h1 id="已知存在的问题">已知存在的问题</h1>
-<h2 id="未对齐的checkpoint-恢复可能会导致数据流损毁-flink-20654">未对齐的checkpoint 恢复可能会导致数据流损毁 FLINK-20654</h2>
-<p>在Flink 1.12 版本中，同时使用<strong>未对齐的检查点(UnalignedCheckpoints) <strong>加</strong>两个/多个输入任务或单输入任务的联合输入(Union inputs)</strong> 组合情况，可能会导致状态数据损毁。<br>
-<strong>发生的场景</strong>：在完全恢复完成之前触发了新的检查点就会发生这种情况。导致一个带有两个或多个输入的任务发生状态损毁的前提是：该任务必须在完成恢复溢出的飞行数据的同时接受检查点屏障。在这种情况下，新的检查点是可以执行成功的，但是因为传输中的数据已损毁/丢失，当尝试从已损毁的检查点恢复时，这将导致各种反序列化/数据流已损毁的错误。</p>
-<h1 id="apis-相关变更和注意点">APIs 相关变更和注意点</h1>
-<h2 id="移除了executionconfig-中的deprecated-方法-flink-19084">移除了ExecutionConfig 中的deprecated 方法 FLINK-19084</h2>
-<ul>
-<li>移除了过期的ExecutionConfig#isLatencyTrackingEnabled方法，替代方法：ExecutionConfig#getLatencyTrackingInterval代替</li>
-<li>过期的或无效的方法被移除：ExecutionConfig#enable/disableSysoutLogging ；ExecutionConfig#set/isFailTaskOnCheckpointError</li>
-<li>从cli中移除了无效的-q选项</li>
-</ul>
-<h2 id="移除过期的runtimecontextgetallaccumulators-方法-flink-19032">移除过期的RuntimeContext#getAllAccumulators 方法 FLINK-19032</h2>
-<p>移除了RuntimeContext#getAllAccumulators方法，替代方法：RuntimeContext#getAccumulator</p>
-<h2 id="因为存在数据丢失的风险设置方法过期checkpointconfigsetprefercheckpointforrecovery-flink-20441">因为存在数据丢失的风险，设置方法过期：CheckpointConfig#setPreferCheckpointForRecovery FLINK-20441</h2>
-<p>因为偏好选择旧的检查点，而不是新的保存点来进行恢复可能会导致数据丢失，设置CheckpointConfig#setPreferCheckpointForRecovery为过期方法</p>
-<h2 id="flip-134datastream-api中批执行相关">FLIP-134：DataStream API中批执行相关</h2>
-<ol>
-<li>
-<p>允许显示地在KeyedStream.intervalJoin()上配置时间行为 FLINK-19479<br>
-在FLINK 1.12之前，KeyedStream.intervalJoin()操作基于全局设置的流的时间特性（TimeCharacteristic)来改变行为。在Flink 1.12中，在IntervalJoin类中显示地引入了inProcessingTime() 和 inEventTime()方法，join不再基于全局的时间特性改变行为。</p>
-</li>
-<li>
-<p><em>将DataSteam API中的timeWindow()方法设置为过期方法 FLINK-19318</em><br>
-在Flink 1.12中，DataStream API中的timeWindow()方法设置为过期。请使用window(WindowAssigner) + TumblingEventTimeWindows/SlidingEventTimeWindows/TumblingProcessingTimeWindows/SlidingProcessingTimeWindows 替代。更多的信息，请查看TimeCharacteristic/setStreamTimeCharacteristic的过期描述</p>
-</li>
-<li>
-<p><em>将StreamExecutionEnvironment.setStreamTimeCharacteristic()和TimeCharacteristic 设置为过期 FLINK-19319</em><br>
-在Flink 1.12中，默认的流时间特性已经变更为Event Time，因此，你不需要再显示地调用这个方法来开启Event-time 支持。显示使用处理时间（Processing Time）窗口和计时器可以在Event-time模式下使用。如果想要禁用水印（watermark），请使用ExecutionConfig.setAutoWatermarkInterval(long)方法。如果想使用IngestionTime，请手动设置合适的WatermarkStrategy。如果使用基于时间特性（time characteristic）更改行为的通用的“time window”操作（比如，KeyedStream.timeWindow()），请使用等效的显示指定Processing time 或event Time的操作。</p>
-</li>
-<li>
-<p>允许在CEP PatternStream中显示配置时间行为  FLINK-19326<br>
-在Flink 1.12之前，CEP 操作基于全局设置的流时间特性来变更行为。在Flink 1.12中，PatternStream中引入了显示设置的inProcessingTime() 和inEventTime()方法，CEP操作不再基于全局的时间特性变更行为</p>
-</li>
-</ol>
-<h2 id="api-清理">API 清理</h2>
-<ol>
-<li>移除了剩余的UdfAnalyzer 配置 FLINK-13857<br>
-移除了ExecutionConfig#get/setCodeAnalysisMode方法和 SkipCodeAnalysis 类。在这个变更之前，这些类或方法也没有启作用，所以也没有必要使用</li>
-<li><em>移除过期的DataStream#split FLINK-19083</em><br>
-DataStream#split方法在几个版本中被标记为已弃用后被删除，替代方法：请使用Side Outputs 替换</li>
-<li><em>移除了过期的DataStream#fold() 方法以及所有相关的类 FLINK-19035</em><br>
-长时间弃用的（Window）DataStream#fold方法在Flink 1.12版本中已经移除。请使用其他操作比如：（Window）DataStream#reduce方法替代，该方法在分布式系统中具有更好的性能</li>
-</ol>
-<h2 id="extend-compositetypeserializersnapshot-to-allow-composite-serializers-to-signal-migration-based-on-outer-configuration-flink-17520">Extend CompositeTypeSerializerSnapshot to allow composite serializers to signal migration based on outer configuration FLINK-17520</h2>
-<p>CompositeTypeSerializerSnapshot # isOuterSnapshotCompatible(TypeSerializer)方法已经设置为过期，为了支持新的OuterSchemaCompatibility#resolveOuterSchemaCompatibility(TypeSerializer)方法。请自行实现它。与旧方法相比，新方法允许复合序列化器基于外部模式和配置来指示状态模式迁移。</p>
-<h2 id="bump-scala-macros-version-to-211-flink-19278">Bump Scala Macros Version to 2.1.1 FLINK-19278</h2>
-<p>Flink现在依赖Scala Macros 2.1.1 。这也意味着不再支持(Scala&lt;&quot;2.11.11&quot;)的版本</p>
-<h1 id="connectors-and-formats">Connectors and Formats</h1>
-<h2 id="移除了kafka-010x-和011x-connectors-flink-19152">移除了Kafka 0.10.x 和0.11.x connectors  FLINK-19152</h2>
-<p>在Flink 1.12中，移除了kafka 0.10.x 和 0.11.x connectors。请使用通用的kafka链接器（universal kafka connector），它支持所有0.10.2.x 版本之后的kafka集群版本。<br>
-请参阅文档，链接如何升级Flink kafka connector 版本 https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/connectors/kafka.html</p>
-<h2 id="csv序列化模式包含了行分隔符-flink-19868">Csv序列化模式包含了行分隔符 FLINK-19868</h2>
-<p>csv.line-delimiter 选项已经从CSV格式中移除。因为行分隔符应该由连接器定义，而不是由格式(format)去定义。如果用户已经在以前的Flink版本中使用了这个选项，在升级到Flink 1.12时，应该alter such table to remove this option。应该没有太多用户使用了这个选项。</p>
-<h2 id="升级到kafka-schema-registry-client-550-flink-18546">升级到Kafka Schema Registry Client 5.5.0 FLINK-18546</h2>
-<p>flink-avro-confluent-schema-registry模块不再作为fat-jar提供。你应该将它所依赖的添加到你的fat-jar中。Sql-客户端用户可以使用 flink-sql-avro-confluent-schema-registry  fat -jar。</p>
-<h2 id="将avro-version-版本从182升级到1100-flink-18192">将Avro version 版本从1.8.2升级到1.10.0 FLINK-18192</h2>
-<p>flink-avro模块的Avro默认版本已经升级到1.10.如果由于某些原因，你需要使用一个旧版本（有来自Hadoop的Avro，或者你使用了基于旧版本Avro的类），请在项目中显示地降低Avro版本。<br>
-注意：我们发现Avro 1.10版本的性能比1.8.2版本有所下降。如果你关心性能，并且你可以很好地使用旧版本的Avro，考虑降级Avro的版本。</p>
-<h2 id="为sql-客户端打包flink-avro时创建一个uber-jar">为SQL 客户端打包flink-avro时，创建一个uber jar</h2>
-<p>SQL客户端jar被重命名为flink-sql-avro-1.12.0.jar，之前为： flink-avro-1.12.0-sql-jar.jar。并且不再需要手动增加Avro依赖。</p>
-<h1 id="部署">部署</h1>
-<h2 id="默认log4j配置在达到100mb后滚动日志-flink-8357">默认log4j配置：在达到100MB后滚动日志  FLINK-8357</h2>
-<p>默认的log4j配置已经变更：除了已有的在Flink启动时滚动日志文件外，当日志文件大小达到100MB时，也会滚动日志文件。Flink总共保存了10个日志文件，有效地将日志目录总大小限制为1GB。</p>
-<h2 id="在flink的docker镜像中默认使用jemalloc-flink-19125">在Flink的docker镜像中默认使用jemalloc FLINK-19125</h2>
-<p>在Flink的docker镜像中，使用jemalloc作为默认的内存分配器，以减少内存碎片问题。在docker-entrypoint.sh 脚本中设置“disable-jemalloc”，可以回滚到使用glibc内存分配器。更多细节，请参考https://ci.apache.org/projects/flink/flink-docs-release-1.12/deployment/resource-providers/standalone/docker.html</p>
-<h2 id="升级mesos版本到17-flink-19783">升级Mesos版本到1.7 FLINK-19783</h2>
-<p>Mesos依赖从1.0.1升级到了1.7</p>
-<h2 id="如果flink进程超时之后还没有终止会发送sigkill信号-flink-17470">如果FLINK进程超时之后还没有终止会发送SIGKILL信号  FLINK-17470</h2>
-<p>在Flink 1.12版本中，变更了standalong 脚本的行为：如果SIGTERM信号没有成功地终止Flink进程，就发出SIGKILL信号</p>
-<h2 id="引入了非阻塞的job提交-flink-16866">引入了非阻塞的job提交 FLINK-16866</h2>
-<p>提交job的语义稍有改变。提交的调用会立即返回，此时作业处于新的初始化状态。当作业处于该状态时，诸如触发保存点或检索完整作业详细信息等操作不可用<br>
-一旦job的JobManager已经创建，该job处于created状态，所有的调用都是可用的</p>
-<h1 id="运行时runtime">运行时Runtime</h1>
-<h2 id="flip-141intra-slot-managed-memory-sharing-槽内托管的内存共享">FLIP-141：Intra-Slot Managed Memory Sharing （槽内托管的内存共享）</h2>
-<p>配置项：python.fn-execution.buffer.memory.size和python.fn-execution.framework.memory.size 已经移除，因此不再产生具体作用。python.fn-execution.memory.managed的默认值变更为True，因此托管的内存将默认被Python workers 使用。当同时使用Python udf 和 RocksDB状态后端时，或者在批处理中使用内存批处理算法时，用户可以通过覆盖“managed memory consumer weights”，以控制在数据处理和Python之间如何共享托管内存（RocksDB状态后端或者批处理算法）。</p>
-<h2 id="flip-119-pipeline-region-schedling-flink-16430">FLIP-119 Pipeline Region Schedling FLINK-16430</h2>
-<p>从Flink 1.12 开始，jobs将以pipelined regions 为单元进行调度。<strong>a pipelined region</strong> 就是一个流水线任务集。这就意味着，对于由多个pipelined regions组成的流作业，不再等待所有的任务获得slot之后才开始部署任务。相反，一旦某个region包含的任务获得了足够的slot，就可以进行部署。对于批作业，将不会为任务分配slots，也不会单独部署任务；相反，某个region获得了足够的slots，在该region中的所有task将一起部署。<br>
-使用jobmanager.scheduler.scheduling-strategy: legacy 可以启用原有调度。</p>
-<h1 id="flink-112-apache-kafka-connector">Flink 1.12 Apache Kafka Connector</h1>
-<p>universal kafka connector 向后兼容kafka 0.10.0及之后的客户端版本。<br>
-依赖：</p>
-<blockquote>
-<dependency>
->	<groupId>org.apache.flink</groupId>
->	<artifactId>flink-connector-kafka_2.11</artifactId>
->	<version>1.12.0</version>
-</dependency>
-</blockquote>
-<h2 id="kafka-consumer">kafka consumer</h2>
-<p>使用同之前版本：</p>
-<pre><code class="language-java">Properties properties = new Properties();
-properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
-properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
-DataStream&lt;String&gt; stream = env
-	.addSource(new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties));
-</code></pre>
-<p>###配置如何确定分区的起始位置----同之前版本</p>
-<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(...);
-myConsumer.setStartFromEarliest();     // start from the earliest record possible
-myConsumer.setStartFromLatest();       // start from the latest record
-myConsumer.setStartFromTimestamp(...); // start from specified epoch timestamp (milliseconds)
-myConsumer.setStartFromGroupOffsets(); // the default behaviour
-
-DataStream&lt;String&gt; stream = env.addSource(myConsumer);
-</code></pre>
-<ul>
-<li>默认setStartFromGroupOffsets: 基于consumer group（由consumer属性中group.id指定）提交到kafka brokers的offsets开始读取partition数据。如果从某个partition没有找到对应的offsets，将基于配置的属性：auto.offset.reset 来读取数据。</li>
-<li>setStartFromEarliest() / setStartFromLatest() ： 从最早或最新位置开始读取。在这种模式下提交到kafka的offset将被忽略，不会作为起始位置。如果offsets超出了partition的范围，将根据配置属性：auto.offset.reset 来读取数据</li>
-<li>setStartFromTimestamp(long)：从指定的timestamp开始读取数据。对于每一个partition，时间戳等于或大于指定时间的记录将用作开始位置。如果某个partition的最新记录早于指定的时间戳，分区将简单地从最新数据开始读取。在这种模式下，提交给kafka的offset将会被忽略，不会作为起始位置。</li>
-<li>指定每个partition的准确offsets.</li>
-</ul>
-<pre><code class="language-java">Map&lt;KafkaTopicPartition, Long&gt; specificStartOffsets = new HashMap&lt;&gt;();
-specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 0), 23L);
-specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 1), 31L);
-specificStartOffsets.put(new KafkaTopicPartition(&quot;myTopic&quot;, 2), 43L);
-
-myConsumer.setStartFromSpecificOffsets(specificStartOffsets);
-</code></pre>
-<p>注意：如果consumer读取的分区在提供的偏移量映射中没有指定偏移量，该分区的起始位置策略将回退到默认的group offsets行为（setStartFromGroupOffsets）</p>
-<p><strong>注意：</strong><br>
-<em>当作业从故障中自动恢复或使用保存点手动恢复时，这些起始位置配置将不会起作用。在恢复时，每个kafka 分区的起始位置由存储在保存点或检查点的偏移量决定</em></p>
-<h3 id="kafka-consumer及容错">kafka consumer及容错</h3>
-<p>启用Flink checkpoint，Flink kafka consumer消费topic的记录的同时会定期checkpoint kafka偏移量，以及其他的操作状态。在作业失败时，Flink将流程序恢复到最新的检查点状态，并从存储在检查点的偏移量位置开始消费kafka中的记录。<br>
-检查点的间隔定义了程序在失败的情况下，最多回退消费的数据量。为了使用容错的kafka consumer，需要在作业中开启拓扑checkpoint。<br>
-如果不开启checkpoint，kafka consumer经周期提交offsets给zookeeper。<br>
-<strong>Checkpointing 配置</strong>：</p>
-<table>
-<thead>
-<tr>
-<th>key</th>
-<th>default</th>
-<th>type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>execution.checkpointing.externalized-checkpoint-retention</td>
-<td>none</td>
-<td>枚举值<br>可能取值：DELETE_ON_CANCELLATION，RETAIN_ON_CANCELLATION</td>
-<td>外部化的检查点将其元数据写到外部持久化存储中，在拥有的作业失败或被挂起（以作业状态JobStatus＃FAILED或JobStatus＃SUSPENDED终止）时，不会自动清除。在这种情况下，您必须手动清除检查点状态 ，包括元数据以及具体程序状态数据.<br>该模式定义了在作业取消时应该如何清除外部检查点。 如果您选择在“取消时保留外部检查点”，则在取消作业（以作业状态JobStatus＃CANCELED终止）时也必须手动处理检查点清除.<br> 外部检查点目录通过：state.checkpoints.dir配置</td>
-</tr>
-<tr>
-<td>execution.checkpointing.interval</td>
-<td>none</td>
-<td>Duration</td>
-<td>checkpoint 周期调度的间隔<br>该设置是checkpoint的基本间隔，checkpoint的触发可能会受：execution.checkpointing.max-concurrent-checkpoints和execution.checkpointing.min-pause影响而延迟</td>
-</tr>
-<tr>
-<td>execution.checkpointing.min-pause</td>
-<td>1</td>
-<td>Integer</td>
-<td>可能同时进行的最大检查点尝试次数。如果该值为n，则当当前有n个检查点尝试时，不会触发任何检查点。要触发下一个检查点，一次检查点尝试需要完成或过期</td>
-</tr>
-<tr>
-<td>execution.checkpointing.min-pause</td>
-<td>0ms</td>
-<td>Duration</td>
-<td>checkpoint的最小间隔。相对于并发点指定的最大并发数量，次设置定义了在可能触发另一个检查点之后，检查点协调器多久可以触发两一个检查点</td>
-</tr>
-<tr>
-<td>execution.checkpointing.mode</td>
-<td>EXACTLY_ONCE</td>
-<td>枚举值<br>可能的取值:<br> EXACTLY_ONCE, AT_LEAST_ONCE</td>
-<td>checkpoint 模式</td>
-</tr>
-<tr>
-<td>execution.checkpointing.prefer-checkpoint-for-recovery</td>
-<td>false</td>
-<td>Boolean</td>
-<td>如果开启，那job恢复时，将从最近的检查点恢复，而不是更新的savepoint</td>
-</tr>
-<tr>
-<td>execution.checkpointing.timeout</td>
-<td>10min</td>
-<td>Duration</td>
-<td>checkpoint被丢弃之前可以执行的最大时间</td>
-</tr>
-<tr>
-<td>execution.checkpointing.tolerable-failed-checkpoints</td>
-<td>none</td>
-<td>Integer</td>
-<td>容忍失败的checkpoint数。如果设置为0，表示不能容忍任何的checkpoint失败</td>
-</tr>
-<tr>
-<td>execution.checkpointing.unaligned</td>
-<td>false</td>
-<td>Boolean</td>
-<td>开启未对齐的checkpoints，这在背压的情况下能极大减少checkpoint时间.<br>未对齐的检查点将存储在buffers的数据作为状态的一部分，这将允许检查点屏障越过这些buffer数据。因此，检查点的持续时间将与当前的吞吐量无关，因为嵌入到数据流中的检查点屏障将不再起到实质作用<br>未对齐的检查点仅在如下情况下可以开启：execution.checkpointing.mode是EXACTLY_ONCE 并且 execution.checkpointing.max-concurrent-checkpoints=1</td>
-</tr>
-</tbody>
-</table>
-<h3 id="kafka-consumer-topic-and-partition-discovery">kafka Consumer topic and partition discovery</h3>
-<ul>
-<li>Partition discovery<br>
-Flink Kafka Consumer 支持发现动态创建的kafka分区，并提供exactly-once 保证。默认，<strong>partition discovery</strong> 未开启，通过在提供的属性配置中，设置flink.partition-discovery.interval-millis为非负值开启此功能。单位：毫秒</li>
-<li>topic discovery<br>
-Kafka消费者还能够通过使用正则表达式匹配主题名称来发现</li>
-</ul>
-<pre><code class="language-java">    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-Properties properties = new Properties();
-properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
-properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
-
-FlinkKafkaConsumer&lt;String&gt; myConsumer = new FlinkKafkaConsumer&lt;&gt;(
-    java.util.regex.Pattern.compile(&quot;test-topic-[0-9]&quot;),
-    new SimpleStringSchema(),
-    properties);
-
-DataStream&lt;String&gt; stream = env.addSource(myConsumer);
-</code></pre>
-<p>为了允许consumer在作业开始运行后发现动态创建的主题，请为flink.partition-discovery.interval-millis设置一个非负值。这使consumer可以发现名称匹配指定模式的新主题的分区。</p>
-<h3 id="kafka-consumer-offset-提交行为配置">kafka consumer offset 提交行为配置</h3>
-<p>Flink kafka consumer支持配置offset如何提交给kafka broker。注意：flink kafka consumer并不依赖于提交给kafka broker的offset来进行容错。提交的offset仅为了监控的目的暴露消费进度的一种途径。<br>
-依赖于是否启动了检查点，配置offset提交行为的方法不同：</p>
-<ul>
-<li>未开启checkpoint：在没有开启检查点时，flink kafka consumer依赖于内部使用的kafka客户端自动的定期offset提交功能。因此，在提供的属性配置中简单地设置enable.auto.commit / auto.commit.interval.ms 键的合适值，就能开启/关闭offset的提交。</li>
-<li>开启checkpoint：如果开启检查点，在checkpoint完成之后，flink kafka consumer将保存在检查点状态中的offsets提交给kafka。这将确保提交给kafka broker的offset与保存在检查点状态中的offset是一致的。用户可以通过调用setCommitOffsetsOnCheckpoints(boolean)方法来选择开启或关闭offset的提交。默认为true。注意：在这种情况下，属性中配置的自动周期offset提交设置将完全被忽略。</li>
-</ul>
-<h3 id="kafka-consumers-and-timestamp-extractionwatermark-emission">kafka consumers and TimeStamp Extraction/WaterMark Emission</h3>
-<p>在大多数场景下，记录的时间戳是嵌入在数据本身，或者ConsumerRecord元数据中的。另外，用户可能想要周期性地或者不定期地发出水印。比如：基于kafka流中的特殊记录，这些记录包含了时间时间水印。对于这些情况，Flink kafka consumer 可以指定<strong>WaterMark Strategy</strong>.<br>
-可以按如下自定义WaterMark Strategy，也可以使用预定义的：</p>
-<pre><code class="language-java">Properties properties = new Properties();
-properties.setProperty(&quot;bootstrap.servers&quot;, &quot;localhost:9092&quot;);
-properties.setProperty(&quot;group.id&quot;, &quot;test&quot;);
-
-FlinkKafkaConsumer&lt;String&gt; myConsumer =
-    new FlinkKafkaConsumer&lt;&gt;(&quot;topic&quot;, new SimpleStringSchema(), properties);
-myConsumer.assignTimestampsAndWatermarks(
-    WatermarkStrategy.
-        .forBoundedOutOfOrderness(Duration.ofSeconds(20)));
-
-DataStream&lt;String&gt; stream = env.addSource(myConsumer);
-</code></pre>
-<p>如果一个水印分配器依赖于从Kafka读取的记录来提升其水印(这是通常的情况)，那么所有的主题和分区都需要有连续的记录流。否则，整个应用程序的水印无法前进，所有基于时间的操作(如时间窗口或带有计时器的函数)都无法前进。单个空闲的Kafka分区会导致这种行为。考虑设置适当的idness超时来缓解这个问题</p>
-<p>Kafka Producer<br>
-Flink的kafka producer—FlinkKafkaProducer允许将流记录写到一个或多个kafka topic中。<br>
-构造方法接受如下参数：<br>
-(1)事件需要写入的默认topic<br>
-(2)SerializationSchema/KafkaSerializationSchema用于将数据序列化到kafka<br>
-(3) kafka client 配置，如下配置项是必须的：bootstrap.servers<br>
-(4)默认的容错语义<br>
-<img src="https://wangyemao-github.github.io/post-images/1611501777416.png" alt="" loading="lazy"></p>
-<p>The SerializationSchema<br>
-Flink kafka Producer需要知道如何将Java/Scala 对象转化为二进制数据。<strong>KafkaSerializationSchema</strong>允许用户去指定这样一个模式。每一条记录都会调用方法：ProducerRecord&lt;byte[], byte[]&gt; serialize(T element, @Nullable Long timestamp) ；生成一个ProducerRecord，写到kafka。<br>
-这让用户可以细粒度地控制数据如何写入kafka，通过producer record，你可以：<br>
-（1）设置header values<br>
-（2）为每一条记录定义keys<br>
-（3）指定自定义数据分区</p>
-<p>Kafka Producers 以及容错<br>
-在开启Fink checkpoint的情况下，FlinkKafkaProducer可以提供exactly-once 传送保证。<br>
-除了启用FlinkKafkaProducer的检查点之外，您还可以通过向FlinkKafkaProducer传递适当的语义参数来选择三种不同的操作模式：<br>
-Semantic.NONE：Flink不会做任何保证。Producer records可能会丢失，也可能会重复<br>
-Semantic.AT_LEAST_ONCE（默认设置）：保证没有记录会丢失，但是可能会重复<br>
-Semantic.Exactly_ONCE: kafka事务将用于提供exactly-once 语义。当你使用事务写入Kafka时，对于从kafka消费数据的任何应用程序都不要忘记设置期望的隔离级别（read_committed or read_uncommitted，默认为后者）</p>
-<p>注意事项：<br>
-Semantic.Exactly_Once 依赖于commit transaction 功能，commit transanction从检查点恢复之后，执行下一次checkpoint之前启动。如果Flink应用程序崩溃到完成重启之间的时间大于Kafka的事务超时时间，则将丢失数据（Kafka将自动中止超过超时时间的事务）。 考虑到这一点，请根据您的预期停机时间适当配置事务超时。<br>
-默认，kafka broker将transaction.max.timeout.ms设置为15分钟。该属性不允许producer设置大于该值的事务超时时间。默认情况下，FlinkKafkaProducer将生产者配置中的transaction.timeout.ms属性设置为1小时，因此使用Semantic.EXACTLY_ONCE模式之前，应先增大transaction.max.timeout.ms的设置。<br>
-在kafkaConsumer的read_committed模式下，任何未完成的事务（既未中止也未完成）将阻止来自给定kafka topic的所有未完成事务的读取。话句话说，在以下事件序列之后：<br>
-（1）用户启动transaction 1，写入一些记录<br>
-（2）用户启动transaction 2，写入一些其他记录<br>
-（3）用户提交了transaction 2<br>
-即便transaction 2中的记录已经提交，但是直到transaction 1 被提交或中止之前，它们对用户仍旧是不可见的。这包含了两层含义：</p>
-<ol>
-<li>首先，在Flink应用程序的正常工作中，用户可以预计生产到kafka topic的记录的可见性延迟，该延迟等于完成checkpoint之间的平均时间。</li>
-<li>其次，在Flink应用程序失败的情况下，应用正在写入的记录对用户不具有可见性。直到应用程序重新启动或经过到达配置的事务超时时间为止。此注释仅适用于有多个代理/应用程序写入同一个Kafka主题的情况。</li>
-</ol>
-<p><strong>注意</strong> ：Semantic.EXACTLY_ONCE模式为每个FlinkKafkaProducer实例使用固定大小的KafkaProducer池。 每个检查点使用这些生产者中的每一个。 如果并发检查点的数量超过池大小，则FlinkKafkaProducer将引发异常，并使整个应用程序失败。 请相应地配置最大池大小和最大并发检查点数。</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Flink Time]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-time/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-time/">
-        </link>
-        <updated>2021-01-13T01:47:03.000Z</updated>
-        <summary type="html"><![CDATA[<p>在Flink中有状态流式处理中，Time承担着一定的作用。比如：进行时间序列的分析，基于特定时间段的聚合（window操作），以及基于发生时间的事件处理等。本文主要讲解Flink中时间概念，及针对不同的时间特性，Flink中提取时间戳及生成水印的策略</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>在Flink中有状态流式处理中，Time承担着一定的作用。比如：进行时间序列的分析，基于特定时间段的聚合（window操作），以及基于发生时间的事件处理等。本文主要讲解Flink中时间概念，及针对不同的时间特性，Flink中提取时间戳及生成水印的策略</p>
-<!-- more -->
-<h1 id="flink-time">Flink Time</h1>
-<h2 id="time-notition">Time notition</h2>
-<p>Flink流程序中支持多种不同的时间概念，包括：Processing Time，Event Time 和 Ingestion Time。下面为官网的说明图及解释：</p>
-<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1610709415381.png" alt="" loading="lazy"></figure>
-<ul>
-<li>Processing Time<br>
-Processing Time 是事件在执行相关操作时，所在机器的系统时间。当流程序在Processing Time上运行时，所有基于时间(比如windows操作)都将使用当时机器的系统时间。每小时处理时间窗口将包括在系统时钟指示整小时之间到达特定操作的所有记录。例如：如果应用程序在上午9:15开始运行，那第一个小时Processing Time 窗口将包括从上午9:15到上午10:00的事件；下一个窗口包含从上午10:00到11:00的事件。<br>
-Processing Time是最简单的时间概念。它不需要流和机器之间的协调，并且提供了最好的性能及最低的延迟。但是，由于会受到事件到达系统的速度，以及事件在系统内操作流动速度的影响，在分布式和异步环境下，基于Processing Time的流程序不能提供确定性的结果</li>
-<li>Event Time<br>
-Event Time 是指事件的发生时间，通常事件到达Flink之前本身就携带了这个时间。在基于事件时间的流程序中，时间取决于数据，跟机器系统时间无关。使用Event Time，需要指定如何提取事件时间，以及如何生成Event Time watermark。<br>
-在理想情况下，无论事件什么时候到达，无论事件如何乱序到达，基于Event Time的流程序总会得到一致且确定的结果。但事实上，除非事件按照既定的顺序到达，否则流程序会因为需要等待一些无序的事件而产生延迟。由于只能等待一段有限的时间，因此很难保障基于Event Time的流程序总是得到一致且确定性的结果。</li>
-<li>Ingestion Time<br>
-Ingestion Time 是事件进入Flink 的时间。在源操作处，每个事件将当前机器的系统时间作为时间戳，后续的所有基于时间的操作(window操作)都将使用这个时间戳。<br>
-<strong>与另外两个时间的对比</strong></li>
-</ul>
-<ol>
-<li>与Event Time 相比，Ingestion Time 无法处理任何无序或延迟事件，因为时间都是在进入Flink源时，统一分配的机器系统时间，事件的顺序已被重新定义；但是使用Ingestion Time的流程序由Flink自动分配时间戳，自动生成水印，不需要用户代码额外指定</li>
-<li>与Processing Time 相比，Ingestion Time稍微更贵一些，但结果更可预测。</li>
-</ol>
-<h2 id="设定时间特性">设定时间特性</h2>
-<p>下面的代码片段为在Flink中设定不同时间特性的：</p>
-<pre><code class="language-java">final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-//设置时间特性为Processing Time
-env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime); 
-//设置时间特性为Ingestion Time
-env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
-//设置时间特性为Event Time
-env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-</code></pre>
-<h1 id="watermarks">WaterMarks</h1>
-<p>支持Event Time的流程序中，由于各种原因，不可能完全保证事件都按照既定的顺序到达，通常事件达到都是无序的并且存在延迟。那基于时间的操作，比如window操作就需要一种方法来衡量时间的进度。在Flink中这种衡量Event Time进度的机制就称作<strong>WaterMarks</strong>。<br>
-在Flink中，watermarks作为数据流的一部分在流程序中流动，并携带了一个时间戳<strong>t</strong>。<strong>watermark(t)<strong>表明所有时间戳&lt;=t的事件都已经到达。<br>
-下图为有序事件流和无序事件流中watermark：<br>
-<img src="https://wangyemao-github.github.io/post-images/1610506420248.png" alt="" loading="lazy"><br>
-<img src="https://wangyemao-github.github.io/post-images/1610506426262.png" alt="" loading="lazy"><br>
-在有序事件流中，watermark只是事件流中简单地周期性标记。<br>
-在无序事件流中，watermark充当着很重要的作用。一旦</strong>watermark(t)<strong>到达某个操作，操作将使用watermark携带的时间戳更新内部</strong>event time clock</strong>。当满足特定条件时触发计算<br>
-设置不同的时间特性，watermark是否需要用户程序设定如下表：</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Processing Time</th>
-<th>Event Time</th>
-<th>Ingestion Time</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>watermark</td>
-<td>不需要</td>
-<td>用户程序指定</td>
-<td>系统自动生成</td>
-</tr>
-</tbody>
-</table>
-<h1 id="time-characteristic-watermark-生成-源码分析">Time Characteristic &amp; watermark 生成 源码分析</h1>
-<p>在Flink流程序中，当指定时间特性为Ingestion Time之后，在源操作处，对于到来的每个事件，将使用当时的机器系统时间作为事件时间戳并自动生成水印。<br>
-在Flink中，源操作处如何发送数据（提取时间戳）、如何生成水印都是由<strong>SourceFunction.SourceContext</strong>接口定义的</p>
-<pre><code class="language-java">public interface SourceFunction&lt;T&gt; extends Function, Serializable {
-    /**
-     *  Interface that source functions use to emit elements, and possibly watermarks   
-     */
-    interface SourceContext&lt;T&gt; {
-        //Emits one element from the source, without attaching a timestamp
-        void collect(T element);
-        // Emits one element from the source, and attaches the given timestamp
-        void collectWithTimestamp(T element, long timestamp);
-        //Emits the given {@link Watermark}
-        void emitWatermark(Watermark mark);
-    }
-}
-</code></pre>
-<p>针对不同的时间特性(Time Characteristic)，StreamSourceContext定义了三种不同的SourceContext实现。NonTimeStampContext、AutomaticWatermarkContext、ManualWatermarkContext。其中后两者都继承自WatermarkContext。</p>
-<pre><code class="language-java">//Source contexts for various stream time characteristics
-public class StreamSourceContexts {
-    /**
-     * Depending on the {@link TimeCharacteristic}, this method will return
-     * the adequate {@link    org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext}
-    **/ 
-    public static &lt;OUT&gt; SourceFunction.SourceContext&lt;OUT&gt; getSourceContext(
-			TimeCharacteristic timeCharacteristic,
-			ProcessingTimeService processingTimeService,
-			Object checkpointLock,
-			StreamStatusMaintainer streamStatusMaintainer,
-			Output&lt;StreamRecord&lt;OUT&gt;&gt; output,
-			long watermarkInterval,
-			long idleTimeout){
-                final SourceFunction.SourceContext&lt;OUT&gt; ctx;
-                switch (timeCharacteristic) {
-			case EventTime:
-				ctx = new ManualWatermarkContext&lt;&gt;(
-					output,
-					processingTimeService,
-					checkpointLock,
-					streamStatusMaintainer,
-					idleTimeout);
-				break;
-			case IngestionTime:
-				ctx = new AutomaticWatermarkContext&lt;&gt;(
-					output,
-					watermarkInterval,
-					processingTimeService,
-					checkpointLock,
-					streamStatusMaintainer,
-					idleTimeout);
-				break;
-			case ProcessingTime:
-				ctx = new NonTimestampContext&lt;&gt;(checkpointLock, output);
-				break;
-			default:
-				throw new IllegalArgumentException(String.valueOf(timeCharacteristic));
-            }
-}
-</code></pre>
-<p>从上面的代码片段中可见，不同的时间特性（TimeCharacteristic）会实现不同SourceContext，其对应关系为：ProcessTime对应NonTimestampContext；EventTime对应ManualWatermarkContext；IngestionTime对应AutomaticWatermarkContext。</p>
-<h2 id="processingtime-时间戳-和水印生成">ProcessingTime &amp; 时间戳 和水印生成</h2>
-<p>对于指定Processing Time 情况，时间戳与水印如何生成，具体看<strong>NonTimestampContext</strong>实现：</p>
-<pre><code class="language-java">/**
- *  A source context that attached {@code -1} as a timestamp to all records,   *   and that does not forward watermarks
- **/
-private static class NonTimestampContext&lt;T&gt; implements SourceFunction.SourceContext&lt;T&gt;{
-    public void collect(T element) {
-			synchronized (lock) {
-				output.collect(reuse.replace(element));
-			}
-	}
-    public void collectWithTimestamp(T element, long timestamp) {
-			// ignore the timestamp
-			collect(element);
-	}
-    public void emitWatermark(Watermark mark) {
-			// do nothing
-	}
-}
-</code></pre>
-<p>从上面代码可见，NonTimestampContext没有为事件生成时间戳，对于传入时间戳的情况，也会将时间戳忽略。另外，发送水印方法为空实现，即不会向下游发送水印(Watermark)。<br>
-事实上，对于使用ProcessingTime情况，生成时间戳和向下游发送水印并没有实际意义。因为，对于时间相关的操作(window类操作)，各个计算节点会根据机器的系统时间定义触发器，触发计算，而不是根据watermark来触发。</p>
-<h2 id="ingestiontime-时间戳-和水印生成">IngestionTime &amp; 时间戳 和水印生成</h2>
-<p>对于IngestionTime情况，时间戳生成及水印生成具体看<strong>AutomaticWatermarkContext</strong>实现。另外前面说到AutomaticWatermarkContext和ManualWatermarkContext都继承自WatermarkContext。此处首先会大概说明下<strong>WatermarkContext</strong>具体实现了什么功能：<br>
-WatermarkContext定义了与watermark相关的行为(因为不是本文的重点，此处简要说明)：</p>
-<ul>
-<li>负责管理当前的StreamStatus，确保StreamStatus向下游传递；</li>
-<li>负责空闲监测逻辑，当超过设定的时间间隔还没有收到数据或者watermark时，会认为Task处于空闲状态。空闲监测逻辑是很有意义上的：如果某个源操作Task标志为空闲状态，后续的Checkpoint中不需要再等待该Task barrier对齐，不需要耗费资源或时间等待</li>
-</ul>
-<h3 id="如何生成事件时间戳">如何生成事件时间戳</h3>
-<p>回到AutomaticWatermarkContext，我们看下在IngestionTime情况，系统是如何自动赋值时间戳，如何自动生成watermark，首先看下时间戳：</p>
-<pre><code class="language-java">protected void processAndCollect(T element) {
-			lastRecordTime = this.timeService.getCurrentProcessingTime();
-			output.collect(reuse.replace(element, lastRecordTime));
-
-			// this is to avoid lock contention in the lockingObject by
-			// sending the watermark before the firing of the watermark
-			// emission task.
-			if (lastRecordTime &gt; nextWatermarkTime) {
-				// in case we jumped some watermarks, recompute the next watermark time
-				final long watermarkTime = lastRecordTime - (lastRecordTime % watermarkInterval);
-				nextWatermarkTime = watermarkTime + watermarkInterval;
-				output.emitWatermark(new Watermark(watermarkTime));
-
-				// we do not need to register another timer here
-				// because the emitting task will do so.
-			}
-	}
-
-    protected void processAndCollectWithTimestamp(T element, long timestamp) {
-			processAndCollect(element);
-	}
-</code></pre>
-<p>两个向下游发送数据的方法最终都是执行都是上面的processAndCollect(element)方法。对于每一条数据记录，会取当前的ProcessingTime(机器系统时间)作为事件时间戳，然后发送到下游。</p>
-<h3 id="如何生成水印">如何生成水印</h3>
-<p>在AutomaticWatermarkContext的构造方法中会初始化两个重要的属性：</p>
-<pre><code class="language-java">private AutomaticWatermarkContext(
-				final Output&lt;StreamRecord&lt;T&gt;&gt; output,
-				final long watermarkInterval,
-				final ProcessingTimeService timeService,
-				final Object checkpointLock,
-				final StreamStatusMaintainer streamStatusMaintainer,
-				final long idleTimeout) {
-			super(timeService, checkpointLock, streamStatusMaintainer, idleTimeout);
-            
-			this.watermarkInterval = watermarkInterval;
-			long now = this.timeService.getCurrentProcessingTime();
-			this.nextWatermarkTimer = this.timeService.registerTimer(now + watermarkInterval,
-				new WatermarkEmittingTask(this.timeService, checkpointLock, output));
-		}
-</code></pre>
-<p>第一个属性是<strong>watermarkInterval</strong>，它指定了水印(watermark)的生成周期，具体的取值为：</p>
-<pre><code class="language-java">watermarkInterval = getRuntimeContext().getExecutionConfig().getAutoWatermarkInterval(); 
-</code></pre>
-<p>默认情况下，生成周期为200ms，当然可以调用ExecutionConfig#setAutoWatermarkInterval（long interval）重新指定<br>
-第二个重要的属性是<strong>nextWatermarkTimer</strong>，它是一个ProcessingTimeService定时器，当<strong>ProceingTime = now + watermarkInterval</strong>时，也就是间隔<strong>watermarkInterval</strong>时间之后，会触发回调<strong>WatermarkEmittingTask#onProcessingTime</strong>方法，下面为从WatermarkEmittingTask中摘取的重要代码片段：</p>
-<pre><code class="language-java"> private class WatermarkEmittingTask implements ProcessingTimeCallback{
-
-     public void onProcessingTime(long timestamp) {
-				final long currentTime = timeService.getCurrentProcessingTime();
-                synchronized (lock) {
-					// we should continue to automatically emit watermarks if we are active
-					if (streamStatusMaintainer.getStreamStatus().isActive()) {
-						if (idleTimeout != -1 &amp;&amp; currentTime - lastRecordTime &gt; idleTimeout) {
-						} else if (currentTime &gt; nextWatermarkTime) {
-							// align the watermarks across all machines. this will ensure that we don't have watermarks that creep along at different intervals because the machine clocks are out of sync 
-							final long watermarkTime = currentTime - (currentTime % watermarkInterval);
-							output.emitWatermark(new Watermark(watermarkTime));
-							nextWatermarkTime = watermarkTime + watermarkInterval;
-						}
-					}
-				}
-				long nextWatermark = currentTime + watermarkInterval;
-				nextWatermarkTimer = this.timeService.registerTimer(
-						nextWatermark, new WatermarkEmittingTask(this.timeService, lock, output));
-			}
- }
-</code></pre>
-<p>上面代码片段中可以看到：（1）在对水印时间进行矫正之后，会将水印时间发送到下游；（2）注册下一次触发时间。也就是说，在<strong>AutomaticWatermarkContext</strong>中使用一个定时器，每当注册触发时间到来时，会自动向下游发送水印，并且会持续地自动注册下一次触发时间。<strong>触发时间为：（作业启动时刻+watermark周期*n）</strong></p>
-<h2 id="event-time-时间戳和水印生成">Event Time &amp; 时间戳和水印生成</h2>
-<p>最后，我们看一下基于Event Time的流程序，在源操作处，是如何处理事件时间戳和水印生成的。具体的实现在<strong>ManualWatermarkContext</strong>：</p>
-<pre><code class="language-java">private static class ManualWatermarkContext&lt;T&gt; extends WatermarkContext&lt;T&gt;{
-    protected void processAndCollectWithTimestamp(T element, long timestamp) {
-			output.collect(reuse.replace(element, timestamp));
-	}
-    protected void processAndEmitWatermark(Watermark mark) {
-			output.emitWatermark(mark);
-	}
-    protected boolean allowWatermark(Watermark mark) {
-			return true;
-	}
-}
-</code></pre>
-<p>从上面代码片段中可以看出：在使用Event Time的情况下，ManualWatermarkContext不会额外生成时间戳，也不会生成watermark。对于数据和水印都只做透传。<br>
-那么，这种情况下透传的时间戳和水印是从哪里来的呢？答案就是UDF(User Defined Function)。具体可以去看下<strong>StreamSource#run</strong>方法：在run方法中根据设置的时间特性创建StreamSourceContexts 之后，会将创建的方法：在run方法中根据设置的时间特性创建StreamSourceContexts传给userFunction：</p>
-<pre><code class="language-java">this.ctx = StreamSourceContexts.getSourceContext(
-			timeCharacteristic,
-			getProcessingTimeService(),
-			lockingObject,
-			streamStatusMaintainer,
-			collector,
-			watermarkInterval,
-			-1);
-userFunction.run(ctx);
-</code></pre>
-<p>时间戳提取及水印的生成在用户定义的SourceFunction中完成之后，到StreamSourceContexts时，只做数据的透传。</p>
-<h2 id="flink-kafka-source-时间戳和水印生成">Flink Kafka Source 时间戳和水印生成</h2>
-<p>本节以Flink-source-connector中KafkaConsumer 为例，说明在设置不同时间特性情况下，时间戳和水印如何生成。基于Flink1.8版本，kafka-010。<br>
-对于消费kafka的每条记录会调用emitRecord()方法发出数据，该方法中会进行时间戳的提取和水印生成：</p>
-<pre><code class="language-java">//emit the actual record. this also updates offset state atomically
-//and deals with timestamps and watermark generation
-protected void emitRecord(
-			T record,
-			KafkaTopicPartitionState&lt;TopicPartition&gt; partition,
-			long offset,
-			ConsumerRecord&lt;?, ?&gt; consumerRecord) throws Exception {
-		// we attach the Kafka 0.10 timestamp here
-		emitRecordWithTimestamp(record, partition, offset, consumerRecord.timestamp());
-}
-</code></pre>
-<p>在emitRecord()方法中调用了emitRecordWithTimestamp()方法，并且传入的时间戳为：consumerRecord.timestamp()。也就是从kafka中消费出来的数据所带的时间戳。具体看下**emitRecordWithTimestamp()**方法：</p>
-<pre><code class="language-java">protected void emitRecordWithTimestamp(
-			T record, KafkaTopicPartitionState&lt;KPH&gt; partitionState, long offset, long timestamp) throws Exception {
-		if (record != null) {
-			if (timestampWatermarkMode == NO_TIMESTAMPS_WATERMARKS) {
-				// fast path logic, in case there are no watermarks generated in the fetcher  emit the record, using the checkpoint lock to guarantee atomicity of record emission and offset state update
-				synchronized (checkpointLock) {
-					sourceContext.collectWithTimestamp(record, timestamp);
-					partitionState.setOffset(offset);
-				}
-			} else if (timestampWatermarkMode == PERIODIC_WATERMARKS) {
-				emitRecordWithTimestampAndPeriodicWatermark(record, partitionState, offset, timestamp);
-			} else {
-				emitRecordWithTimestampAndPunctuatedWatermark(record, partitionState, offset, timestamp);
-			}
-		} 
-</code></pre>
-<p>上面代码中，根据timestampWatermarkMode的不同取值会调用不同的方法发出数据。首先看下<strong>timestampWatermarkMode</strong>取值：</p>
-<pre><code class="language-java">if (watermarksPeriodic == null) {
-			if (watermarksPunctuated == null) {
-				// simple case, no watermarks involved
-				timestampWatermarkMode = NO_TIMESTAMPS_WATERMARKS;
-			} else {
-				timestampWatermarkMode = PUNCTUATED_WATERMARKS;
-			}
-		} else {
-			if (watermarksPunctuated == null) {
-				timestampWatermarkMode = PERIODIC_WATERMARKS;
-			} else {
-				throw new IllegalArgumentException(&quot;Cannot have both periodic and punctuated watermarks&quot;);
-			}
-}
-</code></pre>
-<p>在没有设置属性watermarksPeriodic和watermarksPunctuated时，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS；否则，如果设置了watermarksPunctuated，timestampWatermarkMode的取值为PUNCTUATED_WATERMARKS；否则，如果设置了watermarksPeriodic，则timestampWatermarkMode的取值为PERIODIC_WATERMARKS。</p>
-<ol>
-<li>对于时间特性(TimeCharacteristic)设置为processing Time 或 Ingestion Time的情况：</li>
-</ol>
-<blockquote>
-<p>这种情况是没有必要设置watermarksPeriodic和watermarksPunctuated属性的。因为，对于Processing Time情况，设置时间戳和水印没有实际意义；而对于Ingestion Time情况，具体会在SourceStreamContext中自动生成。<br>
-这种情况下，timestampWatermarkMode取值为NO_TIMESTAMPS_WATERMARKS，直接调用了方法: sourceContext.collectWithTimestamp(record, timestamp)，后续如何提取时间戳，如何生成水印依赖于设置的时间特性，由具体SourceStreamContext实现（前面已经说明，此处不再赘述）。</p>
-</blockquote>
-<ol start="2">
-<li>对于Event Time情况：</li>
-</ol>
-<blockquote>
-<p>对于这种情况，如果想要在源操作处完成时间戳提取以及水印的生成，需要自定义具体AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks的实现，包括如何提取时间戳，以及如何生成下一个水印。<br>
-在FlinkKafkaConsumerBase类中提供了两个方法分别接收用户自定义的AssignerWithPunctuatedWatermarks或AssignerWithPeriodicWatermarks。具体为：</p>
-</blockquote>
-<pre><code class="language-java">public FlinkKafkaConsumerBase&lt;T&gt; assignTimestampsAndWatermarks(AssignerWithPunctuatedWatermarks&lt;T&gt; assigner) {}
-
-public FlinkKafkaConsumerBase&lt;T&gt; assignTimestampsAndWatermarks(AssignerWithPeriodicWatermarks&lt;T&gt; assigner){}
-</code></pre>
-<h2 id="基于flink-kafka-consumer的消费实例">基于Flink kafka consumer的消费实例</h2>
-<p>下面以一个具体的实例，阐述Flink消费kafka数据时如何在数据源出自定义时间戳提取以及生成水印：</p>
-<ol>
-<li>kafka producer端<pre><code class="language-java">public class WriteDataToKafka {
- public static void main(String[] args) throws IOException {
-     Map&lt;String, String&gt; config = new HashMap&lt;String, String&gt;();
-     config.putAll(ReadPropertiesUtils.readConfig(&quot;config.properties&quot;));
-     Properties properties = new Properties();
-     properties.put(&quot;zookeeper.connect&quot;, config.get(&quot;zookeeper.connect&quot;));
-     properties.put(&quot;key.serializer&quot;, &quot;org.apache.kafka.common.serialization.StringSerializer&quot;);
-     properties.put(&quot;value.serializer&quot;, &quot;org.apache.kafka.common.serialization.StringSerializer&quot;);
-     properties.put(&quot;bootstrap.servers&quot;, config.get(&quot;metadata.broker.list&quot;));
-
-     try {
-         KafkaProducer&lt;String, String&gt; kafkaProducer = new KafkaProducer&lt;String, String&gt;(properties);
-         final String[] arr = new String[]{&quot;a&quot;, &quot;b&quot;};
-         Timer timer = new Timer();
-         timer.schedule(new TimerTask() {
-             @Override
-             public void run() {
-                 for (int i = 0; i &lt; arr.length; i++) {
-                     SampleObj sampleObj = new SampleObj();
-                     sampleObj.setValue(arr[i]);
-                     sampleObj.setOccurTime(System.currentTimeMillis());
-                     System.out.println(JSONObject.toJSON(sampleObj).toString());
-                     ProducerRecord&lt;String, String&gt; record =
-                             new ProducerRecord&lt;String, String&gt;(&quot;test_topic&quot;,
-                                     JSONObject.toJSON(sampleObj).toString());
-                     kafkaProducer.send(record);
-                     kafkaProducer.flush();
-                 }
-             }
-         }, 0L, 1000);
-     } catch (Exception e) {
-         e.printStackTrace();
-     }
- }
-</code></pre>
-</li>
-</ol>
-<p>}</p>
-<pre><code>每隔1s向kafka 的test_topic中分别发送两条value取值为&quot;a&quot;或&quot;b&quot;的两条数据，数据的时间戳为构造数据时机器的系统时间。
-发送数据对应的实体类定义为：
-``` java 
-public class SampleObj {
- private String value;
- private Long occurTime;}
-</code></pre>
-<ol start="2">
-<li>Flink 端消费数据代码<br>
-Flink 应用程序消费test_topic 的数据，每隔10s统计下各个value对应的count数，并打印到控制台。<pre><code class="language-java">public class FlinkKafkaConsumerSample {
-        public static void main(String[] args) throws Exception {
-     final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-     env.enableCheckpointing(5000);
-     //设定时间特性为Event Time
-     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-     Properties props = new Properties();
-     props.setProperty(&quot;bootstrap.servers&quot;, &quot;10.154.8.27:9092&quot;);
-     props.setProperty(&quot;group.id&quot;, &quot;alarm_consumer_test&quot;);
-
-     FlinkKafkaConsumer010&lt;JSONObject&gt; consumer =
-             new FlinkKafkaConsumer010&lt;&gt;(&quot;test_topic&quot;, new JsonFormatDeserializer(), props);
-     consumer.assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks&lt;JSONObject&gt;() {
-
-         @Override
-         public long extractTimestamp(JSONObject element, long previousElementTimestamp) {
-             if (StringUtils.isNotBlank(element.getString(&quot;occurTime&quot;))) {
-                 System.out.println(&quot;数据：&quot; + element.getString(&quot;value&quot;) + &quot;:&quot; + timeStamp2Date(element.getLong(&quot;occurTime&quot;)));
-                 return Long.valueOf(element.getString(&quot;occurTime&quot;));
-             } else return 0L;
-         }
-
-         @Nullable
-         @Override
-         public Watermark checkAndGetNextWatermark(JSONObject lastElement, long extractedTimestamp) {
-             if (StringUtils.isNotBlank(lastElement.getString(&quot;occurTime&quot;))) {
-                 return new Watermark(Long.valueOf(lastElement.getString(&quot;occurTime&quot;)));
-             } else return null;
-         }
-     });
-
-     env.addSource(consumer)
-             .keyBy((KeySelector&lt;JSONObject, String&gt;) value -&gt; value.getString(&quot;value&quot;))
-             .timeWindow(Time.seconds(10))
-             .process(new ProcessWindowFunction&lt;JSONObject, Tuple3&lt;String, Long, String&gt;, String, TimeWindow&gt;() {
-                 @Override
-                 public void process(String s, Context context, Iterable&lt;JSONObject&gt; elements, Collector&lt;Tuple3&lt;String, Long, String&gt;&gt; out) throws Exception {
-                     System.out.println(&quot;currentProcessTime:&quot; + timeStamp2Date(context.currentProcessingTime()) +
-                             &quot;watermark:&quot; + timeStamp2Date(context.currentWatermark()) +
-                             &quot;window info,start:&quot; + timeStamp2Date(context.window().getStart()) +
-                             &quot;;end:&quot; + timeStamp2Date(context.window().getEnd()));
-                     long sum = 0L;
-                     long maxTime = Long.MIN_VALUE;
-                     for (JSONObject jsonObject : elements) {
-                         if (jsonObject.getLong(&quot;occurTime&quot;) &gt; maxTime) {
-                             maxTime = jsonObject.getLong(&quot;occurTime&quot;);
-                         }
-                         sum += 1;
-                     }
-                     out.collect(new Tuple3&lt;&gt;(s, sum, timeStamp2Date(maxTime)));
-                 }
-             }).print();
-     env.execute();
- }
-     public static String timeStamp2Date(Long time) {
-     String seconds = String.valueOf(time);
-     if (seconds == null || seconds.isEmpty() || seconds.equals(&quot;null&quot;)) {
-         return &quot;&quot;;
-     }
-     SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;);
-     return sdf.format(new Date(Long.valueOf(seconds)));
- }
-     private static class JsonFormatDeserializer implements DeserializationSchema&lt;JSONObject&gt; {
-     @Override
-     public JSONObject deserialize(byte[] message) throws IOException {
-         try {
-             return JSON.parseObject(message, JSONObject.class);
-         } catch (Exception e) {
-             return null;
-         }
-     }
-
-     @Override
-     public boolean isEndOfStream(JSONObject nextElement) {
-         return false;
-     }
-
-     @Override
-     public TypeInformation&lt;JSONObject&gt; getProducedType() {
-         return TypeInformation.of(JSONObject.class);
-     }
- }
-}
-</code></pre>
-</li>
-<li>运行结果片段<br>
-<img src="https://wangyemao-github.github.io/post-images/1610698549901.png" alt="" loading="lazy"><br>
-以上就是一个基于Event Time，自定义时间戳提取以及水印生成的Flink消费kafka数据的简单实例。除了在数据源处提取时间戳，生成水印之外，还能在一些简单的操作之后再指定相关生成策略。具体可以参见Flink#WarkMark。</li>
-</ol>
-<h1 id="总结">总结</h1>
-<ol>
-<li>本文首先对Flink支持的多种时间概念，包括：Processing Time、Event Time、Ingestion Time 的定义、内涵、差异进行了详细说明，并给出了Flink应用程序中如何设置时间特性</li>
-<li>WaterMark是Flink基于时间操作中的一个很重要的概念，本节简要地对WaterMark的作用进行说明</li>
-<li>之后，基于Flink1.8版本，本文对三种时间特性下，Flink在数据源处如何提取时间戳、如何生成水印并发送到下游进行了解读</li>
-<li>接着，本文结合源码分析了Flink-kafka-source-connector时间戳提取和水印生成进行说明</li>
-<li>最后，基于Flink消费kafka数据场景，给出了一个简单的在源处提取时间戳和生成水印的实例。</li>
-</ol>
-<h1 id="相关参考">相关参考</h1>
-<ol>
-<li>https://ci.apache.org/projects/flink/flink-docs-release-1.12/concepts/timely-stream-processing.html</li>
-<li>http://www.54tianzhisheng.cn/2018/12/11/Flink-time/</li>
-</ol>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Flink State 之总体介绍]]></title>
-        <id>https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/</id>
-        <link href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
-        </link>
-        <updated>2020-12-29T08:09:21.000Z</updated>
-        <summary type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
-<!-- more -->
-<h1 id="一-有状态流计算介绍">一、有状态流计算介绍</h1>
-<h2 id="什么是有状态的计算">什么是有状态的计算</h2>
-<p>计算任务的结果不仅仅依赖于输入，还依赖于它的当前状态。比如，很常见的业务场景wordCount，在计算的过程中要不断地把输入累加到count上去，那么<strong>这里的count就是一个state</strong><br>
-<img src="https://wangyemao-github.github.io/post-images/1609229474736.jpg" alt="" loading="lazy"><br>
-Flink基于用户定义代码对到来的数据进行转换操作，处理过程中不仅依赖用户定义算子，还会涉及State数据的读写操作。这些State数据会存储在本地的State backend中，在Checkpoint的时候持久化到配置的Checkpoint 目录</p>
-<h2 id="传统流式框架">传统流式框架</h2>
-<p>在之前的实时计算框架—Spark进行流式数据处理过程中，流式计算通过将源源不断的数据切分为一个个很小的时间间隔批块，然后针对每一个微批块进行数据计算。它并不是真正意义上的流式处理。每一个微批，只需要保存最终的计算结果，因此，它对于State的需求还是比较小的。</p>
-<p>实际上，流式计算对State的要求是非常高的。因为流系统中输入是一个无限制的流，需要保证很长一段时间持续不间断运行，这个过程中就需要很好地将状态数据管理起来。传统的流式计算框架缺乏对State的有效支持：</p>
-<ul>
-<li>状态数据的存储和访问</li>
-<li>状态数据的备份和恢复</li>
-<li>状态数据的划分和动态扩容</li>
-</ul>
-<h2 id="flink提供了丰富的状态访问和高效的容错机制">Flink提供了丰富的状态访问和高效的容错机制</h2>
-<ul>
-<li>多种数据类型：Value、List、Map、Reducing、Folding、Aggregating</li>
-<li>多种划分方式： Keyed State、Operator State</li>
-<li>多种存储格式： MemoryStateBackend、FsStateBackend、RocksDBStateBackend</li>
-<li>高效的备份和恢复：提供ExactlyOnce保证、增量及异步备份本地恢复</li>
-</ul>
-<h1 id="二-flink-state-类别">二、Flink State 类别</h1>
-<p>Flink中，State按照是否有Key划分为Keyed State和Operator State</p>
-<h2 id="keyed-state">Keyed State</h2>
-<p><strong>Keyed State</strong>在Keyed Stream中使用。状态是跟特定的Key绑定的，即Keyed Stream流上的每一个Key对应一个State对象。</p>
-<h2 id="operator-state">Operator State</h2>
-<p><strong>Operator State</strong>(non-keyed state)跟一个特定操作的并行实例绑定，整个操作只对应一个State。典型的Operator State应用场景就是Kafka Source Connector，kafka consumer的每一个并行实例都维护了topic partition与offsets的映射关系作为它的Operator State。<br>
-<strong>Broadcast State</strong>是一个特殊的Operator State。它的引入是为了支持一个流的记录需要被广播到下游的所有并行任务的场景，在这种场景中，它们被用来在所有的并行任务中维护相同的状态。然后，可以在处理第二个流的记录时访问这个状态。broadcast state与operator state的其他区别：</p>
-<ol>
-<li>状态的数据类型为Map格式</li>
-<li>它仅在具有两个输入流的特定操作上可用，一个输入流为broadcasted stream ，一个输入流为non-broadcasted</li>
-<li>这些操作可以定义多个具有不同名称的broadcast state</li>
-</ol>
-<p><strong>详细对比：</strong></p>
-<table>
-<thead>
-<tr>
-<th>对比维度</th>
-<th>Keyed State</th>
-<th>Operator State</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>使用场景</td>
-<td>只能用于KeyedStream上的算子</td>
-<td>可以用于所有的算子，常用于Source，例如FlinkKafkaConsumer</td>
-</tr>
-<tr>
-<td>应用</td>
-<td>通过RuntimeContext访问，操作函数需要实现RichFunction接口</td>
-<td>实现CheckpointedFunction或ListCheckpointed接口</td>
-</tr>
-<tr>
-<td>是否需要手动声明快照(snapshot)和恢复（restore)方法</td>
-<td>由backend自行实现，对用户透明</td>
-<td>需要手动实现snapshot和restore方法</td>
-</tr>
-<tr>
-<td>支持数据接口</td>
-<td>包括：ValueState、ListState、ReducingState、AggregatingState、MapState</td>
-<td>ListState。特别说明：Broadcast State 是MapState类型</td>
-</tr>
-<tr>
-<td>是否存在当前处理的 key（current key）</td>
-<td>keyed state的value总是与一个current key对应。一个Operator实例处理多个key，访问相应的多个State</td>
-<td>无当前key概念。一个Operator实例对应一个State</td>
-</tr>
-<tr>
-<td>并发改变时State重分布</td>
-<td>基于Key-Group，State随着Key在实例间迁移</td>
-<td>并发改变时，有多种重新分配方式可选：均匀分配；合并后每个实例都得到全量状态</td>
-</tr>
-<tr>
-<td>存储对象是否 on heap</td>
-<td>keyed state backend 有on-heap和off-heap(RocksDB)的多种实现</td>
-<td>目前operator state backend仅有一种on-heap的实现</td>
-</tr>
-<tr>
-<td>状态数据大小【这只是个经验判断，不是绝对的判断区分标准】</td>
-<td>一般而言，Keyed state规模的相对比较大的</td>
-<td>一般而言，我们认为operator state的数据规模是比较小的</td>
-</tr>
-</tbody>
-</table>
-<h1 id="三-flink-state存储和管理">三、Flink State存储和管理</h1>
-<h2 id="state-backend-分类">State Backend 分类</h2>
-<p>State在内部如何表述，checkpoint时，State如何以及在哪里进行持久化，依赖于选择的State Backend。Flink默认捆绑了三类State Backends：MemoryStateBackend、FsStateBackend、RocksDBStateBackend。在未配置的情况下，系统将默认使用MemoryStateBackend。</p>
-<p><strong>详细区别：</strong><br>
-<img src="https://wangyemao-github.github.io/post-images/1609232674288.jpg" alt="" loading="lazy"></p>
-<table>
-<thead>
-<tr>
-<th>State Backend 类型</th>
-<th>State存储</th>
-<th>Checkpoint时存储</th>
-<th>快照方式</th>
-<th>是否支持增量Checkpoint</th>
-<th>限制</th>
-<th>使用场景</th>
-<th>推荐设置</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>MemoryStateBackend</td>
-<td>TaskManager内存</td>
-<td>JobManager内存</td>
-<td>默认异步方式</td>
-<td>否</td>
-<td>1. 单个State默认限制为5MB，当然这个值可以在创建state backend时调整<br>2. 但是Max State最大不能超过akka frame的size (默认10M)<br>3. 聚合的State总大小要小于JobManager内存大小</td>
-<td>1. 本地开发和debugging<br>2. 需要存储很少量状态的作业<br>3. 不推荐生产场景</td>
-<td>将managed memory设置为0.确保最大量地使用分配内存给用户作业</td>
-<td>1. State数据作为Java堆对象在本地（TaskManager）存储<br>2. 在Checkpoint时，state backend会快照状态数据，作为checkpoint确认消息的一部分发送给JobManager。在JobManager上，状态数据也是在Java 堆上存储的</td>
-</tr>
-<tr>
-<td>FsStateBackend</td>
-<td>TaskManager内存</td>
-<td>外部文件系统（本地目录或HDFS目录）</td>
-<td>默认异步方式</td>
-<td>否</td>
-<td>1.单Taskmanager上的State总量不超过它的内存<br>2.总大小不超过配置的文件系统容量</td>
-<td>1.大状态作业，长窗口，大key/value 状态<br>2.高可用设置<br>3.生产场景</td>
-<td>同上</td>
-<td>1.在TaskManager的内存中，存储正在使用的State数据<br>2. Checkpointing时，state backend将状态快照写文件到配置文件系统和目录中。最小化的元数据存储在JobManager的内存【状态数据存储的路径】（高可用模式，存储元数据在元数据checkpoint路径）</td>
-</tr>
-<tr>
-<td>RocksDBStateBackend</td>
-<td>TaskManager上的KV数据库(RocksDB)【实际使用内存+磁盘】</td>
-<td>外部文件系统（本地目录或HDFS目录）</td>
-<td>总是异步</td>
-<td>是</td>
-<td>1.单TaskManager上的State不超过它的内存+磁盘<br>2.单Key最大2G<br>3.总大小不超过配置的文件系统容量</td>
-<td>1.大状态作业，长窗口，大key/value 状态<br>2.高可用设置<br>3.生产场景</td>
-<td></td>
-<td>1.RocksDBStateBackend在RocksDB数据库中保存正在使用的状态数据，默认存储在TaskManager的数据目录<br>2.在checkpointing时，整个RocksDB数据库将被快照到配置的文件系统或目录。最小化的元数据存储在JobManager的内存中（高可用模式，存储在元数据checkpoint目录）</td>
-</tr>
-</tbody>
-</table>
-<p><strong>关于RocksDBStateBackend的特别说明：</strong></p>
-<ol>
-<li>这种方式可以维持的状态量只受限于可用的磁盘空间。与FsStateBackend将state存储在内存相比，这种方式允许保留更大的state</li>
-<li>但是，这也意味着，可以获取的最大吞吐量将比FsStateBackend方式的低</li>
-<li>所有对backend的read/write都需要通过序列化/反序列化，以存储/获取状态对象。这种方式与基于堆的存储方式代价更高</li>
-</ol>
-<h2 id="state-backend配置">State Backend配置</h2>
-<ul>
-<li>配置默认State Backend</li>
-</ul>
-<blockquote>
-<p>flink-conf.yml<br>
-state.backend: 【可能的取值：jobmanager(MemoryStateBackend)、fileSystem(FsStateBackend)、rocksdb(RocksDBStateBackend)、或者实现了state backend factory StateBackendFactory的全限定类名（org.apache.flink.contrib.streaming.state.RocksDBStateBackendFactory）】<br>
-state.checkpoints.dir:定义backend写快照数据和元数据文件的目录</p>
-</blockquote>
-<ul>
-<li>per-job 设置State Backend</li>
-</ul>
-<blockquote>
-<p>StreamExecutionEnvironment</p>
-</blockquote>
-<pre><code class="language-java">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-env.setStateBackend(new FsStateBackend(&quot;hdfs://namenode:40010/flink/checkpoints&quot;));
-</code></pre>
-<h1 id="四-flink-state-划分和动态扩容">四、Flink State 划分和动态扩容</h1>
-<h2 id="state-划分">State 划分</h2>
-<ul>
-<li>对于Operator State类型，每一个并行的Operator实例对应一个State</li>
-<li>对于Keyed State类型，每一个Current Key对应一个State</li>
-</ul>
-<h2 id="state-动态扩容">State 动态扩容</h2>
-<p><strong>Operator State类型</strong><br>
-<img src="https://wangyemao-github.github.io/post-images/1609232700062.jpg" alt="" loading="lazy"></p>
-<ul>
-<li>ListState：并发度改变的时候，会将并发实例上的ListState都合并到一个新的List，然后均匀分配到变更后的并发Task上</li>
-<li>UnionListState：每一个并发Task都会拿到全量的ListState</li>
-<li>BroadcastState：每个并发Task上的State都是完全一致的，因此，当增大并发度时，只需要Copy一份State到新Task即可</li>
-</ul>
-<p><strong>Keyed State类型</strong><br>
-在并行度改变时，如何重分布KeyedState数据，最直观的做法就是计算每个Key的Hash值，并基于并行度parallelism取余。下图为当并行度改变时，基于Hash取余算法的State数据重分布情况：<br>
-<img src="https://wangyemao-github.github.io/post-images/1609232708709.png" alt="" loading="lazy"></p>
-<p>hash取余重分布算法存在的问题：之前在各个Task上维护好的State数据会根据新的并行度重新组织，State数据在各个Task之间传输。这对于KeyedState数据较大时，数据重新组织的代价会很高。</p>
-<p>为了规避上述问题，Flink基于Key-Group(KeyedState的最小组织单位)组织、分配KeyedState。具体的映射关系为</p>
-<pre><code class="language-java">public static int assignToKeyGroup(Object key, int maxParallelism) {
-   return computeKeyGroupForKeyHash(key.hashCode(), maxParallelism);
-}
-public static int computeKeyGroupForKeyHash(int keyHash, int maxParallelism) {
-   return MathUtils.murmurHash(keyHash) % maxParallelism;
-}
-</code></pre>
-<p>也就是说，Key-Group数量取决于最大并行度（MaxParallism），只要最大并行度不变，同一个key归属的Key-Group是不会变更的。另外，此处在HashCode的基础上又调用murmurHash方法是为了保证尽量散列。</p>
-<p>在对Key划分Key-Group之后，MaxParallism个Key-Group 基于KeyGroupRange分配到parallelism个并行Task中，每一个并行Task持有1个KeyGroupRange，具体计算方法：</p>
-<pre><code>public static KeyGroupRange computeKeyGroupRangeForOperatorIndex(
-   int maxParallelism,
-   int parallelism,
-   int operatorIndex) {
-   int start = ((operatorIndex * maxParallelism + parallelism - 1) / parallelism);
-   int end = ((operatorIndex + 1) * maxParallelism - 1) / parallelism;
-   return new KeyGroupRange(start, end);
-}
-</code></pre>
-<p><strong>以一个具体的实例说明：</strong><br>
-对于一个Key 空间=[0,1,2,3,4,5,6,7,8,9] 的数据，MaxParallelism=5，并行度Parallelism由2扩大到3的过程中， 各个并行Task的Key-Group重分布情况为：<br>
-<img src="https://wangyemao-github.github.io/post-images/1609232723011.png" alt="" loading="lazy"><br>
-<strong>总结：</strong></p>
-<ol>
-<li>只要MaxParallelism不变，整个Key空间的Key-Group划分情况是不会变更的</li>
-<li>当并行度变更时，基于Key-Group，将Key-Group重新分配到并行Task中，并且这种重新分配不是一个Shuffle，Key-Group归属的并行Task的变更很小。</li>
-</ol>
-<p>参考资料：<br>
-https://ci.apache.org/projects/flink/flink-docs-release-1.12/dev/stream/state/state.html<br>
-https://ci.apache.org/projects/flink/flink-docs-release-1.12/ops/state/state_backends.html<br>
-http://www.54tianzhisheng.cn/2019/06/18/flink-state/</p>
 ]]></content>
     </entry>
 </feed>

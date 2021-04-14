@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gridea</title>
 <meta name="description" content="温故而知新" />
-<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1612265087142">
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
@@ -23,7 +23,7 @@
       <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
         <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
         <a href="https://wangyemao-github.github.io">
-          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1612265087142" alt="">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
         </a>
         <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
       </div>
@@ -51,6 +51,8 @@
 <ul>
 <li><a href="#fixed-delay-restart-strategy">Fixed Delay Restart Strategy</a></li>
 <li><a href="#failure-rate-restart-strategy">Failure Rate Restart Strategy</a></li>
+<li><a href="#%E6%8C%87%E5%AE%9A%E7%89%B9%E5%AE%9Ajob%E7%9A%84restart-strategy">指定特定job的Restart Strategy</a></li>
+<li><a href="#failover-strategies">Failover Strategies</a></li>
 </ul>
 </li>
 <li><a href="#checkpoints-and-state-backends">Checkpoints and State Backends</a></li>
@@ -105,7 +107,7 @@
       <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
         <h1 class="text-3xl font-bold lg:mt-16">Configuratio—翻译</h1>
         <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-31 / 11 min read
+          2021-01-31 / 12 min read
         </div>
         
         <div class="post-content yue">
@@ -232,7 +234,8 @@ JobManager主机名和端口仅与非高可用的独立模式设置有关。 在
 </tbody>
 </table>
 <h2 id="fault-tolerance">Fault Tolerance</h2>
-<p>这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
+<p>**Restart strategies **decide whether and when the failed/affected tasks can be restarted。<br>
+这些配置选项可控制Flink在执行过程中发生故障时的重启行为。 通过在flink-conf.yaml中配置这些选项，可以定义集群的默认重启策略。<br>
 仅当没有通过ExecutionConfig配置任何特定于作业的重启策略时，默认重启策略才会生效。</p>
 <table>
 <thead>
@@ -314,6 +317,32 @@ JobManager主机名和端口仅与非高可用的独立模式设置有关。 在
 </tr>
 </tbody>
 </table>
+<h3 id="指定特定job的restart-strategy">指定特定job的Restart Strategy</h3>
+<p>处理基于fink-conf.yaml 定义默认重启策略，还可以定义每一个flink job的具体重启策略。</p>
+<pre><code class="language-java">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+env.setRestartStrategy(RestartStrategies.fixedDelayRestart(
+  3, // number of restart attempts
+  Time.of(10, TimeUnit.SECONDS) // delay
+)); 
+</code></pre>
+<h3 id="failover-strategies">Failover Strategies</h3>
+<p><strong>Failover strategies</strong> decide which tasks should be restarted to recover the job。Flink支持不同失败策略，可以通过在Flink的配置文件flink-conf.yaml中配置参数：jobmanager.execution.failover-strategy 进行配置：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612334885673.png" alt="" loading="lazy"></p>
+<ul>
+<li>Restart All ： 当某个task失败时，重启job的所有Tasks</li>
+<li>Restart Pipelined Region ： 此策略将任务分为不相交的区域。 当检测到任务故障时，此策略将计算必须重新启动以从故障中恢复的最小区域集。 与“重新启动所有故障转移策略”相比，对于某些作业，这可能导致要重新启动的任务更少。<br>
+一个区域就是通过pipeline data exchange的任务集。换句话说，batch data exchange标识了region的边界。
+<ul>
+<li>DataStrem job or Streaming Table/SQL job 都是 pipelined data exchange</li>
+<li>默认，Batch Table/SQL job 都是batched data exchange</li>
+<li>DataSet job中的data exchange 类型是由ExecutionMode决定的，ExecutionMode可以由ExecutionConfig设置<br>
+重启的region根据如下规则确定：</li>
+<li>包含了失败任务的region会重启</li>
+<li>如果要重新启动的区域需要结果分区时该分区不可用，则生成结果分区的区域也将重新启动</li>
+<li>如果要重新启动区域，则其所有使用方区域也将重新启动。 这是为了保证数据的一致性，因为不确定的处理或分区会导致不同的分区。</li>
+</ul>
+</li>
+</ul>
 <h2 id="checkpoints-and-state-backends">Checkpoints and State Backends</h2>
 <p>这些选项控制状态后端和检查点行为的基本设置<br>
 这些选项仅与以连续流方式执行的作业/应用程序相关。 以批处理方式执行的作业/应用程序不使用状态后端和检查点，而是使用针对批处理而优化的不同内部数据结构。</p>

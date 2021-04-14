@@ -16,7 +16,7 @@
 
   </head>
   <body>
-    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+    <div class="main px-4 flex flex-col lg:flex-row">
       <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
   <div class="lg:sticky top-0">
     <div class="sidebar-content">
@@ -30,9 +30,29 @@
       
         <div class="animated fadeInLeft" style="animation-delay: 0.4s">
           <p class="my-4 text-gray-600 font-light hidden lg:block">
-            文章目录
+            温故而知新
           </p>
-          <div class="toc-container hidden lg:block">
+          <div class="animated fadeInLeft social-container hidden lg:block" style="animation-delay: 0.6s">
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
+            
+              
             
           </div>
         </div>
@@ -77,28 +97,106 @@
 </div>
 <div class="mask" onclick="closeMenu()">
 </div>
-      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
-        <h1 class="text-3xl font-bold lg:mt-16">部署</h1>
-        <div class="text-sm text-gray-700 lg:my-8">
-          2021-01-21 / 1 min read
-        </div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4">
+        <h2 class="latest-article text-lg text-gray-700 mb-8">
+          <i class="ri-article-line"></i>
+          最新文章
+        </h2>
         
-        <div class="post-content yue">
-          <p>Standalone</p>
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${0 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/flink-uid-pou-xi/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink Uid剖析</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        <p>Flink版本升级和应用升级都会基于savepoint这个核心机制。基于savepoint作业重新恢复需要将savepoint中存储状态的operator与作业的operator相匹配，匹配的过程基于operator uid。因此，能否按照用户的意图恢复作业，uid承担着重要的作用。基于此，本文会详细剖析Flink中operator uid如何生成。</p>
 
-        </div>
+      </div>
+      <div class="text-gray-400 text-sm font-light">2021-01-29 / 11 min read</div>
+    </div>
+  </section>
 
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${1 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/savepoint/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Savepoint</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
         
+      </div>
+      <div class="text-gray-400 text-sm font-light">2021-01-21 / 10 min read</div>
+    </div>
+  </section>
 
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${2 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/upgrading-applications-and-flink-version-fan-yi-from-guan-wang/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">upgrading applications and flink version —翻译from官网</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        
+      </div>
+      <div class="text-gray-400 text-sm font-light">2021-01-20 / 12 min read</div>
+    </div>
+  </section>
 
-        <div class="flex justify-between py-8">
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${3 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/upgrade-flink-to-112-release-notesfan-yi-guan-wang/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Upgrade Flink to 1.12 —Release Notes(翻译官网)</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        <p>如果你计划将Flink版本升级到1.12，请仔细阅读如下注意点：</p>
+
+      </div>
+      <div class="text-gray-400 text-sm font-light">2021-01-18 / 21 min read</div>
+    </div>
+  </section>
+
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${4 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/flink-time/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink Time</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        <p>在Flink中有状态流式处理中，Time承担着一定的作用。比如：进行时间序列的分析，基于特定时间段的聚合（window操作），以及基于发生时间的事件处理等。本文主要讲解Flink中时间概念，及针对不同的时间特性，Flink中提取时间戳及生成水印的策略</p>
+
+      </div>
+      <div class="text-gray-400 text-sm font-light">2021-01-13 / 20 min read</div>
+    </div>
+  </section>
+
+  <section class="post-item md:flex pb-12 animated fadeIn" :style="{ 'animation-delay': `${5 * 0.2}s` }">
+    
+    <div class="content">
+      <a href="https://wangyemao-github.github.io/post/flink-state-zong-ti-jie-shao/">
+        <h2 class="post-title text-xl font-extrabold mt-5 md:mt-0">Flink State 之总体介绍</h2>
+      </a>
+      <div class="post-abstract text-gray-700 font-light my-4">
+        <p>本文主要对Flink State进行整体介绍，包括有状态的流式计算框架Flink与传统流式计算框架的区别，Flink State类型划分，State存储与管理以及动态扩容。</p>
+
+      </div>
+      <div class="text-gray-400 text-sm font-light">2020-12-29 / 11 min read</div>
+    </div>
+  </section>
+
+        <div class="read-more">
           
-
-          
         </div>
+        <div class="index-page">
+          <div class="pagination-container animated fadeIn">
+  
+    <a href="https://wangyemao-github.github.io/" class="page-btn"><i class="ri-arrow-left-line"></i> 上一页</a>
+  
+  
+</div>
 
-        
-
+        </div>
       </div>
     </div>
 

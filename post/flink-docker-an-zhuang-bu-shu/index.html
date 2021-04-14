@@ -1,0 +1,481 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#%E5%85%B3%E4%BA%8Eflink-docker-%E6%A6%82%E8%BF%B0">关于Flink Docker 概述</a></li>
+<li><a href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E8%B7%B5%E5%8F%82%E8%80%83">具体实践参考</a></li>
+<li><a href="#%E4%BD%BF%E7%94%A8volume%E5%8F%AF%E8%83%BD%E5%9B%9E%E5%BC%95%E5%8F%91%E7%9A%84%E9%97%AE%E9%A2%98">使用volume可能回引发的问题</a></li>
+<li><a href="#%E5%9F%BA%E4%BA%8Edocker-%E7%9A%84flink-session%E5%AE%89%E8%A3%85">基于Docker 的Flink Session安装</a>
+<ul>
+<li><a href="#%E5%AE%89%E8%A3%85%E9%83%A8%E7%BD%B2%E6%AD%A5%E9%AA%A4">安装部署步骤</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Flink Docker 安装部署</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-04-01 / 10 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>本文为基于docker 安装部署flink集群中得一些笔记。</p>
+<h1 id="关于flink-docker-概述">关于Flink Docker 概述</h1>
+<p>基于Docker 的Flink 集群部署，支持Session 和Application cluster 部署模式。具体可参见官网：https://ci.apache.org/projects/flink/flink-docs-release-1.12/deployment/resource-providers/standalone/docker.html。并且提供了官方的Flink Docker 镜像 https://hub.docker.com/_/flink/。<br>
+直接使用提供的镜像进行Flink 集群部署存在如下一些问题：</p>
+<ul>
+<li>flink conf目录下的配置文件都在容器内，不便于动态修改、调整</li>
+<li>flink运行过程中执行的快照结果，可能因为容器的崩溃而丢失</li>
+</ul>
+<h1 id="具体实践参考">具体实践参考</h1>
+<p>解决上述问题的一个可行方案就是使用docker volume。 volume的官方定义为：A data volume is a specially-designated directory within one or more containers that bypasses the Union File System。它的主要用途就在于：在运行容器间实现数据持久化和共享。</p>
+<h1 id="使用volume可能回引发的问题">使用volume可能回引发的问题</h1>
+<p>volume使得容器与容器之间，或者容器与宿主机之间能够共享目录。但是容器运行的用户和宿主机上运行的用户通常不会是相同的用户，这就可能导致：</p>
+<ul>
+<li>容器运行时写入目录的文件，宿主机上的用户不能访问；</li>
+<li>容器运行时用户没有权限写入文件</li>
+</ul>
+<p>总结来说，因为宿主机和容器运行时用户不是相同的用户，导致了使用volume时带来的用户权限问题。换句话来说，如果宿主机上的当前用户与容器运行时的用户是同一个用户，那容器运行时写入的文件，宿主机上用户也有权限访问；宿主机上创建的文件，容器内也有权限进行操作（读写）。</p>
+<h1 id="基于docker-的flink-session安装">基于Docker 的Flink Session安装</h1>
+<p>参考：https://denibertovic.com/posts/handling-permissions-with-docker-volumes/ 中提到的解决方法，对官方提供的Dockerfile 和 docker-entrypoint.sh文件进行调整。<br>
+调整后的Dockerfile为：</p>
+<pre><code class="language-text">FROM openjdk:8-jre
+
+# Install dependencies
+RUN set -ex; \
+  apt-get update; \
+  apt-get -y install libsnappy1v5 gettext-base libjemalloc-dev; \
+  rm -rf /var/lib/apt/lists/*
+
+# Grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.11
+RUN set -ex; \
+  wget -nv -O /usr/local/bin/gosu &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)&quot;; \
+  wget -nv -O /usr/local/bin/gosu.asc &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc&quot;; \
+  export GNUPGHOME=&quot;$(mktemp -d)&quot;; \
+  for server in ha.pool.sks-keyservers.net $(shuf -e \
+                          hkp://p80.pool.sks-keyservers.net:80 \
+                          keyserver.ubuntu.com \
+                          hkp://keyserver.ubuntu.com:80 \
+                          pgp.mit.edu) ; do \
+      gpg --batch --keyserver &quot;$server&quot; --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 &amp;&amp; break || : ; \
+  done &amp;&amp; \
+  gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+  gpgconf --kill all; \
+  rm -rf &quot;$GNUPGHOME&quot; /usr/local/bin/gosu.asc; \
+  chmod +x /usr/local/bin/gosu; \
+  gosu nobody true
+
+# Configure Flink version
+ENV FLINK_TGZ_URL=https://www.apache.org/dyn/closer.cgi?action=download&amp;filename=flink/flink-1.12.2/flink-1.12.2-bin-scala_2.11.tgz \
+    FLINK_ASC_URL=https://www.apache.org/dist/flink/flink-1.12.2/flink-1.12.2-bin-scala_2.11.tgz.asc \
+    GPG_KEY=0D545F264D2DFDEBFD4E038F97B4625E2FCF517C \
+    CHECK_GPG=true
+
+# Prepare environment
+ENV FLINK_HOME=/opt/flink
+ENV PATH=$FLINK_HOME/bin:$PATH
+#RUN groupadd --system --gid=9999 flink &amp;&amp; \
+#    useradd --system --home-dir $FLINK_HOME --uid=9999 --gid=flink flink
+WORKDIR $FLINK_HOME
+
+# Install Flink
+RUN set -ex; \
+  wget -nv -O flink.tgz &quot;$FLINK_TGZ_URL&quot;; \
+  \
+  if [ &quot;$CHECK_GPG&quot; = &quot;true&quot; ]; then \
+    wget -nv -O flink.tgz.asc &quot;$FLINK_ASC_URL&quot;; \
+    export GNUPGHOME=&quot;$(mktemp -d)&quot;; \
+    for server in ha.pool.sks-keyservers.net $(shuf -e \
+                            hkp://p80.pool.sks-keyservers.net:80 \
+                            keyserver.ubuntu.com \
+                            hkp://keyserver.ubuntu.com:80 \
+                            pgp.mit.edu) ; do \
+        gpg --batch --keyserver &quot;$server&quot; --recv-keys &quot;$GPG_KEY&quot; &amp;&amp; break || : ; \
+    done &amp;&amp; \
+    gpg --batch --verify flink.tgz.asc flink.tgz; \
+    gpgconf --kill all; \
+    rm -rf &quot;$GNUPGHOME&quot; flink.tgz.asc; \
+  fi; \
+  \
+  tar -xf flink.tgz --strip-components=1; \
+  rm flink.tgz; 
+#  \
+#  \
+#  chown -R flink:flink .;
+
+# Configure container
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT [&quot;/docker-entrypoint.sh&quot;]
+EXPOSE 6123 8081
+CMD [&quot;help&quot;]
+</code></pre>
+<p>调整后的docker-entryoint.sh 为：</p>
+<pre><code class="language-text">#!/usr/bin/env bash
+COMMAND_STANDALONE=&quot;standalone-job&quot;
+# Deprecated, should be remove in Flink release 1.13
+COMMAND_NATIVE_KUBERNETES=&quot;native-k8s&quot;
+COMMAND_HISTORY_SERVER=&quot;history-server&quot;
+
+# If unspecified, the hostname of the container is taken as the JobManager address
+JOB_MANAGER_RPC_ADDRESS=${JOB_MANAGER_RPC_ADDRESS:-$(hostname -f)}
+CONF_FILE=&quot;${FLINK_HOME}/conf/flink-conf.yaml&quot;
+USER_ID=${LOCAL_USER_ID:-9001}
+
+drop_privs_cmd() {
+	echo &quot;Starting with UID : $USER_ID&quot;
+	useradd --shell /bin/bash -u $USER_ID -o -c &quot;&quot; -m flink
+	chown -R flink:flink /opt/flink
+    if [ $(id -u) != 0 ]; then
+        # Don't need to drop privs if EUID != 0
+        return
+    elif [ -x /sbin/su-exec ]; then
+        # Alpine
+        echo su-exec flink
+    else
+        # Others
+        echo gosu flink
+    fi
+}
+
+copy_plugins_if_required() {
+  if [ -z &quot;$ENABLE_BUILT_IN_PLUGINS&quot; ]; then
+    return 0
+  fi
+
+  echo &quot;Enabling required built-in plugins&quot;
+  for target_plugin in $(echo &quot;$ENABLE_BUILT_IN_PLUGINS&quot; | tr ';' ' '); do
+    echo &quot;Linking ${target_plugin} to plugin directory&quot;
+    plugin_name=${target_plugin%.jar}
+
+    mkdir -p &quot;${FLINK_HOME}/plugins/${plugin_name}&quot;
+    if [ ! -e &quot;${FLINK_HOME}/opt/${target_plugin}&quot; ]; then
+      echo &quot;Plugin ${target_plugin} does not exist. Exiting.&quot;
+      exit 1
+    else
+      ln -fs &quot;${FLINK_HOME}/opt/${target_plugin}&quot; &quot;${FLINK_HOME}/plugins/${plugin_name}&quot;
+      echo &quot;Successfully enabled ${target_plugin}&quot;
+    fi
+  done
+}
+
+set_config_option() {
+  local option=$1
+  local value=$2
+
+  # escape periods for usage in regular expressions
+  local escaped_option=$(echo ${option} | sed -e &quot;s/\./\\\./g&quot;)
+
+  # either override an existing entry, or append a new one
+  if grep -E &quot;^${escaped_option}:.*&quot; &quot;${CONF_FILE}&quot; &gt; /dev/null; then
+        sed -i -e &quot;s/${escaped_option}:.*/$option: $value/g&quot; &quot;${CONF_FILE}&quot;
+  else
+        echo &quot;${option}: ${value}&quot; &gt;&gt; &quot;${CONF_FILE}&quot;
+  fi
+}
+
+prepare_configuration() {
+    set_config_option jobmanager.rpc.address ${JOB_MANAGER_RPC_ADDRESS}
+    set_config_option blob.server.port 6124
+    set_config_option query.server.port 6125
+
+    TASK_MANAGER_NUMBER_OF_TASK_SLOTS=${TASK_MANAGER_NUMBER_OF_TASK_SLOTS:-1}
+    set_config_option taskmanager.numberOfTaskSlots ${TASK_MANAGER_NUMBER_OF_TASK_SLOTS}
+
+    if [ -n &quot;${FLINK_PROPERTIES}&quot; ]; then
+        echo &quot;${FLINK_PROPERTIES}&quot; &gt;&gt; &quot;${CONF_FILE}&quot;
+    fi
+    envsubst &lt; &quot;${CONF_FILE}&quot; &gt; &quot;${CONF_FILE}.tmp&quot; &amp;&amp; mv &quot;${CONF_FILE}.tmp&quot; &quot;${CONF_FILE}&quot;
+}
+
+maybe_enable_jemalloc() {
+    if [ &quot;${DISABLE_JEMALLOC:-false}&quot; == &quot;false&quot; ]; then
+        export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libjemalloc.so
+    fi
+}
+
+maybe_enable_jemalloc
+
+copy_plugins_if_required
+
+prepare_configuration
+
+args=(&quot;$@&quot;)
+if [ &quot;$1&quot; = &quot;help&quot; ]; then
+    printf &quot;Usage: $(basename &quot;$0&quot;) (jobmanager|${COMMAND_STANDALONE}|taskmanager|${COMMAND_HISTORY_SERVER})\n&quot;
+    printf &quot;    Or $(basename &quot;$0&quot;) help\n\n&quot;
+    printf &quot;By default, Flink image adopts jemalloc as default memory allocator. This behavior can be disabled by setting the 'DISABLE_JEMALLOC' environment variable to 'true'.\n&quot;
+    exit 0
+elif [ &quot;$1&quot; = &quot;jobmanager&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Job Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/jobmanager.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = ${COMMAND_STANDALONE} ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Job Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/standalone-job.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = ${COMMAND_HISTORY_SERVER} ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting History Server&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/historyserver.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = &quot;taskmanager&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    echo &quot;Starting Task Manager&quot;
+
+    exec $(drop_privs_cmd) &quot;$FLINK_HOME/bin/taskmanager.sh&quot; start-foreground &quot;${args[@]}&quot;
+elif [ &quot;$1&quot; = &quot;$COMMAND_NATIVE_KUBERNETES&quot; ]; then
+    args=(&quot;${args[@]:1}&quot;)
+
+    export _FLINK_HOME_DETERMINED=true
+    . $FLINK_HOME/bin/config.sh
+    export FLINK_CLASSPATH=&quot;`constructFlinkClassPath`:$INTERNAL_HADOOP_CLASSPATHS&quot;
+    # Start commands for jobmanager and taskmanager are generated by Flink internally.
+    echo &quot;Start command: ${args[@]}&quot;
+    exec $(drop_privs_cmd) bash -c &quot;${args[@]}&quot;
+fi
+
+args=(&quot;${args[@]}&quot;)
+
+# Set the Flink related environments
+export _FLINK_HOME_DETERMINED=true
+. $FLINK_HOME/bin/config.sh
+export FLINK_CLASSPATH=&quot;`constructFlinkClassPath`:$INTERNAL_HADOOP_CLASSPATHS&quot;
+
+# Running command in pass-through mode
+exec $(drop_privs_cmd) &quot;${args[@]}&quot;
+</code></pre>
+<h2 id="安装部署步骤">安装部署步骤</h2>
+<ol>
+<li>构建镜像<br>
+将调整后的Dockerfile文件和docker-entrypoint.sh 文件copy到同一个目录下。执行如下命令构建镜像<br>
+docker build -t wmz/flink:1.12.2_2.11 .</li>
+<li>创建网络<br>
+docker network create flink-network ：容器间使用同一个的网络，使得相互间可以通过容器名进行访问。</li>
+<li>启动jobmanager</li>
+</ol>
+<pre><code class="language-text">docker run -itd --name=myjobmanager -h myjobmanager --network flink-network --publish 8081:8081 --env LOCAL_USER_ID=`id -u $USER` -v /root/wym/conf:/opt/flink/conf -v /root/wym/data/save_point:/opt/flink/save_point -v /root/wym/data/check_point:/opt/flink/check_point -v /root/wym/data/blob_store:/opt/flink/blob_store -v /root/wym/data/upload_dir:/opt/flink/upload_dir -v /root/wym/data/log:/opt/flink/log flink1:latest jobmanager 
+</code></pre>
+<p>说明：<br>
+(1)--env LOCAL_USER_ID=<code>id -u $USER</code>  将当前宿主机上的用户的uid作为环境变量传到容器内；容器内会基于改用户uid创建容器用户，并运行容器。这就保证了宿主机上的用户与容器内运行时的用户时相同的用户<br>
+4. 启动taskmanager</p>
+<pre><code class="language-text">docker run -itd --name=mytaskmanager1 -h mytaskmanager1 --network flink-network  \
+ -v /root/wym/conf:/opt/flink/conf -v /root/wym/data/save_point:/opt/flink/save_point -v /root/wym/data/check_point:/opt/flink/check_point -v /root/wym/data/blob_store:/opt/flink/blob_store -v /root/wym/data/upload_dir:/opt/flink/upload_dir -v /root/wym/data/log:/opt/flink/log --env FLINK_PROPERTIES=&quot;jobmanager.rpc.address: myjobmanager&quot; --env LOCAL_USER_ID=`id -u $USER` flink1:latest taskmanager
+</code></pre>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/jstack/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  JStack
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/handleing-permissions-with-docker-volume/">
+                <h3 class="post-title">
+                  Handleing  Permissions with Docker Volume
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

@@ -1,0 +1,296 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#flink-memory-%E7%BB%84%E6%88%90">Flink memory 组成</a></li>
+<li><a href="#configure-total-memory">Configure Total Memory</a></li>
+<li><a href="#local-execution">Local Execution</a></li>
+<li><a href="#memory-tuning">Memory tuning</a>
+<ul>
+<li><a href="#configure-memory-for-standalone-deployment">Configure memory for standalone deployment</a></li>
+<li><a href="#configure-memory-for-state-backends">Configure memory for state backends</a>
+<ul>
+<li><a href="#heap-state-backend">Heap state backend</a></li>
+<li><a href="#rocksdb-state-backend">RocksDB state backend</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Flink 内存设置——个人理解</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-02-02 / 5 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>本文主要讲解关于TaskManager 1.10版本和JobManager 1.11版本之后，Flink内存相关设置。</p>
+<h1 id="flink-memory-组成">Flink memory 组成</h1>
+<p>Flink JVM进程的总内存包括<em>Flink应用程序内存（total Flink memory）<em>和</em>JVM运行该进程所消耗的内存</em>组成。total Flink memory 又包括<em>JVM Heap memory</em> 和<em>Off-Heap(direct and native)memory</em>。<br>
+<img src="https://wangyemao-github.github.io/post-images/1612265850568.png" alt="" loading="lazy"></p>
+<p>JobManager的内存模型同上，TaskManager 的内存模型为：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612266194318.png" alt="" loading="lazy"><br>
+可见，TaskManager 进程中，total Flink memory 包括JVM Heap memory，Managed memory(由Flink管理的) 和其他Direct(或者native) memory组成。</p>
+<h1 id="configure-total-memory">Configure Total Memory</h1>
+<ol>
+<li>
+<p>在Flink中设置内存最简单的方式就是配置如下两个组合选项之一：<br>
+<img src="https://wangyemao-github.github.io/post-images/1612266389363.png" alt="" loading="lazy"><br>
+<strong>注意</strong>：不推荐同时配置<em>total process memory * 和</em>total Flink memory*，可能因为潜在的配置冲突，造成部署失败。</p>
+</li>
+<li>
+<p>设置内存的另一种方式就是配置<em>total flink memory 的必须组成部分的内存</em><br>
+<img src="https://wangyemao-github.github.io/post-images/1612267283859.png" alt="" loading="lazy"></p>
+</li>
+</ol>
+<ul>
+<li>对于TaskManager，指定<em>task heap</em>和<em>managed memory</em>，它可以更好地控制Flink任务的可用JVM堆内存以及Managed memory。其余的内存组成部分将根据默认值或其他配置项进行自动调整。<br>
+** Task Heap Memory** ： 如果你想要确保特定大小的JVM Heap 内存用于用户代码任务执行，你可以显示指定 <em>task heap memory</em></li>
+</ul>
+<pre><code class="language-text">taskmanager.memory.task.heap.size 
+</code></pre>
+<p><strong>Managed Memory</strong> : 由Flink管理的，被分类为off-heap memory。Managed memory主要用于：(1) 流作业用于RocksDB state backend；（2）批作业用于排序，hash table，缓存中间结果等；（3）在流/批作业中用于user defined function in python processes。设置方式为：</p>
+<pre><code class="language-text">taskmanager.memory.managed.size    
+or
+taskmanager.memory.managed.fraction
+</code></pre>
+<p><strong>注意</strong>：  taskmanager.memory.managed.fraction 设置的占比是基于<em>total Flink Memory</em> 的占比。Size和fraction都配置的情况下，Size将覆盖fraction；如果都没设置，将使用默认的fraction计算。</p>
+<ul>
+<li>对于JobManager，指定*JVM Heap *大小，它提供了对可用JVM堆的更多控制。<br>
+JVM Heap内存用于：（1）Flink framework；（2）job提交期间执行的用户代码(比如，特定的批数据源)或者checkpoint完成时的回调。所需的JVM堆大小主要由正在运行的作业的数量、它们的结构和对上述用户代码的需求驱动。</li>
+</ul>
+<ol start="3">
+<li>推荐：已经在按照<strong>2</strong>进行配置的情况下，建议不要做<strong>1</strong>相关的配置。<br>
+具体来说，对TaskManager，如果已经配置了task heap memory 和managed memory的情况下，推荐不要在设置total process memory 和 total Flink memory。否则，很可能导致内存配置冲突问题。对JobManager，如果配置了JVM heap，也推荐不要在设置total process memory 和total Flink memory，否则也会导致同样的问题。</li>
+<li>Configure off-heap memory  ： off-heap memory 的相关配置，具体可参见官网。</li>
+</ol>
+<h1 id="local-execution">Local Execution</h1>
+<p>如果您在本地（例如从IDE中）运行Flink而没有创建集群，针对不同的进程有效的内存设置分别为：</p>
+<ul>
+<li>TaskManager ：除了下表中的设置项，其他的内存设置都会忽略<br>
+<img src="https://wangyemao-github.github.io/post-images/1612315668235.png" alt="" loading="lazy"><br>
+对于本地执行，当前Task Heap size 与 实际Heap size 没有任何关系。在下一个版本，它是未来优化的重要内容。实际的JVM Heap Size不是由Flink控制，而是依赖于如何启动Flink 进程。如果你想要控制JVM Heap 大小，你需要显示传递相应的JVM参数：比如，-Xmx，-Xms 。</li>
+<li>JobManager ： JobManager的内存配置项都会被忽略</li>
+</ul>
+<h1 id="memory-tuning">Memory tuning</h1>
+<p>本节主要说明：针对不同的使用场景如何设置内存，以及在每种场景下的重要设置项。</p>
+<h2 id="configure-memory-for-standalone-deployment">Configure memory for standalone deployment</h2>
+<p>对于standalone 部署模式，推荐配置*total Flink memory （taskmanager.memory.flink.size 或jobmanager.memory.flink.size）*或者其组成部分。另外，如果JVM MetaSpace存在问题，则可以对其进行调整。<br>
+*the total Process memory *是无关紧要的，因为JVM 开销并不由Flink或者部署环境控制，在这种情况下，只有执行机器的物理资源是重要的。</p>
+<h2 id="configure-memory-for-state-backends">Configure memory for state backends</h2>
+<p>该配置只与TaskManager有关。部署Flink 流应用程序时，使用的状态后端（state backend）类型将决定集群的最佳内存配置。</p>
+<h3 id="heap-state-backend">Heap state backend</h3>
+<p><em>当运行无状态作业或者使用heap state backend(MemoryStateBackend 或者 FsStateBackend)时，将Managed Memory设置为0</em>. 这可以确保为JVM上的用户代码分配最大数量的堆内存</p>
+<h3 id="rocksdb-state-backend">RocksDB state backend</h3>
+<p>RocksDBStateBackend 使用native memory。默认地，RocksDB设置将native memory限制为 managed memory的大小。因此，预留足够的managed memory给你的状态（state）是很重要的。如果禁用了RocksDB的内存控制，对于容器部署模式，当RocksDB分配的内存超过了请求的容器内存大小（the total process memory）时，TaskManager会被kill掉。</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/dockerfile/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  DockerFile
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/set-up-flink-de-process-memory/">
+                <h3 class="post-title">
+                  Set up Flink Memory——翻译
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

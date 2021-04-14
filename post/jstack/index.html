@@ -1,0 +1,383 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#jstack%E6%98%AF%E4%BB%80%E4%B9%88">JStack是什么？</a></li>
+<li><a href="#jstack-dump%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6%E4%B8%AD%E6%8C%87%E5%BE%97%E5%85%B3%E6%B3%A8%E7%9A%84%E7%BA%BF%E7%A8%8B%E7%8A%B6%E6%80%81">jstack dump日志文件中，指得关注的线程状态</a></li>
+<li><a href="#jstack-%E5%91%BD%E4%BB%A4">jstack 命令</a>
+<ul>
+<li><a href="#%E5%A6%82%E4%BD%95%E6%9F%A5%E7%9C%8Bjstack-dump-%E6%97%A5%E5%BF%97">如何查看JStack Dump 日志</a></li>
+<li><a href="#%E7%BA%BF%E7%A8%8B%E7%8A%B6%E6%80%81%E8%AF%B4%E6%98%8E">线程状态说明</a></li>
+<li><a href="#%E5%85%B3%E4%BA%8Eobjectclass-monitor">关于Object/Class Monitor</a>
+<ul>
+<li><a href="#%E8%B0%83%E7%94%A8%E4%BF%AE%E9%A5%B0">调用修饰</a></li>
+</ul>
+</li>
+<li><a href="#%E5%AE%9E%E4%BE%8B">实例</a>
+<ul>
+<li><a href="#waiting-on-condition-and-timed_waiting">waiting on condition and TIMED_WAITING</a></li>
+<li><a href="#in-objectwait-and-timed_waiting">in Object.wait() and TIMED_WAITING</a></li>
+</ul>
+</li>
+<li><a href="#%E7%BA%BF%E7%A8%8Bdump%E7%9A%84%E5%88%86%E6%9E%90">线程Dump的分析</a>
+<ul>
+<li><a href="#%E8%BF%9B%E5%85%A5%E5%8C%BA%E7%AD%89%E5%BE%85">进入区等待</a></li>
+<li><a href="#%E5%90%8C%E6%AD%A5%E5%9D%97%E9%98%BB%E5%A1%9E">同步块阻塞</a></li>
+<li><a href="#%E6%8C%81%E7%BB%AD%E8%BF%90%E8%A1%8C%E7%9A%84io">持续运行的IO</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结：</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#jstack-dump-%E6%97%A5%E5%BF%97%E4%B8%AD%E4%B8%80%E4%BA%9B%E5%B8%B8%E8%A7%81%E7%BA%BF%E7%A8%8B%E6%95%B4%E7%90%86">jstack dump 日志中一些常见线程整理</a>
+<ul>
+<li><a href="#jstack%E6%8E%92%E6%9F%A5java%E7%9A%84cpu%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98">jstack排查java的CPU性能问题</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">JStack</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-04-12 / 12 min read
+        </div>
+        
+        <div class="post-content yue">
+          <h1 id="jstack是什么">JStack是什么？</h1>
+<p>jstack 是java虚拟机自带的一种堆栈跟踪工具。**作用：**生成JVM当前时刻线程的快照（threaddump，当前进程中所有线程的信息）；**目的：**帮助定位程序问题出现的原因，如长时间停顿、CPU占用率过高等。<br>
+<strong>功能</strong>：<br>
+jstack用于生成java虚拟机当前时刻的线程快照。线程快照是当前java虚拟机内每一条线程正在执行的方法堆栈的集合，生成线程快照的主要目的是定位线程出现长时间停顿的原因【通过jstack来查看各个线程的调用堆栈，就可以知道线程到底在后台做什么事情，或者等待什么资源】，如线程间死锁、死循环、请求外部资源导致的长时间等待等。<br>
+---如果java程序崩溃生成core文件，jstack工具可以用来获得core文件的java stack和native stack的信息，从而可以轻松地知道java程序是如何崩溃和在程序何处发生问题<br>
+---对于java 程序hung住的状态，jstack非常有用。</p>
+<p>**总结：**jstack命令主要用来查看Java线程的调用堆栈的，可以用来分析线程问题（如死锁）</p>
+<h1 id="jstack-dump日志文件中指得关注的线程状态">jstack dump日志文件中，指得关注的线程状态</h1>
+<ol>
+<li><strong>死锁，Deadlock（重点关注）</strong></li>
+<li>执行中，Runnable</li>
+<li><strong>等待资源，Waiting on condition（重点关注）</strong></li>
+<li><strong>等待获取监视器，Waiting on monitor entry（重点关注）</strong></li>
+<li>暂停，Suspended</li>
+<li>对象等待中，Object.wait() 或 TIMED_WAITIN</li>
+<li><strong>阻塞，Blocked（重点关注）</strong></li>
+<li>停止，Parked</li>
+</ol>
+<h1 id="jstack-命令">jstack 命令</h1>
+<pre><code class="language-text">hollis@hos:~$ jstack -help
+Usage:
+    jstack [-l] &lt;pid&gt;
+        (to connect to running process)
+    jstack -F [-m] [-l] &lt;pid&gt;
+        (to connect to a hung process)
+    jstack [-m] [-l] &lt;executable&gt; &lt;core&gt;
+        (to connect to a core file)
+    jstack [-m] [-l] [server_id@]&lt;remote server IP or hostname&gt;
+        (to connect to a remote debug server)
+
+Options:
+    -F  to force a thread dump. Use when jstack &lt;pid&gt; does not respond (process is hung)
+    -m  to print both java and native frames (mixed mode)
+    -l  long listing. Prints additional information about locks
+    -h or -help to print this help message
+</code></pre>
+<p>#jstack dump 日志</p>
+<h2 id="如何查看jstack-dump-日志">如何查看JStack Dump 日志</h2>
+<p><img src="https://wangyemao-github.github.io/post-images/1618197743245.png" alt="" loading="lazy"><br>
+上图jstack dump日志解读：</p>
+<ul>
+<li>线程状态是 Blocked，阻塞状态。说明线程等待资源超时！</li>
+<li>“ waiting to lock &lt;0x00000000acf4d0c0&gt;”指，线程在等待给这个 0x00000000acf4d0c0 地址上锁（英文可描述为：trying to obtain 0x00000000acf4d0c0 lock）。</li>
+<li>在 dump 日志里查找字符串 0x00000000acf4d0c0，发现有大量线程都在等待给这个地址上锁。如果能在日志里找到谁获得了这个锁（如locked &lt; 0x00000000acf4d0c0 &gt;），就可以顺藤摸瓜了。</li>
+<li>“waiting for monitor entry”说明此线程通过 synchronized(obj) {……} 申请进入了临界区，从而进入了下图1中的“Entry Set”队列，但该 obj 对应的 monitor 被其他线程拥有，所以本线程在 Entry Set 队列中等待。</li>
+<li>第一行里，”RMI TCP Connection(267865)-172.16.5.25”是 Thread Name 。tid指Java Thread id。nid指native线程的id【OS层面的线程id，top命令显示的就是OS层面的线程id】。prio是线程优先级。[0x00007fd4f8684000]是线程栈起始地址。</li>
+</ul>
+<h2 id="线程状态说明">线程状态说明</h2>
+<p>线程的状态有：NEW、RUNNABLE、BLOCKED、WAITING、TIMED_WAITING、TERMINATED。其中，NEW为未启动的，不会出现在dump 日志文件中的状态。</p>
+<ul>
+<li>Deadlock：死锁线程，一般指多个线程调用间，进入相互资源占用，导致一直等待无法释放的情况</li>
+<li>Runnable：一般指该线程正在执行状态中，该线程占用了资源，正在处理某个请求，有可能正在传递SQL到数据库执行，有可能在对某个文件操作，有可能进行数据类型等转换</li>
+<li>Waiting on condition：等待资源，或等待某个条件的发生。具体原因需结合 stacktrace来分析
+<ol>
+<li>如果堆栈信息明确是应用代码，则证明该线程正在等待资源。一般是大量读取某资源，且该资源采用了资源锁的情况下，线程进入等待状态，等待资源的读取；又或者，正在等待其他线程的执行等。</li>
+<li>如果发现有大量的线程都在处在 Wait on condition，从线程 stack看，正等待网络读写，这可能是一个网络瓶颈的征兆</li>
+<li>另外一种出现 Wait on condition的常见情况是该线程在 sleep，等待 sleep的时间到了时候，将被唤醒</li>
+</ol>
+</li>
+<li>Blocked：线程阻塞，是指当前线程执行过程中，所需要的资源长时间等待却一直未能获取到，被容器的线程管理器标识为阻塞状态，可以理解为等待资源超时的线程</li>
+<li>Waiting for monitor entry 和 in Object.wait()：Monitor是 Java中用以实现线程之间的互斥与协作的主要手段，它可以看成是对象或者 Class的锁。每一个对象都有，也仅有一个 monitor。</li>
+</ul>
+<h2 id="关于objectclass-monitor">关于Object/Class Monitor</h2>
+<p>在多线程的JAVA程序中，<strong>Monitor是java中用以实现线程之间的互斥与协作的主要手段</strong>。它可以看成是对象或Class的锁，每一个对象都有且仅有一个monitor。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618198555803.png" alt="" loading="lazy"><br>
+每个 Monitor在某个时刻，只能被一个线程拥有，该线程就是 “Active Thread”，而其它线程都是 “Waiting Thread”，分别在两个队列 “ Entry Set”和 “Wait Set”里面等候。在 “Entry Set”中等待的线程状态是 “Waiting for monitor entry”，而在 “Wait Set”中等待的线程状态是 “in Object.wait()”。</p>
+<pre><code class="language-java">synchronized(obj){
+    ......
+}
+</code></pre>
+<h3 id="调用修饰">调用修饰</h3>
+<p>表示线程在方法调用时,额外的重要的操作。</p>
+<ul>
+<li>locked &lt;地址&gt; 目标: 使用synchronized申请对象锁成功,监视器的拥有者<br>
+<img src="https://wangyemao-github.github.io/post-images/1618209989027.png" alt="" loading="lazy"><br>
+通过synchronized关键字,成功获取到了对象的锁,成为监视器的拥有者,在临界区内操作。对象锁是可以线程重入的</li>
+<li>waiting to lock &lt;地址&gt; 目标：使用synchronized申请对象锁未成功,在进入区等待<br>
+<img src="https://wangyemao-github.github.io/post-images/1618212008930.png" alt="" loading="lazy"><br>
+通过synchronized关键字,没有获取到了对象的锁,线程在监视器的进入区等待。在调用栈顶出现,线程状态为Blocked</li>
+<li>waiting on &lt;地址&gt; 目标：使用synchronized申请对象锁成功后,释放锁并在等待区等待<br>
+<img src="https://wangyemao-github.github.io/post-images/1618210054705.png" alt="" loading="lazy"><br>
+通过synchronized关键字,成功获取到了对象的锁后,调用了wait方法,进入对象的等待区等待。在调用栈顶出现,线程状态为WAITING或TIMED_WATING</li>
+<li>parking to wait for &lt;地址&gt; 目标<br>
+park是基本的线程阻塞原语,不通过监视器在对象上阻塞。随concurrent包会出现的新的机制,与synchronized体系不同</li>
+</ul>
+<h2 id="实例">实例</h2>
+<h3 id="waiting-on-condition-and-timed_waiting">waiting on condition and TIMED_WAITING</h3>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618206244210.png" alt="" loading="lazy"></figure>
+<ul>
+<li>&quot;TIMED_WAITING(parking)&quot;中的timed_waiting 表示指定了时间的等待状态，当到达指定时间后自动退出等待状态；parking指线程处于挂起中。</li>
+<li>“waiting on condition”需要与堆栈中的“parking to wait for &lt;0x00000000acd84de8&gt; (a java.util.concurrent.SynchronousQueue$TransferStack)”结合来看。首先，本线程肯定是在等待某个条件的发生，来把自己唤醒。其次，SynchronousQueue 并不是一个队列，只是线程之间移交信息的机制，当我们把一个元素放入到 SynchronousQueue 中时必须有另一个线程正在等待接受移交的任务，因此这就是本线程在等待的条件</li>
+</ul>
+<h3 id="in-objectwait-and-timed_waiting">in Object.wait() and TIMED_WAITING</h3>
+<figure data-type="image" tabindex="2"><img src="https://wangyemao-github.github.io/post-images/1618206737075.png" alt="" loading="lazy"></figure>
+<ul>
+<li>“TIMED_WAITING (on object monitor)”，对于本例而言，是因为本线程调用了 java.lang.Object.wait(long timeout) 而进入等待状态</li>
+<li>“Wait Set”中等待的线程状态就是“ in Object.wait() ”。当线程获得了 Monitor，进入了临界区之后，如果发现线程继续运行的条件没有满足，它则调用对象（一般就是被 synchronized 的对象）的 wait() 方法，放弃了 Monitor，进入 “Wait Set”队列。只有当别的线程在该对象上调用了 notify() 或者 notifyAll() ，“ Wait Set”队列中线程才得到机会去竞争，但是只有一个线程获得对象的 Monitor，恢复到运行态</li>
+</ul>
+<h2 id="线程dump的分析">线程Dump的分析</h2>
+<p>一些入手点说明：</p>
+<h3 id="进入区等待">进入区等待</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210608128.png" alt="" loading="lazy"><br>
+线程状态BLOCKED,线程动作wait on monitor entry,调用修饰waiting to lock总是一起出现。表示在代码级别已经存在冲突的调用。必然有问题的代码,需要尽可能减少其发生。</p>
+<h3 id="同步块阻塞">同步块阻塞</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210749419.png" alt="" loading="lazy"><br>
+一个线程锁住某对象,大量其他线程在该对象上等待。</p>
+<h3 id="持续运行的io">持续运行的IO</h3>
+<p><img src="https://wangyemao-github.github.io/post-images/1618210836280.png" alt="" loading="lazy"><br>
+IO操作是可以以RUNNABLE状态达成阻塞。例如:数据库死锁、网络读写。 格外注意对IO线程的真实状态的分析。 一般来说,被捕捉到RUNNABLE的IO调用,都是有问题的。 以下堆栈显示： 线程状态为RUNNABLE。 调用栈在SocketInputStream或SocketImpl上,socketRead0等方法。 调用栈包含了jdbc相关的包。很可能发生了数据库死锁</p>
+<h3 id="总结">总结：</h3>
+<ul>
+<li>wait on monitor entry ： 被阻塞的肯定有问题</li>
+<li>runnable：注意IO线程</li>
+<li>in object.wait() : 注意非线程池等待</li>
+</ul>
+<h1 id="jstack-dump-日志中一些常见线程整理">jstack dump 日志中一些常见线程整理</h1>
+<p>下表中整理的线程都是归属JVM的线程，通常在对每个应用进行进行jstack dump时，日志文件中都会出现如下一些线程：<br>
+|线程|所属|说明|<br>
+|&quot;Attach Listener&quot;|JVM|Attach Listener线程是负责接收到外部的命令，而对该命令进行执行的并且吧结果返回给发送者。通常我们会用一些命令去要求jvm给我们一些反馈信息，如：java -version、jmap、jstack等等。如果该线程在jvm启动的时候没有初始化，那么，则会在用户第一次执行jvm命令时，得到启动|<br>
+|&quot;Service Thread&quot; |JVM|前面我们提到第一个Attach Listener线程的职责是接收外部jvm命令，当命令接收成功后，会交给signal dispather线程去进行分发到各个不同的模块处理命令，并且返回处理结果。signal dispather线程也是在第一次接收外部jvm命令时，进行初始化工作|<br>
+|&quot;CompilerThreadX&quot;|JVM|用来调用JITing，实时编译装卸class。通常，jvm会启动多个线程来处理这部分工作，线程名称后面的数字也会累加，例如：CompilerThread1|<br>
+|&quot;Reference Handler&quot;|JVM|JVM在创建main线程后就创建Reference Handler线程，其优先级最高，为10，它主要用于处理引用对象本身（软引用、弱引用、虚引用）的垃圾回收问题|<br>
+|&quot;Finalizer&quot;|JVM|这个线程也是在main线程之后创建的，其优先级为10，主要用于在垃圾收集前，调用对象的finalize()方法；关于Finalizer线程的几点：1)只有当开始一轮垃圾收集时，才会开始调用finalize()方法；因此并不是所有对象的finalize()方法都会被执行；2)该线程也是daemon线程，因此如果虚拟机中没有其他非daemon线程，不管该线程有没有执行完finalize()方法，JVM也会退出；3) JVM在垃圾收集时会将失去引用的对象包装成Finalizer对象（Reference的实现），并放入ReferenceQueue，由Finalizer线程来处理；最后将该Finalizer对象的引用置为null，由垃圾收集器来回收；4) JVM为什么要单独用一个线程来执行finalize()方法呢？如果JVM的垃圾收集线程自己来做，很有可能由于在finalize()方法中误操作导致GC线程停止或不可控，这对GC线程来说是一种灾难；|<br>
+|&quot;DestroyJavaVM&quot; |JVM|执行main()的线程在main执行完后调用JNI中的jni_DestroyJavaVM()方法唤起DestroyJavaVM线程.线程退出时，都会判断自己当前是否是整个JVM中最后一个非deamon线程，如果是，则通知DestroyJavaVM线程卸载JVM。ps：扩展一下：1.如果线程退出时判断自己不为最后一个非deamon线程，那么调用thread-&gt;exit(false)，并在其中抛出thread_end事件，jvm不退出。2.如果线程退出时判断自己为最后一个非deamon线程，那么调用before_exit()方法，抛出两个事件： 事件1：thread_end线程结束事件、事件2：VM的death事件。然后调用thread-&gt;exit(true)方法，接下来把线程从active list卸下，删除线程等等一系列工作执行完成后，则通知正在等待的DestroyJavaVM线程执行卸载JVM操作|<br>
+实时上，我们更多地是需要关注应用相关的线程。</p>
+<h2 id="jstack排查java的cpu性能问题">jstack排查java的CPU性能问题</h2>
+<figure data-type="image" tabindex="3"><img src="https://wangyemao-github.github.io/post-images/1618212296706.png" alt="" loading="lazy"></figure>
+<p>针对这个排查流程，github上开源的快速定位脚本：https://github.com/oldratlee/useful-scripts/blob/dev-2.x/docs/java.md#-show-busy-java-threads</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/flink-table-and-sql/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Flink Table &amp; SQL
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/flink-docker-an-zhuang-bu-shu/">
+                <h3 class="post-title">
+                  Flink Docker 安装部署
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

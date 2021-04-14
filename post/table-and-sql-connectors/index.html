@@ -1,0 +1,452 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#how-to-use-connectors">how to use connectors</a>
+<ul>
+<li><a href="#sql-create-statements">SQL CREATE Statements</a>
+<ul>
+<li><a href="#run-a-sql-create-statements">RUN a SQL CREATE Statements</a></li>
+<li><a href="#create-table">CREATE TABLE</a></li>
+<li><a href="#columns">Columns</a>
+<ul>
+<li><a href="#physical-regular-columns">Physical / Regular Columns</a></li>
+<li><a href="#metadata-columns">Metadata Columns</a></li>
+</ul>
+</li>
+<li><a href="#wartermark">WARTERMARK</a></li>
+<li><a href="#like">LIKE</a></li>
+<li><a href="#primary-key">Primary KEY</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#schema-mapping">Schema Mapping</a></li>
+<li><a href="#primary-key-2">Primary KEY</a></li>
+<li><a href="#time-attributes">Time Attributes</a>
+<ul>
+<li><a href="#introduction-to-time-attributes">Introduction to Time Attributes</a><br>
+*
+<ul>
+<li><a href="#defining-in-ddl">Defining in DDL</a></li>
+<li><a href="#during-datastream-to-table-conversion">During DataStream-to-Table Conversion</a></li>
+<li><a href="#processing-time">Processing Time</a>
+<ul>
+<li><a href="#defining-in-ddl-2">Defining in DDL</a></li>
+<li><a href="#during-datastream-to-table-conversion-2">During DataStream-to-Table Conversion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#proctime-attributes">Proctime Attributes</a></li>
+<li><a href="#rowtime-attributes">Rowtime Attributes</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Table &amp; SQL Connectors</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-04-13 / 12 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>Table API &amp; SQL 可以connect to 外部系统，读取、写入 batch 或streaming table。** a table source** 提供了访问存储在外部系统的数据（比如，数据库，key-value存储，消息队列，文件系统等）；** a table sink ** emit a table 到外部存储系统。<br>
+Flink 当前支持的Connectors：<br>
+<img src="https://wangyemao-github.github.io/post-images/1618302077330.png" alt="" loading="lazy"></p>
+<h1 id="how-to-use-connectors">how to use connectors</h1>
+<p>flink支持使用SQL create table 语句注册表。可以定义表名称，表模式，以及对于连接到外部系统的表选项。</p>
+<pre><code class="language-java">CREATE TABLE MyUserTable (
+  -- declare the schema of the table
+  `user` BIGINT,
+  `message` STRING,
+  `rowtime` TIMESTAMP(3) METADATA FROM 'timestamp',    -- use a metadata column to access Kafka's record timestamp
+  `proctime AS PROCTIME(),    -- use a computed column to define a proctime attribute
+  WATERMARK FOR `rowtime` AS `rowtime` - INTERVAL '5' SECOND    -- use a WATERMARK statement to define a rowtime attribute
+) WITH (
+  -- declare the external system to connect to
+  'connector' = 'kafka',
+  'topic' = 'topic_name',
+  'scan.startup.mode' = 'earliest-offset',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'format' = 'json'   -- declare a format for this system
+)
+</code></pre>
+<h2 id="sql-create-statements">SQL CREATE Statements</h2>
+<p>Ceate Statements 用于在当前或者指定的Catalog中注册table/view。注册的table/view可以在SQL查询中使用。FLINk SQL支持如下Create statements：CREATE TABLE / DATABASE/VIEW/FUNCTION。</p>
+<h3 id="run-a-sql-create-statements">RUN a SQL CREATE Statements</h3>
+<p>使用TableEnvironment的executeSql()方法执行。返回“ok”----》成功；否则抛出一个异常</p>
+<pre><code class="language-java">EnvironmentSettings settings = EnvironmentSettings.newInstance()...
+TableEnvironment tableEnv = TableEnvironment.create(settings);
+
+// SQL query with a registered table
+// register a table named &quot;Orders&quot;
+tableEnv.executeSql(&quot;CREATE TABLE Orders (`user` BIGINT, product STRING, amount INT) WITH (...)&quot;);
+// run a SQL query on the Table and retrieve the result as a new Table
+Table result = tableEnv.sqlQuery(
+  &quot;SELECT product, amount FROM Orders WHERE product LIKE '%Rubber%'&quot;);
+// Execute insert SQL with a registered table
+// register a TableSink
+tableEnv.executeSql(&quot;CREATE TABLE RubberOrders(product STRING, amount INT) WITH (...)&quot;);
+// run an insert SQL on the Table and emit the result to the TableSink
+tableEnv.executeSql(
+  &quot;INSERT INTO RubberOrders SELECT product, amount FROM Orders WHERE product LIKE '%Rubber%'&quot;);
+</code></pre>
+<h3 id="create-table">CREATE TABLE</h3>
+<p>建表语句语法：</p>
+<pre><code class="language-text">CREATE TABLE [catalog_name.][db_name.]table_name
+  (
+    { &lt;physical_column_definition&gt; | &lt;metadata_column_definition&gt; | &lt;computed_column_definition&gt; }[ , ...n]
+    [ &lt;watermark_definition&gt; ]
+    [ &lt;table_constraint&gt; ][ , ...n]
+  )
+  [COMMENT table_comment]
+  [PARTITIONED BY (partition_column_name1, partition_column_name2, ...)]
+  WITH (key1=val1, key2=val2, ...)
+  [ LIKE source_table [( &lt;like_options&gt; )] ]
+   
+&lt;physical_column_definition&gt;:
+  column_name column_type [ &lt;column_constraint&gt; ] [COMMENT column_comment]
+  
+&lt;column_constraint&gt;:
+  [CONSTRAINT constraint_name] PRIMARY KEY NOT ENFORCED
+
+&lt;table_constraint&gt;:
+  [CONSTRAINT constraint_name] PRIMARY KEY (column_name, ...) NOT ENFORCED
+
+&lt;metadata_column_definition&gt;:
+  column_name column_type METADATA [ FROM metadata_key ] [ VIRTUAL ]
+
+&lt;computed_column_definition&gt;:
+  column_name AS computed_column_expression [COMMENT column_comment]
+
+&lt;watermark_definition&gt;:
+  WATERMARK FOR rowtime_column_name AS watermark_strategy_expression
+
+&lt;source_table&gt;:
+  [catalog_name.][db_name.]table_name
+
+&lt;like_options&gt;:
+{
+   { INCLUDING | EXCLUDING } { ALL | CONSTRAINTS | PARTITIONS }
+ | { INCLUDING | EXCLUDING | OVERWRITING } { GENERATED | OPTIONS | WATERMARKS } 
+}[, ...]
+</code></pre>
+<h3 id="columns">Columns</h3>
+<h4 id="physical-regular-columns">Physical / Regular Columns</h4>
+<p>物理列是众所周知的数据库中常规列。它们定义物理数据中字段的名称、类型和顺序。因此，物理列表示从外部系统读取和写入的有效负载。connectors和formats使用这些列(按定义的顺序)来配置。其他类型的列可以在物理列之间声明，但不会影响最终的物理模式。</p>
+<pre><code class="language-text">CREATE TABLE MyTable (
+  `user_id` BIGINT,
+  `name` STRING
+) WITH (
+  ...
+);
+</code></pre>
+<h4 id="metadata-columns">Metadata Columns</h4>
+<p>元数据列是SQL标准的扩展，并允许访问表每一行中特定connectors和formats的字段。元数据列由METADATA关键字标识。比如，对于基于时间的操作，元数据列可以用于从kafka记录中读写时间戳。声明元数据列咋table模式中是可选的。<br>
+引用kafka 的timestamp字段作为元数据列：</p>
+<pre><code class="language-text">CREATE TABLE MyTable (
+  `user_id` BIGINT,
+  `name` STRING,
+  `record_time` TIMESTAMP(3) WITH LOCAL TIME ZONE METADATA FROM 'timestamp'    -- reads and writes a Kafka record's timestamp
+) WITH (
+  'connector' = 'kafka'
+  ...
+); 
+</code></pre>
+<p>每一个元数据标识为：字符串key+文本数据类型；比如上面kafka暴露了一个元数据字段，其key为：timestamp；数据类型为：TIMESTAMP(3) WITH LOCAL TIME ZONE。<br>
+元数据列record_time会作为table schema的一部分，可以像正常列一样做转换和存储：</p>
+<pre><code class="language-text">INSERT INTO MyTable SELECT user_id, name, record_time + INTERVAL '1' SECOND FROM MyTable;
+</code></pre>
+<p>如果元数据列名就是元数据key，FROM子句可以省略：</p>
+<pre><code class="language-text">`timestamp` TIMESTAMP(3) WITH LOCAL TIME ZONE METADATA    -- use column name as metadata key
+</code></pre>
+<p>为方便起见，如果列的数据类型不同于元数据字段的数据类型，则运行时将执行显式强制转换。当然，这要求这两种数据类型是兼容的。</p>
+<pre><code class="language-text">`timestamp` BIGINT METADATA    -- cast the timestamp as BIGINT
+</code></pre>
+<p>默认，planner假定元数据列可用于读写。但是，在许多情况下，外部系统提供的只读元数据字段比可写字段更多。因此，可以使用VIRTUAL关键字排除元数据列的持久化。</p>
+<pre><code class="language-text">`timestamp` BIGINT METADATA VIRTUAL ,       -- no part of the query-to-sink schema
+</code></pre>
+<p>=====&gt;</p>
+<pre><code class="language-text">source-to-query schema:
+MyTable(`timestamp` BIGINT, `user_id` BIGINT, `name` STRING)
+
+query-to-sink schema:
+MyTable(`user_id` BIGINT, `name` STRING)
+</code></pre>
+<p>####Computed Columns<br>
+Computed columns are virtual columns that are generated using the syntax column_name AS computed_column_expression.<br>
+计算字段不会在表中进行物理存储，<br>
+The planner will transform computed columns into a regular projection after the source。</p>
+<pre><code class="language-text"> `cost` AS price * quanitity,  -- evaluate expression and supply the result to queries
+</code></pre>
+<p>计算列可以包含任何列、常量、函数的组合，不能包含子查询。<br>
+计算列通常在CREATE TABLE statement中用于定义时间属性：</p>
+<ul>
+<li>processing time ：使用系统的PROCTIME() 函数定义。proc AS PROCTIME()</li>
+<li>event time ：可以在WATERMARK申明之前进行预处理。<br>
+计算列与元数据列相似，也不会进行持久化。因此计算列不能是INSERT INTO语句的目标。</li>
+</ul>
+<h3 id="wartermark">WARTERMARK</h3>
+<p>WARTERMARK语句定义了table的事件时间属性（event-time属性），采用如下的格式：WATERMARK FOR rowtime_column_name AS watermark_strategy_expression<br>
+<strong>rowtime_column_name</strong> 已有字段，标记为table的事件时间属性。该列数据类型必须是TIMESTAMP(3)，并且为模式中的顶级列。可以是计算列。<br>
+<strong>watermark_strategy_expression</strong>定义了watermark生成策略。它允许任意非查询表达式(包括计算的列)计算水印。表达式返回类型必须为TIMESTAMP(3)，表示从Epoch开始的时间戳。只有当返回的水印是非空且其值大于先前发出的本地水印时，才会发出返回的水印；水印生成表达式由框架基于每一条记录进行计算。框架会周期性地发出生成的最大水印，如果当前的水印仍就与之前的相同，或为null，或比之前的小，则都不会发出水印。水印发出间隔由pipeline.auto-watermark-interval 配置设置。如果watermark 间隔为0ms，那么对于每条记录，如果生成的水印不为null，并且比之前的水印值大，会发射水印。<br>
+Flink提供的几种常用的水印策略：</p>
+<ul>
+<li>严格升序时间戳：WATERMARK FOR rowtime_column AS rowtime_column</li>
+<li>升序时间戳：WATERMARK FOR rowtime_column AS rowtime_column - INTERVAL '0.001' SECOND</li>
+<li>有界的乱序时间戳：WATERMARK FOR rowtime_column AS rowtime_column - INTERVAL 'string'</li>
+</ul>
+<p>###WITH Options<br>
+table options ： 用于创建table source/sink。这些属性通常用于查找和创建底层connector。表达式中的key，value都应该为字符串字面量。不同的connector支持不同的table属性。</p>
+<h3 id="like">LIKE</h3>
+<h3 id="primary-key">Primary KEY</h3>
+<h1 id="schema-mapping">Schema Mapping</h1>
+<p>SQL CREATE TABLE语句的body子句定义物理列、约束和水印的名称和类型。Flink不保存数据，因此模式定义只声明如何将外部系统的物理列映射到Flink的表示。映射可能不是基于名称映射的，这依赖于formats和connector的实现。比如：mysql 数据库表通过字段名映射（不区分大小写）；CSV格式的文件系统按字段顺序进行映射。</p>
+<h1 id="primary-key-2">Primary KEY</h1>
+<p>主键约束表示表中的一列或一组列是唯一的，并且它们不包含空值。主键唯一标识表中的一行。<br>
+source table的primary key是用于优化的元数据信息。sink table的primary key 通常被sink 实现用于upserting。</p>
+<h1 id="time-attributes">Time Attributes</h1>
+<p>在无界流table处理中，时间属性必不可少。因此可以将proctime and rowtime attributes定义为模式的一部分。</p>
+<h2 id="introduction-to-time-attributes">Introduction to Time Attributes</h2>
+<p>Time attributes 可以是每个table schema的一部分。在使用CREATE TABLE DDL 或DataSteam创建table时定义。一旦定义了time attributes，就可以引用为字段，并在基于时间的操作中使用。只要time attribute（时间属性）没有被修改，只是从查询的一个部分转发到另一个部分，它就仍然是一个有效的时间属性。时间属性的行为类似于常规的时间戳，并且可以用于计算。当在计算中使用时，time attribute被物化，充当标准的时间戳。但是，常规时间戳办呢个用于替换或转换为时间属性。</p>
+<p>###Event Time<br>
+Event Time允许Table program根据每个记录中的时间戳产生结果，允许在无序或延迟事件的情况下产生一致的结果。它还确保了从持久存储读取记录时table program结果的可重复性。<br>
+此外，Event Time允许批处理和流环境中的Table program使用统一的语法。Streaming environment中的time attribute可以是batch environment行中的常规列。<br>
+为了处理无序事件并区分流中的准时事件和延迟事件，Flink需要知道每一行的时间戳，还需要定期指示到目前为止处理的事件时间进展了多少（通过所谓watermarks）<br>
+Event Time 可以在CREATE table DDL 或 DataStream 到Table转换期间。</p>
+<h4 id="defining-in-ddl">Defining in DDL</h4>
+<p>在CREATE table DDL 中，使用WATERMARK 语句定义event time attribute。watermark 语句在已有event time 字段上定义了watermark的生成表达式，将event time 字段标记为event time attribute。</p>
+<pre><code class="language-text">user_action_time TIMESTAMP(3),
+  -- declare user_action_time as event time attribute and use 5 seconds delayed watermark strategy
+  WATERMARK FOR user_action_time AS user_action_time - INTERVAL '5' SECOND
+</code></pre>
+<h4 id="during-datastream-to-table-conversion">During DataStream-to-Table Conversion</h4>
+<p>当将DataStream转换为table时，可以在模式定义期间使用.rowtime属性定义事件时间属性。TimeStamp 和 watermark 必须已经在DataStream中已经分配。<br>
+在将DataStream转换为Table时，有两种方式定义time attribute。依赖于指定的.rowtime字段名是否存在于DataStream的模式中，时间戳要么（1）append as a new column；要么（2）替换已经存在的某个列。</p>
+<h3 id="processing-time">Processing Time</h3>
+<p>Processing Time允许Table programe根据本地机器的时间产生结果。这是最简单的时间概念，但它会产生不确定性的结果。Processing Time不需要时间戳提取或水印生成<br>
+三种方式定义Processing Time attribute</p>
+<h4 id="defining-in-ddl-2">Defining in DDL</h4>
+<p>在CREATE table DDL语句中，使用系统的PROCTIME()函数，Processing time attribute作为计算列被定义。</p>
+<pre><code class="language-java">user_action_time AS PROCTIME() -- declare an additional field as a processing time attribute
+</code></pre>
+<h4 id="during-datastream-to-table-conversion-2">During DataStream-to-Table Conversion</h4>
+<p>在模式定义中，processing time attribute使用.proctime属性定义。time attribute 必须仅通过附加的逻辑字段扩展物理模式。因此，它只能在模式定义的末尾进行定义。</p>
+<pre><code class="language-java">// declare an additional logical field as a processing time attribute
+Table table = tEnv.fromDataStream(stream, $(&quot;user_name&quot;), $(&quot;data&quot;), $(&quot;user_action_time&quot;).proctime()); 
+</code></pre>
+<h2 id="proctime-attributes">Proctime Attributes</h2>
+<p>为了在模式中声明proctime属性，可以使用Computed Column语法声明从proctime()内置函数生成的Computed Column。计算列是一个虚拟列，它不存储在物理数据中</p>
+<h2 id="rowtime-attributes">Rowtime Attributes</h2>
+<p>为了控制表的event-time行为，Flink提供了预定义的时间戳提取器和水印策略。</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://wangyemao-github.github.io/post/table-api-and-sql-streaming-concepts/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Table API &amp; SQL Streaming Concepts
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/flink-table-and-sql/">
+                <h3 class="post-title">
+                  Flink Table &amp; SQL
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

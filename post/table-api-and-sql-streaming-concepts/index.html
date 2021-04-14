@@ -1,0 +1,302 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gridea</title>
+<meta name="description" content="温故而知新" />
+<link rel="shortcut icon" href="https://wangyemao-github.github.io/favicon.ico?v=1618370988505">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://wangyemao-github.github.io/styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://wangyemao-github.github.io">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://wangyemao-github.github.io/images/avatar.png?v=1618370988505" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">Gridea</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li><a href="#dynamic-tables">Dynamic Tables</a>
+<ul>
+<li><a href="#relational-queries-on-data-streams">Relational Queries on Data Streams</a></li>
+<li><a href="#dynamic-tables-continuous-queries">Dynamic Tables &amp; Continuous Queries</a></li>
+<li><a href="#defining-a-table-on-a-stream">Defining a Table on a Stream</a></li>
+<li><a href="#continuous-queries">Continuous Queries</a>
+<ul>
+<li><a href="#update-and-append-queries">Update and Append Queries</a></li>
+<li><a href="#query-restrictions">Query Restrictions</a></li>
+<li><a href="#table-to-stream-conversion">Table to Stream Conversion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://wangyemao-github.github.io/atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Table API &amp; SQL Streaming Concepts</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2021-04-13 / 7 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>Flink 的Table API 和SQL 对batch 和stream处理支持统一的APIs。这就意味着不管它们的输入是否为有界的batch 输入还是无界的stream input，Table API 和SQL查询具有相同的语义。</p>
+<h1 id="dynamic-tables">Dynamic Tables</h1>
+<h2 id="relational-queries-on-data-streams">Relational Queries on Data Streams</h2>
+<p>关系代数/SQL 与 Stream Processing 比较<br>
+<img src="https://wangyemao-github.github.io/post-images/1618364966334.png" alt="" loading="lazy"><br>
+** 物化视图**<br>
+高级数据库系统中提供了物化视图的特性。物化视图被定义为SQL查询，就像常规的虚拟视图一样。与虚拟视图不同，物化视图缓存查询结果，因此在访问查询时不需要对查询进行计算。<br>
+缓存的一个常见挑战是防止缓存提供过时的结果。当定义查询物化视图的基表被修改时，物化视图中的数据就会过时。<br>
+Eager View Maintenance 是一种一旦基表更新，就更新物化视图的一种技术。<br>
+如果我们考虑以下问题，Eager View Maintenance和 SQL queries on streams的联系就会变得明显起来：</p>
+<ul>
+<li>a database table 由INSERT、UPDATE和DELETE DML语句流产生，通常称为changelog stream（更改日志流）</li>
+<li>A materialized view 定义为一个SQL 查询。为了更新视图，查询必须持续处理视图基表的变更日志流（changelog stream）</li>
+<li>materialized view 就是streaming SQL query 的结果</li>
+</ul>
+<h2 id="dynamic-tables-continuous-queries">Dynamic Tables &amp; Continuous Queries</h2>
+<p><strong>Dynamic tables</strong>为Flink Table API &amp; SQL 支持Streaming data的核心概念。与表示批处理数据的静态表不同，Dynamic tables会随时间变化。但就像静态批处理表一样，系统也可以对动态表执行查询。查询动态表产生持续的查询。持续查询永远不会终止并产生动态结果—另一个动态表。查询不断更新其(动态)结果表，以反映其(动态)输入表的更改。<strong>从本质上讲，动态表上的持续查询非常类似于定义物化视图的查询</strong>。<br>
+值得注意的是：持续查询的输出在语义上总是等同于在输入表的快照上以批处理模式执行的相同查询的结果。<br>
+Streams，dynamic tables, and continuous queries的关系：<br>
+<img src="https://wangyemao-github.github.io/post-images/1618367200840.png" alt="" loading="lazy"></p>
+<ol>
+<li>Stream 转换为 dynamic table</li>
+<li>在dynamic table上执行A continuous query 生成了一张新的dynamic table</li>
+<li>生成的dynamic table又转换回stream</li>
+</ol>
+<p>注意：dynamic table 是一个逻辑概念。在查询执行期间，它不一定完全物化。</p>
+<h2 id="defining-a-table-on-a-stream">Defining a Table on a Stream</h2>
+<figure data-type="image" tabindex="1"><img src="https://wangyemao-github.github.io/post-images/1618367649017.png" alt="" loading="lazy"></figure>
+<p>使用关系查询处理流需要将其转换为Table。从概念上讲，流的每条记录都被解释为对结果表的INSERT修改。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618367877328.png" alt="" loading="lazy"><br>
+注意: 上图是一种概念上的描述，实际上在流上定义的Table在内部没有物化</p>
+<h2 id="continuous-queries">Continuous Queries</h2>
+<p>在dynamic table上执行A continuous query 生成了一张新的dynamic table。与批查询不同，持续查询不会终止，它会根据输入表的更新不断更新结果表。</p>
+<ul>
+<li>simple GROUP-BY COUNT 聚合查询<br>
+<img src="https://wangyemao-github.github.io/post-images/1618368281876.png" alt="" loading="lazy"></li>
+<li>基于user + hourly tumbling window Group-BY COUNT 聚合查询<br>
+<img src="https://wangyemao-github.github.io/post-images/1618368506928.png" alt="" loading="lazy"></li>
+</ul>
+<h3 id="update-and-append-queries">Update and Append Queries</h3>
+<p>两个实例查询的差异：</p>
+<ul>
+<li>第一个查询会更新之前计算的结果。也就是说定义结果表的changelog stream 包含了INSERT 和UPDATE 变更</li>
+<li>第二个查询只会追加数据。也就是说定义结果表的changelog stream 只包含INSERT 变更<br>
+查询生成append-only table 还是 updated table 具有如下一些含义：</li>
+<li>具有变更的查询通常需要维护更多状态（state）</li>
+<li>append-only table 到Stream的转换 与 updated table 到stream的转换不同。</li>
+</ul>
+<h3 id="query-restrictions">Query Restrictions</h3>
+<p>很多（但是不是所有）语义有效查询可以作为流上的持续查询进行评估。由于需要维护的状态的大小或计算更新的开销太大，有些查询的计算成本太高。</p>
+<ul>
+<li>State Size ：连续查询在无界流上进行计算，通常需要运行数周或数月。因此，连续查询处理的数据总量可能非常大。需要更新以前发出的结果的查询需要维护所有发出的行来更新它们。例如，第一个示例查询需要存储每个用户的URL计数，以增加计数，并在输入表接收到新行时发送一个新结果。如果只跟踪注册用户，要维护的计数可能不会太高。但是，如果非注册用户分配了唯一的用户名，那么要维护的计数会随着时间的推移而增加，最终可能导致查询失败。</li>
+</ul>
+<pre><code class="language-text">SELECT user, COUNT(url) FROM clicks GROUP BY user;
+</code></pre>
+<ul>
+<li>Computing Updates: 有些查询需要重新计算和更新大部分发出的结果行，即使只添加或更新了单个输入记录.这样的查询不太适合作为连续查询执行.下面的查询是一个例子，它根据最后一次单击的时间计算每个用户的排名.一旦单击表收到一个新行，就更新用户的lastAction并计算一个新的排名。但是，由于两行不能具有相同的排名，所以还需要更新所有排名较低的行。</li>
+</ul>
+<pre><code class="language-text">SELECT user, RANK() OVER (ORDER BY lastAction)
+FROM (
+  SELECT user, MAX(cTime) AS lastAction FROM clicks GROUP BY user
+);
+</code></pre>
+<h3 id="table-to-stream-conversion">Table to Stream Conversion</h3>
+<p>dynamic table可以像普通的数据库表一样，通过插入、更新和删除更改来持续修改。它可能是一个只有一行且不断更新的表，也可能是一个只包含插入的表，而不包含更新和删除修改，或者介于两者之间的任何内容。<br>
+在将dynamic table转换为Stream或将其写入外部系统时，需要对这些更改进行编码.Flink的Table API和SQL支持三种方法来编码动态表的更改:</p>
+<ul>
+<li><strong>Append-only stream:</strong> 只有INSERT 修改的dynamic table 转换为Stream 可以通过发出插入的行</li>
+<li><strong>Retract stream:</strong> a retract  stream 是包含两种类型消息的流：add message 和 retract message。dynamic table转换为retract stream，通过将INSERT 变更编码为add message；将DELETE 变更编码为retract message；UPDATE 变更编码为对已更新的（先前的）行的retract message + 对正在更新的（新的）行编码add message。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618370395219.png" alt="" loading="lazy"></li>
+<li>**Upsert stream: **upsert stream 是包含两种类型的消息：upsert messages 和delete messages。dynamic table 转换为upsert stream需要一个唯一key（可能是组合字段）。具有唯一key的dynamic table转换为stream，通过将INSERT和UPDATE变更编码为 upsert messages；DELETE变更编码为delete message。流消费operator需要知道唯一key属性才能正确的应用消息。与retract  stream 的主要区别在于：UPDATE变更被编码为唯一的消息，因此更高效。<br>
+<img src="https://wangyemao-github.github.io/post-images/1618370817342.png" alt="" loading="lazy"></li>
+</ul>
+<p>dynamic table into a DataStream 只支持：append and retract streams；</p>
+
+        </div>
+
+        
+
+
+        <div class="flex justify-between py-8">
+          
+
+          
+            <div class="next-post">
+              <a href="https://wangyemao-github.github.io/post/table-and-sql-connectors/">
+                <h3 class="post-title">
+                  Table &amp; SQL Connectors
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+
+      </div>
+    </div>
+
+    <script src="https://wangyemao-github.github.io/media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>
